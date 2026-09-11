@@ -1,0 +1,23 @@
+@"
+# Entornos y Secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencias y Builds
+node_modules/
+vendor/
+dist/
+build/
+coverage/
+
+# Base de datos local Docker
+pgdata/
+
+# Logs y Temporales
+*.log
+.DS_Store
+Thumbs.db
+"@ | Set-Content -Path .gitignore
