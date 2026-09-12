@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+@theme {
+  --color-erp-bg: #F8FAFC;
+  --color-erp-border: #E2E8F0;
+}
