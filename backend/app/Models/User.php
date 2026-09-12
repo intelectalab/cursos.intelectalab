@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasUuids, BelongsToTenant, Notifiable;
+    use HasApiTokens, HasUuids, BelongsToTenant, Notifiable;
 
     protected $table = 'erp.app_user';
     protected $primaryKey = 'user_id';
@@ -52,14 +53,5 @@ class User extends Authenticatable
             'user_id',
             'role_id'
         );
-    }
-
-    public function hasPermission(string $permissionCode): bool
-    {
-        return $this->roles()
-            ->whereHas('permissions', function ($query) use ($permissionCode) {
-                $query->where('code', $permissionCode);
-            })
-            ->exists();
     }
 }
