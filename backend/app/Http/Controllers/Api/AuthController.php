@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Models\Tenant;
+use App\Models\Role;
+use App\Models\Permission;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {

@@ -1,0 +1,67 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { TenantProvider, useTenant } from '../shared/tenancy/TenantContext';
+import { AuthProvider } from '../features/auth/AuthContext';
+import { ProtectedRoute, PermissionGate } from '../features/auth/ProtectedRoute';
+import { AppLayout } from '../layouts/backoffice/AppLayout';
+import { Login } from '../features/auth/pages/Login';
+import { Register } from '../features/auth/pages/Register';
+import { APP_MODULES } from '../config/modules';
+
+// Dominio central de la plataforma: alta de organizaciones
+function CentralRoutes() {
+  return (
+    <Routes>
+      <Route path="/register" element={<Register />} />
+      <Route path="*" element={<Navigate to="/register" replace />} />
+    </Routes>
+  );
+}
+
+// Subdominio de una organización
+function TenantRoutes() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+
+        {/* Rutas Protegidas Mapeadas Automáticamente */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            {APP_MODULES.map((mod) => {
+              const Component = mod.component;
+              return (
+                <Route
+                  key={mod.id}
+                  path={mod.href}
+                  element={
+                    <PermissionGate permission={mod.permission}>
+                      <Component />
+                    </PermissionGate>
+                  }
+                />
+              );
+            })}
+          </Route>
+        </Route>
+
+        {/* Ruta por defecto */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </AuthProvider>
+  );
+}
+
+function AppRoutes() {
+  const { tenant } = useTenant();
+  return tenant ? <TenantRoutes /> : <CentralRoutes />;
+}
+
+export default function App() {
+  return (
+    <TenantProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </TenantProvider>
+  );
+}

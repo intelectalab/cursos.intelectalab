@@ -8,4 +8,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    host: '127.0.0.1',
+    // La API se consume en el mismo origen. Se conserva el Host original
+    // ({organización}.localhost) para que el backend resuelva el tenant.
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: false,
+      },
+    },
+  },
 })
