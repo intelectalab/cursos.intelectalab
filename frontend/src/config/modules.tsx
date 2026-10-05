@@ -3,6 +3,8 @@ import {
   LayoutDashboard,
   BookOpen,
   ClipboardCheck,
+  GraduationCap,
+  Library,
   Users,
   CreditCard,
   BarChart3,
@@ -14,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Dashboard } from '../features/dashboard/pages/Dashboard';
 import { CoursesPage } from '../features/courses/pages/CoursesPage';
+import { QuestionBanksPage } from '../features/academic/pages/QuestionBanksPage';
+import { MyCoursesPage } from '../features/enrollments/pages/MyCoursesPage';
 import { UsersPage } from '../features/identity/pages/UsersPage';
 import { RolesPage } from '../features/identity/pages/RolesPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
@@ -53,6 +57,17 @@ export const APP_MODULES: ModuleItem[] = [
     component: Dashboard,
   },
   {
+    id: 'my-courses',
+    name: 'Mis cursos',
+    description: 'Los cursos en los que estás matriculado',
+    href: '/my-courses',
+    icon: GraduationCap,
+    tone: 'info',
+    group: 'general',
+    permission: 'enrollments.self.read',
+    component: MyCoursesPage,
+  },
+  {
     id: 'courses',
     name: 'Cursos',
     description: 'Cursos, contenido y publicación',
@@ -65,9 +80,20 @@ export const APP_MODULES: ModuleItem[] = [
     component: CoursesPage,
   },
   {
+    id: 'question-banks',
+    name: 'Banco de preguntas',
+    description: 'Preguntas para los cuestionarios',
+    href: '/question-banks',
+    icon: Library,
+    tone: 'success',
+    group: 'operation',
+    permission: 'question_banks.read',
+    component: QuestionBanksPage,
+  },
+  {
     id: 'academic',
     name: 'Académico',
-    description: 'Evaluaciones, tareas y matrículas',
+    description: 'Entregas, notas y progreso',
     href: '/academic',
     icon: ClipboardCheck,
     tone: 'violet',
@@ -76,9 +102,9 @@ export const APP_MODULES: ModuleItem[] = [
     component: () => (
       <ComingSoon
         title="Académico"
-        description="Evaluaciones, tareas y matrículas."
+        description="Entregas de los alumnos, notas y progreso."
         icon={ClipboardCheck}
-        features={['Actividades', 'Cuestionarios y tareas', 'Encuestas', 'Matrículas y progreso']}
+        features={['Revisión de tareas', 'Resultados de cuestionarios', 'Respuestas de encuestas', 'Progreso por alumno']}
       />
     ),
   },

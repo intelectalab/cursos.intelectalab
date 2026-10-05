@@ -156,7 +156,11 @@ export const coursesApi = {
   },
   async get(id: string) {
     const response = await api.get(`/courses/${id}`);
-    return { course: response.data.data as CourseDetail, canEditContent: response.data.meta.can_edit_content as boolean };
+    return {
+      course: response.data.data as CourseDetail,
+      canEditContent: response.data.meta.can_edit_content as boolean,
+      canManageActivities: response.data.meta.can_manage_activities as boolean,
+    };
   },
   async create(input: CourseInput) {
     return (await api.post('/courses', input)).data.data as CourseDetail;

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Modules\Academic\Application\ActivityContent;
+use App\Modules\Courses\Application\CourseContentExtension;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Support\Facades\Event;
@@ -15,6 +17,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TenantContext::class);
+
+        // Contenido que otros módulos aportan a los cursos al publicarlos
+        $this->app->tag([ActivityContent::class], CourseContentExtension::TAG);
     }
 
     /**

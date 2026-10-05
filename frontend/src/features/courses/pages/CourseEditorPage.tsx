@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
+  GraduationCap,
   History,
   ImageUp,
   Info,
@@ -50,13 +51,17 @@ import {
 } from '../api';
 import { CourseFields } from '../components/CourseForm';
 import { ContentTab } from '../components/ContentTab';
+import { academicApi, type Activity } from '../../academic/api';
+import { SectionActivities } from '../../academic/components/SectionActivities';
+import { StudentsTab } from '../../enrollments/components/StudentsTab';
 
-type TabId = 'content' | 'info' | 'teachers' | 'versions';
+type TabId = 'content' | 'info' | 'teachers' | 'students' | 'versions';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'content', label: 'Contenido', icon: Layers },
   { id: 'info', label: 'Información', icon: Info },
   { id: 'teachers', label: 'Profesores', icon: Users },
+  { id: 'students', label: 'Alumnos', icon: GraduationCap },
   { id: 'versions', label: 'Versiones', icon: History },
 ];
 
@@ -430,6 +435,9 @@ export const CourseEditorPage: React.FC = () => {
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [canEditContent, setCanEditContent] = useState(false);
+  const [canManageActivities, setCanManageActivities] = useState(false);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [gradeScale, setGradeScale] = useState(20);
   const [options, setOptions] = useState<CourseOptions | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
@@ -438,18 +446,24 @@ export const CourseEditorPage: React.FC = () => {
   const [attempt, setAttempt] = useState(0);
 
   const reload = useCallback(async () => {
-    const result = await coursesApi.get(courseId);
+    const [result, academic] = await Promise.all([coursesApi.get(courseId), academicApi.activities(courseId)]);
     setCourse(result.course);
     setCanEditContent(result.canEditContent);
+    setCanManageActivities(result.canManageActivities);
+    setActivities(academic.activities);
+    setGradeScale(academic.gradeScale);
   }, [courseId]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([coursesApi.get(courseId), coursesApi.options()])
-      .then(([result, loadedOptions]) => {
+    Promise.all([coursesApi.get(courseId), coursesApi.options(), academicApi.activities(courseId)])
+      .then(([result, loadedOptions, academic]) => {
         if (!active) return;
         setCourse(result.course);
         setCanEditContent(result.canEditContent);
+        setCanManageActivities(result.canManageActivities);
+        setActivities(academic.activities);
+        setGradeScale(academic.gradeScale);
         setOptions(loadedOptions);
         setState('ready');
       })
@@ -479,10 +493,10 @@ export const CourseEditorPage: React.FC = () => {
   }
 
   const archived = course.status === 'ARCHIVED';
-  const hasContent = course.resources_count > 0;
+  const hasContent = course.resources_count > 0 || activities.length > 0;
   const nothingNew = course.status === 'PUBLISHED' && !course.pending_changes;
   const publishHint = !hasContent
-    ? 'Agrega al menos una sección con un recurso para poder publicar.'
+    ? 'Agrega al menos una sección con un recurso o una actividad para poder publicar.'
     : nothingNew
       ? 'No hay cambios nuevos que publicar.'
       : undefined;
@@ -569,7 +583,7 @@ export const CourseEditorPage: React.FC = () => {
 
       {/* Pestañas */}
       <div className="flex gap-1 mb-5 border-b border-slate-200 overflow-x-auto overflow-y-hidden" role="tablist" aria-label="Secciones del curso">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.filter(({ id }) => id !== 'students' || hasPermission('enrollments.read')).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -590,10 +604,27 @@ export const CourseEditorPage: React.FC = () => {
       </div>
 
       {tab === 'content' && (
-        <ContentTab course={course} options={options} editable={canEditContent && !archived} onChanged={reload} />
+        <ContentTab
+          course={course}
+          options={options}
+          editable={canEditContent && !archived}
+          onChanged={reload}
+          sectionExtra={(section) => (
+            <SectionActivities
+              courseId={course.id}
+              sectionId={section.id}
+              activities={activities.filter((activity) => activity.section_id === section.id)}
+              gradeScale={gradeScale}
+              editable={canManageActivities && !archived}
+              canReadBanks={hasPermission('question_banks.read')}
+              onChanged={reload}
+            />
+          )}
+        />
       )}
       {tab === 'info' && <InfoTab course={course} options={options} editable={canUpdate && !archived} onChanged={reload} />}
       {tab === 'teachers' && <TeachersTab course={course} options={options} editable={canUpdate} onChanged={reload} />}
+      {tab === 'students' && <StudentsTab course={course} />}
       {tab === 'versions' && <VersionsTab course={course} />}
 
       {dialog === 'publish' && <PublishModal course={course} onClose={() => setDialog(null)} onDone={closeAndReload} />}

@@ -21,7 +21,7 @@ Cada academia recibe estos seis roles al crearse. Son fijos: no se editan ni se 
 | --- | --- | --- | --- |
 | Administrador | `ADMIN` | Administración integral de la organización | Acceso total |
 | Alumno | `STUDENT` | Consumo de cursos, actividades y certificados | 13 |
-| Profesor | `TEACHER` | Gestión académica de los cursos asignados | 5 |
+| Profesor | `TEACHER` | Gestión académica de los cursos asignados | 7 |
 | Soporte | `SUPPORT` | Atención y seguimiento de tickets | 4 |
 | Ventas/CRM | `SALES` | Gestión comercial y CRM | 4 |
 | B2B autorizado | `B2B` | Operaciones corporativas: cuentas, licencias y cotizaciones | 3 |
@@ -44,7 +44,7 @@ Se agregará en el sprint S8. Será el contacto de una empresa cliente (uno o va
 
 ### Administrador
 
-Acceso total a todos los módulos de su academia (52 permisos). No alcanza las operaciones de plataforma.
+Acceso total a todos los módulos de su academia (56 permisos). No alcanza las operaciones de plataforma.
 
 ### Alumno
 
@@ -69,6 +69,8 @@ Acceso total a todos los módulos de su academia (52 permisos). No alcanza las o
 - `activities.assigned.manage`: Gestionar actividades de los cursos asignados
 - `submissions.assigned.review`: Revisar entregas de los cursos asignados
 - `reports.assigned.read`: Consultar reportes de los cursos asignados
+- `question_banks.read`: Consultar los bancos de preguntas
+- `question_banks.manage`: Crear y editar bancos de preguntas
 
 ### Soporte
 
@@ -136,13 +138,17 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | `activities.attempt` | Rendir actividades | ✔ | ✔ |  |  |  |  |
 | `activities.self` | Consultar las actividades propias | ✔ | ✔ |  |  |  |  |
 | `activities.assigned.manage` | Gestionar actividades de los cursos asignados | ✔ |  | ✔ |  |  |  |
+| `question_banks.read` | Consultar los bancos de preguntas | ✔ |  | ✔ |  |  |  |
+| `question_banks.manage` | Crear y editar bancos de preguntas | ✔ |  | ✔ |  |  |  |
 | `submissions.assigned.review` | Revisar entregas de los cursos asignados | ✔ |  | ✔ |  |  |  |
 
 ### Matrículas y portal del alumno
 
 | Permiso | Descripción | Administrador | Alumno | Profesor | Soporte | Ventas/CRM | B2B autorizado |
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `enrollments.read` | Consultar las matrículas de los cursos | ✔ |  |  |  |  |  |
 | `enrollments.create` | Crear matrículas | ✔ |  |  |  |  |  |
+| `enrollments.cancel` | Cancelar matrículas | ✔ |  |  |  |  |  |
 | `enrollments.self.read` | Consultar las matrículas propias | ✔ | ✔ |  |  |  |  |
 | `enrollments.support.read` | Consultar matrículas para atención de soporte | ✔ |  |  | ✔ |  |  |
 | `student.portal` | Acceder al portal del alumno | ✔ | ✔ |  |  |  |  |

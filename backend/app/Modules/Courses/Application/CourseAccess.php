@@ -46,6 +46,26 @@ class CourseAccess
             || ($user->hasPermission('content.assigned.write') && $this->teaches($user, $course));
     }
 
+    public function canManageActivities(User $user, Course $course): bool
+    {
+        return $user->hasPermission('courses.content.write')
+            || ($user->hasPermission('activities.assigned.manage') && $this->teaches($user, $course));
+    }
+
+    public function assertCanManageActivities(User $user, Course $course): void
+    {
+        $this->assertCanView($user, $course);
+
+        if (! $this->canManageActivities($user, $course)) {
+            throw new ApiException(
+                ErrorCode::PermissionDenied,
+                'No cuenta con el permiso requerido para gestionar las actividades de este curso.',
+                403,
+                ['permission' => 'activities.assigned.manage']
+            );
+        }
+    }
+
     /**
      * Un curso ajeno responde igual que uno inexistente.
      */

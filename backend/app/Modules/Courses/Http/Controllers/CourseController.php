@@ -98,6 +98,7 @@ class CourseController extends Controller
 
         return ApiResponse::success(CoursePresenter::detail($course), [
             'can_edit_content' => $this->access->canEditContent($request->user(), $course),
+            'can_manage_activities' => $this->access->canManageActivities($request->user(), $course),
         ]);
     }
 

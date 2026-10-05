@@ -33,4 +33,8 @@ enum ErrorCode: string
 
     case CourseNotPublishable = 'COURSE_NOT_PUBLISHABLE';
     case CourseInvalidState = 'COURSE_INVALID_STATE';
+
+    case QuestionInUse = 'QUESTION_IN_USE';
+
+    case EnrollmentNotActive = 'ENROLLMENT_NOT_ACTIVE';
 }

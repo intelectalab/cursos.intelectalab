@@ -10,6 +10,8 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-05 | Vista móvil del menú lateral | [2026-10-05-vista-movil-menu.md](2026-10-05-vista-movil-menu.md) |
 | 2026-10-05 | Almacenamiento de archivos por academia | [2026-10-05-almacenamiento-de-archivos.md](2026-10-05-almacenamiento-de-archivos.md) |
 | 2026-10-05 | S2 — Cursos | [2026-10-05-s2-cursos.md](2026-10-05-s2-cursos.md) |
+| 2026-10-05 | S3 — Académico · Entrega 1: armado de actividades | [2026-10-05-s3-entrega-1-actividades.md](2026-10-05-s3-entrega-1-actividades.md) |
+| 2026-10-05 | S3 — Académico · Entrega 2: matrícula mínima y aula del alumno | [2026-10-05-s3-entrega-2-matricula-y-aula.md](2026-10-05-s3-entrega-2-matricula-y-aula.md) |
 
 Documentos relacionados:
 
@@ -20,4 +22,4 @@ Documentos relacionados:
 
 ## Qué sigue
 
-1. S3 — Académico: actividades, cuestionarios, tareas, encuestas y progreso.
+1. S3 · Entrega 3: rendir cuestionarios, entregar y revisar tareas, encuestas y progreso.

@@ -28,6 +28,7 @@ class TenantSettingsController extends Controller
                     'extensions' => config('files.purposes.'.TenantLogoService::PURPOSE.'.extensions'),
                 ],
                 'currencies' => TenantSettingsService::CURRENCIES,
+                'grade_scales' => TenantSettingsService::GRADE_SCALES,
                 'session_minutes' => [
                     'min' => config('identity.session_lifetime_min'),
                     'max' => config('identity.session_lifetime_max'),
@@ -50,6 +51,7 @@ class TenantSettingsController extends Controller
             'contact_address' => ['nullable', 'string', 'max:255'],
             'terms' => ['nullable', 'string', 'max:50000'],
             'privacy_policy' => ['nullable', 'string', 'max:50000'],
+            'grade_scale' => ['required', 'integer', Rule::in(TenantSettingsService::GRADE_SCALES)],
             'session_minutes' => [
                 'required', 'integer',
                 'min:'.config('identity.session_lifetime_min'),

@@ -68,13 +68,17 @@ class PermissionCatalog
                     'activities.attempt' => 'Rendir actividades',
                     'activities.self' => 'Consultar las actividades propias',
                     'activities.assigned.manage' => 'Gestionar actividades de los cursos asignados',
+                    'question_banks.read' => 'Consultar los bancos de preguntas',
+                    'question_banks.manage' => 'Crear y editar bancos de preguntas',
                     'submissions.assigned.review' => 'Revisar entregas de los cursos asignados',
                 ],
             ],
             'enrollments' => [
                 'name' => 'Matrículas y portal del alumno',
                 'permissions' => [
+                    'enrollments.read' => 'Consultar las matrículas de los cursos',
                     'enrollments.create' => 'Crear matrículas',
+                    'enrollments.cancel' => 'Cancelar matrículas',
                     'enrollments.self.read' => 'Consultar las matrículas propias',
                     'enrollments.support.read' => 'Consultar matrículas para atención de soporte',
                     'student.portal' => 'Acceder al portal del alumno',

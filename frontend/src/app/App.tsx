@@ -8,6 +8,7 @@ import { Register } from '../features/auth/pages/Register';
 import { ForgotPassword, ResetPassword } from '../features/auth/pages/PasswordRecovery';
 import { AccountPage } from '../features/account/pages/AccountPage';
 import { CourseEditorPage } from '../features/courses/pages/CourseEditorPage';
+import { ClassroomPage } from '../features/enrollments/pages/ClassroomPage';
 import { PlatformConsole } from '../features/platform/pages/PlatformConsole';
 import { APP_MODULES } from '../config/modules';
 
@@ -36,6 +37,14 @@ function TenantRoutes() {
           <Route element={<AppLayout />}>
             {/* Cuenta propia: disponible para cualquier usuario autenticado */}
             <Route path="/account" element={<AccountPage />} />
+            <Route
+              path="/my-courses/:courseId"
+              element={
+                <PermissionGate permission="enrollments.self.read">
+                  <ClassroomPage />
+                </PermissionGate>
+              }
+            />
             <Route
               path="/courses/:courseId"
               element={

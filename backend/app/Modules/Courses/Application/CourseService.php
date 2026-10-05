@@ -121,20 +121,31 @@ class CourseService
         $this->assertNotArchived($course);
 
         $course->load(['sections.resources.file']);
+        $snapshot = $this->snapshot($course);
 
-        if ($course->sections->isEmpty() || $course->sections->every(fn (CourseSection $section) => $section->resources->isEmpty())) {
+        $empty = collect($snapshot['sections'])->every(
+            fn (array $section) => collect($section)->except(['id', 'title'])->every(fn (array $items) => $items === [])
+        );
+
+        if ($empty) {
             throw new ApiException(
                 ErrorCode::CourseNotPublishable,
-                'Para publicar, el curso necesita al menos una sección con un recurso.',
+                'Para publicar, el curso necesita al menos una sección con un recurso o una actividad.',
                 422
             );
+        }
+
+        $problems = collect($this->extensions())->flatMap(fn (CourseContentExtension $extension) => $extension->publishProblems($course));
+
+        if ($problems->isNotEmpty()) {
+            throw new ApiException(ErrorCode::CourseNotPublishable, $problems->first(), 422, ['problems' => $problems->all()]);
         }
 
         if ($course->status === Course::STATUS_PUBLISHED && ! $course->has_pending_changes) {
             throw new ApiException(ErrorCode::CourseNotPublishable, 'No hay cambios nuevos que publicar.', 422);
         }
 
-        return DB::transaction(function () use ($course, $actor, $note) {
+        return DB::transaction(function () use ($course, $actor, $note, $snapshot) {
             // Bloquea el curso: dos publicaciones simultáneas no repiten número
             Course::query()->whereKey($course->id)->lockForUpdate()->first();
 
@@ -142,7 +153,7 @@ class CourseService
                 'course_id' => $course->id,
                 'number' => (int) CourseVersion::query()->where('course_id', $course->id)->max('number') + 1,
                 'note' => $note,
-                'snapshot' => $this->snapshot($course),
+                'snapshot' => $snapshot,
                 'published_by' => $actor->id,
                 'published_at' => now(),
             ]);
@@ -242,6 +253,12 @@ class CourseService
      */
     private function snapshot(Course $course): array
     {
+        $extra = [];
+
+        foreach ($this->extensions() as $extension) {
+            $extra[$extension->key()] = $extension->snapshot($course);
+        }
+
         return $course->only(self::EDITABLE) + [
             'cover_file_id' => $course->cover_file_id,
             'sections' => $course->sections->map(fn (CourseSection $section) => [
@@ -260,7 +277,15 @@ class CourseService
                         'size_bytes' => $resource->file->size_bytes,
                     ] : null,
                 ])->all(),
-            ])->all(),
+            ] + array_map(fn (array $bySection) => $bySection[$section->id] ?? [], $extra))->all(),
         ];
+    }
+
+    /**
+     * @return iterable<CourseContentExtension>
+     */
+    private function extensions(): iterable
+    {
+        return app()->tagged(CourseContentExtension::TAG);
     }
 }

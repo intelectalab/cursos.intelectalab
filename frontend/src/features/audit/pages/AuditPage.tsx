@@ -52,6 +52,8 @@ const ACTION_LABEL: Record<string, string> = {
   'courses.archived': 'Curso archivado',
   'courses.restored': 'Curso restaurado',
   'courses.teachers_updated': 'Profesores del curso cambiados',
+  'enrollments.created': 'Alumno matriculado',
+  'enrollments.cancelled': 'Matrícula cancelada',
   'users.created': 'Usuario creado',
   'users.updated': 'Usuario editado',
   'users.roles_updated': 'Roles de usuario cambiados',
@@ -80,6 +82,7 @@ const GROUPS = [
   ['roles', 'Roles'],
   ['auth', 'Contraseñas'],
   ['courses', 'Cursos'],
+  ['enrollments', 'Matrículas'],
   ['tenant', 'Organización'],
   ['access', 'Accesos denegados'],
 ];

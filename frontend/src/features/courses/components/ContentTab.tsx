@@ -287,7 +287,9 @@ export const ContentTab: React.FC<{
   options: CourseOptions;
   editable: boolean;
   onChanged: () => Promise<void>;
-}> = ({ course, options, editable, onChanged }) => {
+  // Contenido que otros módulos muestran dentro de cada sección (actividades)
+  sectionExtra?: (section: CourseSection) => React.ReactNode;
+}> = ({ course, options, editable, onChanged, sectionExtra }) => {
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -482,6 +484,8 @@ export const ContentTab: React.FC<{
               </Button>
             </div>
           )}
+
+          {sectionExtra?.(section)}
         </Card>
       ))}
 

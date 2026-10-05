@@ -15,6 +15,9 @@ class TenantSettingsService
 {
     public const KEY = 'general';
 
+    /** Escalas de calificación: vigesimal o centesimal */
+    public const GRADE_SCALES = [20, 100];
+
     /** Monedas soportadas (RN-019) */
     public const CURRENCIES = ['PEN', 'USD'];
 
@@ -29,6 +32,8 @@ class TenantSettingsService
         'privacy_policy' => null,
         // null = valor por defecto de la plataforma
         'session_minutes' => null,
+        // Nota máxima con la que se muestran las calificaciones
+        'grade_scale' => 20,
     ];
 
     public function __construct(private readonly AuditLogger $audit) {}
@@ -48,6 +53,13 @@ class TenantSettingsService
             'legal_name' => $tenant->legal_name,
             'tax_id' => $tenant->tax_id,
         ] + $settings;
+    }
+
+    public function gradeScale(): int
+    {
+        $stored = TenantSetting::query()->where('key', self::KEY)->value('value') ?? [];
+
+        return (int) ($stored['grade_scale'] ?? self::DEFAULTS['grade_scale']);
     }
 
     /**

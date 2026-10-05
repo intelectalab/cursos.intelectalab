@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   FileText,
   Globe2,
+  GraduationCap,
   ImageUp,
   Phone,
   Settings as SettingsIcon,
@@ -29,6 +30,7 @@ interface Settings {
   terms: string | null;
   privacy_policy: string | null;
   session_minutes: number;
+  grade_scale: number;
   logo_url: string | null;
 }
 
@@ -50,6 +52,7 @@ const fetchSettings = async () => {
     settings: response.data.data as Settings,
     currencies: response.data.meta.currencies as string[],
     sessionLimits: response.data.meta.session_minutes as Limits,
+    gradeScales: response.data.meta.grade_scales as number[],
     logoRules: response.data.meta.logo as LogoRules,
   };
 };
@@ -190,6 +193,7 @@ export const SettingsPage: React.FC = () => {
   const [form, setForm] = useState<Settings | null>(null);
   const [currencies, setCurrencies] = useState<string[]>([]);
   const [sessionLimits, setSessionLimits] = useState<Limits>({ min: 5, max: 1440 });
+  const [gradeScales, setGradeScales] = useState<number[]>([20, 100]);
   const [logoRules, setLogoRules] = useState<LogoRules>({ max_kb: 2048, extensions: [] });
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
@@ -207,6 +211,7 @@ export const SettingsPage: React.FC = () => {
         setForm(result.settings);
         setCurrencies(result.currencies);
         setSessionLimits(result.sessionLimits);
+        setGradeScales(result.gradeScales);
         setLogoRules(result.logoRules);
         setState('ready');
       })
@@ -363,6 +368,28 @@ export const SettingsPage: React.FC = () => {
           </Field>
           <Field label="Dirección">
             <input {...text('contact_address')} maxLength={255} />
+          </Field>
+        </div>
+      </Section>
+
+      <Section icon={GraduationCap} tone="violet" title="Calificaciones" text="Cómo se muestran las notas de cuestionarios y tareas.">
+        <div className="max-w-xs">
+          <Field label="Escala de notas" hint="Cambiarla no altera las notas ya registradas: solo cómo se muestran.">
+            <select
+              className={INPUT_CLASS}
+              disabled={!editable}
+              value={form.grade_scale}
+              onChange={(event) => {
+                setForm({ ...form, grade_scale: Number(event.target.value) });
+                setStatus('idle');
+              }}
+            >
+              {gradeScales.map((scale) => (
+                <option key={scale} value={scale}>
+                  De 0 a {scale}
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
       </Section>

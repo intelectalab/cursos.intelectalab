@@ -26,6 +26,7 @@ class TenantSettingsTest extends TestCase
             'terms' => 'Términos de la academia.',
             'privacy_policy' => 'Política de privacidad.',
             'session_minutes' => 30,
+            'grade_scale' => 20,
         ];
     }
 
