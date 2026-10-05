@@ -13,6 +13,7 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-05 | S3 — Académico · Entrega 1: armado de actividades | [2026-10-05-s3-entrega-1-actividades.md](2026-10-05-s3-entrega-1-actividades.md) |
 | 2026-10-05 | S3 — Académico · Entrega 2: matrícula mínima y aula del alumno | [2026-10-05-s3-entrega-2-matricula-y-aula.md](2026-10-05-s3-entrega-2-matricula-y-aula.md) |
 | 2026-10-05 | S3 — Académico · Entrega 3: rendir actividades y progreso | [2026-10-05-s3-entrega-3-rendir-y-progreso.md](2026-10-05-s3-entrega-3-rendir-y-progreso.md) |
+| 2026-10-05 | S4 — Matrículas y portal del alumno | [2026-10-05-s4-matriculas-y-portal.md](2026-10-05-s4-matriculas-y-portal.md) |
 
 Documentos relacionados:
 
@@ -23,4 +24,4 @@ Documentos relacionados:
 
 ## Qué sigue
 
-1. S4 — Matrículas y portal del alumno: lo que falta sobre la matrícula mínima ya hecha (vigencia, elegibilidad, cursos disponibles).
+1. S5 — Venta a personas (B2C): catálogo, compra y órdenes.

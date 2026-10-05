@@ -37,7 +37,10 @@ class MyCoursesController extends Controller
             ->whereHas('course', fn ($course) => $course->whereNotNull('current_version_id'))
             ->with('course.currentVersion')
             ->orderByDesc('enrolled_at')
-            ->get();
+            ->get()
+            // Primero los que hoy se pueden cursar; los vencidos y por iniciar quedan a la vista, al final
+            ->sortByDesc(fn (Enrollment $enrollment) => $enrollment->hasAccess())
+            ->values();
 
         return ApiResponse::success(
             $enrollments->map(fn (Enrollment $enrollment) => ClassroomPresenter::summary($enrollment) + [

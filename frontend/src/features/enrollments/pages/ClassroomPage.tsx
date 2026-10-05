@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, Download, ExternalLink, FileText, Link2, Paperclip, Video, type LucideIcon } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
@@ -151,7 +151,9 @@ export const ClassroomPage: React.FC = () => {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [currentKey, setCurrentKey] = useState<string | null>(null);
+  // Un enlace puede abrir el aula directamente en un elemento (?item=a-…)
+  const [searchParams] = useSearchParams();
+  const [currentKey, setCurrentKey] = useState<string | null>(() => searchParams.get('item'));
 
   useEffect(() => {
     let active = true;

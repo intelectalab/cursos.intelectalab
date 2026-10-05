@@ -44,7 +44,7 @@ Se agregará en el sprint S8. Será el contacto de una empresa cliente (uno o va
 
 ### Administrador
 
-Acceso total a todos los módulos de su academia (57 permisos). No alcanza las operaciones de plataforma.
+Acceso total a todos los módulos de su academia (58 permisos). No alcanza las operaciones de plataforma.
 
 ### Alumno
 
@@ -149,6 +149,7 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: |
 | `enrollments.read` | Consultar las matrículas de los cursos | ✔ |  |  |  |  |  |
 | `enrollments.create` | Crear matrículas | ✔ |  |  |  |  |  |
+| `enrollments.update` | Cambiar la vigencia de las matrículas | ✔ |  |  |  |  |  |
 | `enrollments.cancel` | Cancelar matrículas | ✔ |  |  |  |  |  |
 | `enrollments.self.read` | Consultar las matrículas propias | ✔ | ✔ |  |  |  |  |
 | `enrollments.support.read` | Consultar matrículas para atención de soporte | ✔ |  |  | ✔ |  |  |

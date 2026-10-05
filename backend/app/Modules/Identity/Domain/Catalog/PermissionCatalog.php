@@ -79,6 +79,7 @@ class PermissionCatalog
                 'permissions' => [
                     'enrollments.read' => 'Consultar las matrículas de los cursos',
                     'enrollments.create' => 'Crear matrículas',
+                    'enrollments.update' => 'Cambiar la vigencia de las matrículas',
                     'enrollments.cancel' => 'Cancelar matrículas',
                     'enrollments.self.read' => 'Consultar las matrículas propias',
                     'enrollments.support.read' => 'Consultar matrículas para atención de soporte',

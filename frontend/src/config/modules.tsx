@@ -3,6 +3,8 @@ import {
   LayoutDashboard,
   BookOpen,
   GraduationCap,
+  ClipboardList,
+  Compass,
   Library,
   Users,
   CreditCard,
@@ -17,6 +19,8 @@ import { Dashboard } from '../features/dashboard/pages/Dashboard';
 import { CoursesPage } from '../features/courses/pages/CoursesPage';
 import { QuestionBanksPage } from '../features/academic/pages/QuestionBanksPage';
 import { MyCoursesPage } from '../features/enrollments/pages/MyCoursesPage';
+import { AvailableCoursesPage } from '../features/enrollments/pages/AvailableCoursesPage';
+import { EnrollmentsPage } from '../features/enrollments/pages/EnrollmentsPage';
 import { UsersPage } from '../features/identity/pages/UsersPage';
 import { RolesPage } from '../features/identity/pages/RolesPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
@@ -67,6 +71,17 @@ export const APP_MODULES: ModuleItem[] = [
     component: MyCoursesPage,
   },
   {
+    id: 'available-courses',
+    name: 'Cursos disponibles',
+    description: 'Otros cursos de tu academia',
+    href: '/available-courses',
+    icon: Compass,
+    tone: 'violet',
+    group: 'general',
+    permission: 'courses.catalog.read',
+    component: AvailableCoursesPage,
+  },
+  {
     id: 'courses',
     name: 'Cursos',
     description: 'Cursos, contenido y publicación',
@@ -77,6 +92,18 @@ export const APP_MODULES: ModuleItem[] = [
     // El profesor entra con el permiso de cursos asignados
     permission: ['courses.read', 'courses.assigned.read'],
     component: CoursesPage,
+  },
+  {
+    id: 'enrollments',
+    name: 'Matrículas',
+    description: 'Alumnos por curso, vigencia y avance',
+    href: '/enrollments',
+    icon: ClipboardList,
+    tone: 'info',
+    group: 'operation',
+    // Soporte las consulta en solo lectura
+    permission: ['enrollments.read', 'enrollments.support.read'],
+    component: EnrollmentsPage,
   },
   {
     id: 'question-banks',

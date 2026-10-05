@@ -38,6 +38,7 @@ class CourseService
     {
         return DB::transaction(function () use ($actor, $data) {
             $course = Course::create($this->attributes($data) + [
+                'access_days' => $data['access_days'] ?? null,
                 'status' => Course::STATUS_DRAFT,
                 'created_by' => $actor->id,
             ]);
@@ -64,6 +65,16 @@ class CourseService
                 $course->save();
 
                 $this->audit->record('courses.updated', $course, $before, $course->only(self::EDITABLE));
+            }
+
+            // Regla de matrícula, no contenido: no genera cambios por publicar
+            $course->access_days = $data['access_days'] ?? null;
+
+            if ($course->isDirty('access_days')) {
+                $previous = $course->getOriginal('access_days');
+                $course->save();
+
+                $this->audit->record('courses.updated', $course, ['access_days' => $previous], ['access_days' => $course->access_days]);
             }
 
             return $course;

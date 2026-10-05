@@ -26,6 +26,8 @@ class CoursePresenter
             'category' => $course->category,
             'level' => $course->level,
             'duration_hours' => $course->duration_hours,
+            // Días de acceso que recibe cada matrícula nueva; null = no vence
+            'access_days' => $course->access_days,
             'language' => $course->language,
             'status' => $course->status,
             'cover_url' => $course->cover?->publicUrl(),

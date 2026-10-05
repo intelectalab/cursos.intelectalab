@@ -4,6 +4,7 @@ use App\Modules\Academic\Http\Controllers\ActivityController;
 use App\Modules\Academic\Http\Controllers\QuestionBankController;
 use App\Modules\Academic\Http\Controllers\ReviewController;
 use App\Modules\Academic\Http\Controllers\StudentActivityController;
+use App\Modules\Academic\Http\Controllers\StudentOverviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () {
@@ -49,6 +50,9 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
             Route::get('/submissions/{submission}/download', [ReviewController::class, 'download']);
             Route::get('/activities/{activity}/survey-results', [ReviewController::class, 'surveyResults']);
         });
+
+    // Alumno: resumen de inicio
+    Route::get('/me/overview', [StudentOverviewController::class, 'show'])->middleware('permission:enrollments.self.read');
 
     // Alumno: consultar sus actividades…
     Route::middleware('permission:activities.self')->whereUuid(['course', 'activity', 'attempt'])->group(function () {

@@ -2,6 +2,7 @@ import { api } from '../../shared/api/client';
 import type { PageMeta } from '../identity/api';
 import type { ActivityType } from '../academic/api';
 import type { CourseLevel, ResourceType } from '../courses/api';
+import type { Tone } from '../../shared/ui';
 
 /* ───────────────────────────── Personal: matrículas de un curso ───────────────────────────── */
 
@@ -11,13 +12,54 @@ export interface StudentRef {
   email: string;
 }
 
+// Situación de una matrícula hoy: se deduce de su estado y de sus fechas de vigencia
+export type EnrollmentState = 'ACTIVE' | 'UPCOMING' | 'EXPIRED' | 'COMPLETED' | 'CANCELLED';
+
+export const STATE_LABEL: Record<EnrollmentState, string> = {
+  ACTIVE: 'Activa',
+  UPCOMING: 'Por iniciar',
+  EXPIRED: 'Vencida',
+  COMPLETED: 'Completada',
+  CANCELLED: 'Cancelada',
+};
+
+export const STATE_TONE: Record<EnrollmentState, Tone> = {
+  ACTIVE: 'success',
+  UPCOMING: 'info',
+  EXPIRED: 'warning',
+  COMPLETED: 'brand',
+  CANCELLED: 'neutral',
+};
+
+export const ENROLLMENT_STATES: EnrollmentState[] = ['ACTIVE', 'UPCOMING', 'EXPIRED', 'COMPLETED', 'CANCELLED'];
+
 export interface Enrollment {
   id: string;
   status: 'ACTIVE' | 'CANCELLED';
+  state: EnrollmentState;
   source: string;
   enrolled_at: string;
+  // Vigencia en días completos (AAAA-MM-DD); null = sin límite
+  starts_at: string | null;
+  ends_at: string | null;
+  completed_at: string | null;
   cancelled_at: string | null;
+  course: { id: string; title: string };
   student: StudentRef;
+  progress_percent?: number;
+}
+
+export interface Validity {
+  starts_at: string | null;
+  ends_at: string | null;
+}
+
+export interface EnrollableCourse {
+  id: string;
+  title: string;
+  // Solo los publicados admiten matrículas nuevas
+  open: boolean;
+  access_days: number | null;
 }
 
 /* ───────────────────────────── Alumno: sus cursos y el aula ───────────────────────────── */
@@ -32,6 +74,10 @@ export interface MyCourse {
   language: string | null;
   cover_url: string | null;
   enrolled_at: string;
+  state: EnrollmentState;
+  starts_at: string | null;
+  ends_at: string | null;
+  completed_at: string | null;
   sections_count: number;
   resources_count: number;
   activities_count: number;
@@ -85,6 +131,58 @@ export interface Classroom extends MyCourse {
   progress: Progress;
 }
 
+// Inicio del alumno
+export interface StudentOverview {
+  courses: MyCourse[];
+  pending: { course_id: string; course_title: string; activity_id: string; type: ActivityType; title: string }[];
+  pending_total: number;
+  recent_grades: {
+    type: 'QUIZ' | 'TASK';
+    course_id: string;
+    course_title: string;
+    title: string;
+    grade_percent: number;
+    passed: boolean | null;
+    at: string;
+  }[];
+}
+
+// Curso publicado en el que el alumno aún no está: solo la ficha
+export interface AvailableCourse {
+  id: string;
+  title: string;
+  summary: string | null;
+  category: string | null;
+  level: CourseLevel | null;
+  duration_hours: number | null;
+  language: string | null;
+  cover_url: string | null;
+  sections_count: number;
+  resources_count: number;
+  activities_count: number;
+}
+
+export interface AvailableCourseDetail extends AvailableCourse {
+  description: string | null;
+  access_days: number | null;
+  teachers: string[];
+  sections: { title: string; items: { kind: 'RESOURCE' | 'ACTIVITY'; type: ResourceType | ActivityType; title: string }[] }[];
+}
+
+// Fecha de vigencia (AAAA-MM-DD) sin corrimiento por zona horaria
+export function formatDay(value: string | null): string {
+  if (!value) return '—';
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export function describeValidity(startsAt: string | null, endsAt: string | null): string {
+  if (startsAt && endsAt) return `${formatDay(startsAt)} – ${formatDay(endsAt)}`;
+  if (endsAt) return `Hasta el ${formatDay(endsAt)}`;
+  if (startsAt) return `Desde el ${formatDay(startsAt)}`;
+  return 'Sin vencimiento';
+}
+
 export const enrollmentsApi = {
   async list(course: string, page = 1) {
     const response = await api.get(`/courses/${course}/enrollments`, { params: { page } });
@@ -93,14 +191,33 @@ export const enrollmentsApi = {
   async candidates(course: string, search?: string) {
     return (await api.get(`/courses/${course}/enrollment-candidates`, { params: { search: search || undefined } })).data.data as StudentRef[];
   },
-  async enroll(course: string, studentIds: string[]) {
-    return (await api.post(`/courses/${course}/enrollments`, { student_ids: studentIds })).data.meta as {
+  async all(params: { course_id?: string; search?: string; state?: string; page?: number }) {
+    const response = await api.get('/enrollments', { params });
+    return { data: response.data.data as Enrollment[], meta: response.data.meta as PageMeta };
+  },
+  async options() {
+    return (await api.get('/enrollments/options')).data.data.courses as EnrollableCourse[];
+  },
+  updateValidity: (enrollment: string, validity: Validity) => api.put(`/enrollments/${enrollment}`, validity),
+  cancelById: (enrollment: string) => api.delete(`/enrollments/${enrollment}`),
+  async enroll(course: string, studentIds: string[], validity?: Validity) {
+    return (await api.post(`/courses/${course}/enrollments`, { student_ids: studentIds, ...validity })).data.meta as {
       created: number;
       already_enrolled: number;
     };
   },
   cancel: (course: string, enrollment: string) => api.delete(`/courses/${course}/enrollments/${enrollment}`),
 
+  async overview() {
+    const response = await api.get('/me/overview');
+    return { ...(response.data.data as StudentOverview), gradeScale: response.data.meta.grade_scale as number };
+  },
+  async availableCourses() {
+    return (await api.get('/me/available-courses')).data.data as AvailableCourse[];
+  },
+  async availableCourse(course: string) {
+    return (await api.get(`/me/available-courses/${course}`)).data.data as AvailableCourseDetail;
+  },
   async myCourses() {
     return (await api.get('/me/courses')).data.data as MyCourse[];
   },

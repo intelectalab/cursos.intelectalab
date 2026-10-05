@@ -76,6 +76,7 @@ function toInput(course: CourseDetail): CourseInput {
     category: course.category,
     level: course.level,
     duration_hours: course.duration_hours,
+    access_days: course.access_days,
     language: course.language,
   };
 }
@@ -589,7 +590,7 @@ export const CourseEditorPage: React.FC = () => {
 
       {/* Pestañas */}
       <div className="flex gap-1 mb-5 border-b border-slate-200 overflow-x-auto overflow-y-hidden" role="tablist" aria-label="Secciones del curso">
-        {TABS.filter(({ id }) => (id !== 'students' || hasPermission('enrollments.read')) && (id !== 'tracking' || canReview)).map(({ id, label, icon: Icon }) => (
+        {TABS.filter(({ id }) => (id !== 'students' || hasPermission('enrollments.read') || canReview) && (id !== 'tracking' || canReview)).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"

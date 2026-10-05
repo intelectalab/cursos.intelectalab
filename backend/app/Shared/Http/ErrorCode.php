@@ -37,6 +37,8 @@ enum ErrorCode: string
     case QuestionInUse = 'QUESTION_IN_USE';
 
     case EnrollmentNotActive = 'ENROLLMENT_NOT_ACTIVE';
+    case EnrollmentExpired = 'ENROLLMENT_EXPIRED';
+    case EnrollmentNotStarted = 'ENROLLMENT_NOT_STARTED';
 
     case NoAttemptsLeft = 'NO_ATTEMPTS_LEFT';
     case AttemptClosed = 'ATTEMPT_CLOSED';

@@ -61,6 +61,18 @@ export const CourseFields: React.FC<{
             onChange={(event) => set('duration_hours', event.target.value ? Number(event.target.value) : null)}
           />
         </Field>
+        <Field label="Días de acceso (opcional)" hint="Cuánto dura la matrícula de cada alumno. Vacío: no vence.">
+          <input
+            className={INPUT_CLASS}
+            type="number"
+            min={1}
+            max={3650}
+            placeholder="Sin vencimiento"
+            disabled={disabled}
+            value={value.access_days ?? ''}
+            onChange={(event) => set('access_days', event.target.value ? Number(event.target.value) : null)}
+          />
+        </Field>
         <Field label="Idioma">
           <select className={INPUT_CLASS} disabled={disabled} value={value.language} onChange={(event) => set('language', event.target.value)}>
             {(options?.languages ?? ['es']).map((language) => (

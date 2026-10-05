@@ -24,6 +24,8 @@ class ProgressService
             ['enrollment_id' => $enrollment->id, 'item_type' => $type, 'item_id' => $itemId],
             ['completed_at' => now()]
         );
+
+        $this->summary($enrollment);
     }
 
     /**
@@ -31,10 +33,10 @@ class ProgressService
      */
     public function summary(Enrollment $enrollment): array
     {
-        return $this->summarize(
+        return $this->markIfCompleted($enrollment, $this->summarize(
             $this->items($enrollment->course->currentVersion),
             EnrollmentProgress::query()->where('enrollment_id', $enrollment->id)->get(['item_type', 'item_id'])
-        );
+        ));
     }
 
     /**
@@ -53,9 +55,26 @@ class ProgressService
 
         return $enrollments
             ->mapWithKeys(fn (Enrollment $enrollment) => [
-                $enrollment->id => $this->summarize($items, $rows->get($enrollment->id, collect())),
+                $enrollment->id => $this->markIfCompleted($enrollment, $this->summarize($items, $rows->get($enrollment->id, collect()))),
             ])
             ->all();
+    }
+
+    /**
+     * El curso queda completado la primera vez que su avance llega al 100 %;
+     * contenido publicado después no le quita esa condición. Se comprueba cada
+     * vez que se calcula el avance, así también alcanza a matrículas antiguas.
+     *
+     * @param  array{percent: int, completed: int, total: int, resource_ids: list<string>, activity_ids: list<string>}  $summary
+     * @return array{percent: int, completed: int, total: int, resource_ids: list<string>, activity_ids: list<string>}
+     */
+    private function markIfCompleted(Enrollment $enrollment, array $summary): array
+    {
+        if ($summary['percent'] === 100 && $enrollment->completed_at === null && $enrollment->isActive()) {
+            $enrollment->update(['completed_at' => now()]);
+        }
+
+        return $summary;
     }
 
     /**

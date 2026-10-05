@@ -180,6 +180,7 @@ class CourseController extends Controller
             'category' => ['nullable', 'string', 'max:80'],
             'level' => ['nullable', Rule::in(Course::LEVELS)],
             'duration_hours' => ['nullable', 'integer', 'min:1', 'max:5000'],
+            'access_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
             'language' => ['required', Rule::in(Course::LANGUAGES)],
         ]);
     }

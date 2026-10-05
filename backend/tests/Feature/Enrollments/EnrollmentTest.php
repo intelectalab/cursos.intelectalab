@@ -267,8 +267,12 @@ class EnrollmentTest extends TestCase
         $teacherToken = $this->login('acme', $this->createUser($this->tenant, RoleCatalog::TEACHER)->email);
         $enrollment = $this->withToken($this->admin)->getJson($this->api("/courses/{$course}/enrollments"))->json('data.0.id');
 
+        // La lista de un curso la ve también su profesor; para uno que no lo dicta, el curso no existe
+        $this->withToken($studentToken)->getJson($this->api("/courses/{$course}/enrollments"))->assertForbidden();
+        $this->withToken($teacherToken)->getJson($this->api("/courses/{$course}/enrollments"))->assertNotFound();
+
         foreach ([$studentToken, $teacherToken] as $token) {
-            $this->withToken($token)->getJson($this->api("/courses/{$course}/enrollments"))->assertForbidden();
+            $this->withToken($token)->getJson($this->api('/enrollments'))->assertForbidden();
             $this->withToken($token)->getJson($this->api("/courses/{$course}/enrollment-candidates"))->assertForbidden();
             $this->withToken($token)->postJson($this->api("/courses/{$course}/enrollments"), ['student_ids' => [$student->id]])->assertForbidden();
             $this->withToken($token)->deleteJson($this->api("/courses/{$course}/enrollments/{$enrollment}"))->assertForbidden();

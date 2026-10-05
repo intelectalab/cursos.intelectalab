@@ -47,6 +47,8 @@ export interface CourseSummary {
   category: string | null;
   level: CourseLevel | null;
   duration_hours: number | null;
+  // Días de acceso de cada matrícula nueva; null = no vence
+  access_days: number | null;
   language: string;
   status: CourseStatus;
   cover_url: string | null;
@@ -115,6 +117,7 @@ export interface CourseInput {
   category: string | null;
   level: CourseLevel | null;
   duration_hours: number | null;
+  access_days: number | null;
   language: string;
 }
 
@@ -125,6 +128,7 @@ export const EMPTY_COURSE: CourseInput = {
   category: null,
   level: null,
   duration_hours: null,
+  access_days: null,
   language: 'es',
 };
 

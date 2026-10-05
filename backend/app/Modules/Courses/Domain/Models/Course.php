@@ -35,6 +35,7 @@ class Course extends Model
         'category',
         'level',
         'duration_hours',
+        'access_days',
         'language',
         'cover_file_id',
         'status',
@@ -49,6 +50,7 @@ class Course extends Model
     {
         return [
             'duration_hours' => 'integer',
+            'access_days' => 'integer',
             'has_pending_changes' => 'boolean',
             'published_at' => 'datetime',
             'archived_at' => 'datetime',

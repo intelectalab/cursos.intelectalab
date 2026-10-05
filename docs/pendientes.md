@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-05, al cerrar S3 (entrega 3).
+Última actualización: 2026-10-05, al cerrar S4.
 
 ## Dónde estamos
 
-**Sprint actual: S3 — Académico, terminado. Toca empezar S4.**
+**Sprint actual: S4 — Matrículas y portal del alumno, terminado. Toca empezar S5.**
 
-**Siguiente paso:** S4 — Matrículas y portal del alumno. Parte ya está hecha (matrícula manual, Mis cursos y aula); falta definir el alcance restante, que depende de las decisiones 10 y 11.
+**Siguiente paso:** S5 — Venta a personas (B2C): catálogo, compra y órdenes. Antes de construir hay que definir su alcance, porque el pago real depende de la decisión 8.
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -20,8 +20,8 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S3 · entrega 1 | Banco de preguntas, cuestionarios, tareas y encuestas | Hecho |
 | S3 · entrega 2 | Matrícula mínima y aula del alumno | Hecho |
 | S3 · entrega 3 | Rendir cuestionarios, entregar y revisar tareas, encuestas y progreso | Hecho |
-| S4 | Matrículas y portal del alumno (parte adelantada en S3) | **Siguiente** |
-| S5 | Venta a personas (B2C): catálogo, compra y órdenes | Pendiente |
+| S4 | Matrículas y portal del alumno: vigencia, gestión general, curso completado, inicio del alumno y cursos disponibles | Hecho |
+| S5 | Venta a personas (B2C): catálogo, compra y órdenes | **Siguiente** |
 | S6 | Pagos | Pendiente |
 | S7 | Certificados | Pendiente |
 | S8 | Empresas y CRM (B2B) | Pendiente |
@@ -30,10 +30,10 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S11 | Promociones | Pendiente |
 | S12–S13 | Endurecimiento y pruebas de aceptación | Pendiente |
 
-- **Avance del plan:** 4 de 14 sprints completos (S0 a S3), con parte de S4 adelantada.
-- **Calidad:** 131 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
-- **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
-- **Qué no se puede hacer todavía:** comprar un curso (la matrícula la hace el personal a mano), pagar, ni emitir certificados.
+- **Avance del plan:** 5 de 14 sprints completos (S0 a S4).
+- **Calidad:** 138 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
+- **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
+- **Qué no se puede hacer todavía:** comprar un curso (la matrícula la hace el personal a mano; el alumno solo ve la ficha de los cursos disponibles), pagar, ni emitir certificados.
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
 El detalle de cada bloque terminado está en [avances/](avances/README.md).
@@ -49,8 +49,8 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 | 5 | Videos de los cursos | Resuelto: se alojan en YouTube y ya se pueden agregar a los cursos. A tener presente: un video «No listado» lo ve cualquiera con el enlace, aunque no esté matriculado. | Nada |
 | 6 | Respaldos | Cada cuánto se respalda la base de datos y dónde se guarda la copia. | Salida a producción |
 | 7 | Cuentas de prueba | Quiénes probarán en staging y con qué cuentas y datos. | Pruebas en staging |
-| 10 | Vigencia de la matrícula | Cuánto dura el acceso de un alumno a un curso (indefinido, por meses, hasta una fecha). Hoy dura hasta que se cancela. | S4 Matrículas |
-| 11 | Curso archivado | Si los alumnos ya matriculados conservan el acceso cuando un curso se archiva. Hoy lo conservan. | Nada por ahora |
+| 10 | Vigencia de la matrícula | Resuelto: cada curso define sus "días de acceso" (vacío = no vence) y el personal ajusta la vigencia de cada matrícula. Falta que cada academia decida qué valor pone a sus cursos. | Nada |
+| 11 | Curso archivado | Resuelto: quienes ya estaban matriculados conservan el acceso; solo se bloquean las matrículas nuevas. | Nada |
 | 8 | Pasarela de pagos y facturación | Proveedor de pagos, Yape y comprobantes electrónicos. No urge todavía. | S6 Pagos |
 | 9 | SCORM | Si la academia ya tiene cursos en SCORM o clientes que los pidan, y en qué versiones. Si no hay ninguno, S9 se puede posponer. | S9 SCORM |
 
@@ -97,15 +97,20 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 **De matrículas y aula (S3, entrega 2)**
 
-- Que el profesor vea a los alumnos de sus cursos.
-- Matricular muchos alumnos desde un archivo.
 - Avisar al alumno por correo cuando se le matricula (depende de la decisión 3).
+
+**De matrículas y portal (S4)**
+
+- Matricular muchos alumnos desde un archivo y exportar la lista de matrículas.
+- Avisos por correo: matrícula creada, acceso por vencer y vencido (depende de la decisión 3).
+- Que el alumno pueda solicitar una matrícula o una extensión desde el portal.
+- Revisar en teléfono las pantallas de Matrículas, inicio del alumno y cursos disponibles.
 
 **De rendir actividades (S3, entrega 3)**
 
 - Recuperar las respuestas ya marcadas al retomar un intento abierto.
 - Que quien revisa vea el detalle de cada intento, la nota final del curso y pueda exportar las notas.
-- Fechas límite para las tareas (depende de la decisión 10).
+- Fechas límite para las tareas (la vigencia de la matrícula ya existe; falta definir cómo se fijan los plazos).
 - Revisar en teléfono las pantallas de rendir, entregar y seguimiento.
 
 
@@ -113,4 +118,4 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 1. Limpieza del repositorio (sección 2).
 2. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging.
-3. S4 Matrículas, en paralelo con lo anterior.
+3. S5 Venta a personas, en paralelo con lo anterior.

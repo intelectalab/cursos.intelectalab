@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { APP_MODULES } from '../../../config/modules';
 import { api } from '../../../shared/api/client';
 import { Badge, Card, CardHeader, IconChip, StatCard } from '../../../shared/ui';
+import { StudentHome } from '../../enrollments/components/StudentHome';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -43,6 +44,8 @@ export const Dashboard: React.FC = () => {
   }, [canSeeUsers, canSeeRoles]);
 
   const fullAccess = permissions.includes('*');
+  // Quien solo cursa (no administra) ve su avance en lugar de las cifras de la organización
+  const isStudent = hasPermission('enrollments.self.read') && !hasPermission('users.read') && !hasPermission('courses.read');
   const shortcuts = APP_MODULES.filter(
     (module) => module.id !== 'dashboard' && (!module.permission || hasPermission(module.permission)),
   );
@@ -73,8 +76,17 @@ export const Dashboard: React.FC = () => {
               {greeting()}, {user?.first_name}
             </h1>
             <p className="mt-1.5 text-sm text-brand-100/85 max-w-xl">
-              Este es el resumen de <strong className="font-semibold text-white">{tenant?.name}</strong>. Desde aquí
-              llegas a todo lo que tu rol te permite gestionar.
+              {isStudent ? (
+                <>
+                  Bienvenido a <strong className="font-semibold text-white">{tenant?.name}</strong>. Aquí tienes tus cursos, lo que te falta y
+                  tus notas.
+                </>
+              ) : (
+                <>
+                  Este es el resumen de <strong className="font-semibold text-white">{tenant?.name}</strong>. Desde aquí llegas a todo lo que tu
+                  rol te permite gestionar.
+                </>
+              )}
             </p>
           </div>
 
@@ -92,8 +104,10 @@ export const Dashboard: React.FC = () => {
         </div>
       </section>
 
+      {isStudent && <StudentHome />}
+
       {/* Indicadores */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <section className={isStudent ? 'hidden' : 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'}>
         <StatCard label="Organización" value={tenant?.name} hint="Espacio de trabajo activo" icon={Building2} tone="brand" />
         <StatCard
           label="Usuarios"

@@ -8,13 +8,15 @@ use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Matrícula manual: el personal de la organización inscribe alumnos en un
- * curso publicado. La compra (S5) y las licencias (S8) crearán matrículas
- * por este mismo servicio.
+ * Matrícula (RF-ENR-001, FP-05): solicitud → validar elegibilidad → crear →
+ * habilitar acceso. Hoy la hace el personal a mano; la compra (S5) y las
+ * licencias (S8) crearán matrículas por este mismo servicio.
  */
 class EnrollmentService
 {
@@ -24,7 +26,7 @@ class EnrollmentService
     public function __construct(private readonly AuditLogger $audit) {}
 
     /**
-     * Usuarios activos que pueden ser alumnos y aún no tienen matrícula activa en el curso.
+     * Usuarios activos que pueden ser alumnos y aún no tienen matrícula en el curso.
      *
      * @return Collection<int, User>
      */
@@ -54,10 +56,13 @@ class EnrollmentService
     }
 
     /**
+     * Si no se indica fin y el curso define días de acceso, la vigencia se
+     * calcula desde el inicio (o desde hoy).
+     *
      * @param  list<string>  $studentIds
      * @return Collection<int, Enrollment> las matrículas creadas (quien ya estaba matriculado se omite)
      */
-    public function enroll(Course $course, array $studentIds, User $actor): Collection
+    public function enroll(Course $course, array $studentIds, User $actor, ?CarbonInterface $startsAt = null, ?CarbonInterface $endsAt = null): Collection
     {
         if ($course->status !== Course::STATUS_PUBLISHED) {
             throw new ApiException(
@@ -79,7 +84,11 @@ class EnrollmentService
             );
         }
 
-        return DB::transaction(function () use ($course, $students, $actor) {
+        if ($endsAt === null && $course->access_days !== null) {
+            $endsAt = Carbon::instance($startsAt ?? now())->addDays($course->access_days)->endOfDay();
+        }
+
+        return DB::transaction(function () use ($course, $students, $actor, $startsAt, $endsAt) {
             $already = Enrollment::query()
                 ->where('course_id', $course->id)
                 ->where('status', Enrollment::STATUS_ACTIVE)
@@ -88,7 +97,7 @@ class EnrollmentService
 
             return $students
                 ->reject(fn (User $student) => $already->contains($student->id))
-                ->map(function (User $student) use ($course, $actor) {
+                ->map(function (User $student) use ($course, $actor, $startsAt, $endsAt) {
                     $enrollment = Enrollment::create([
                         'course_id' => $course->id,
                         'student_id' => $student->id,
@@ -96,17 +105,44 @@ class EnrollmentService
                         'source' => Enrollment::SOURCE_MANUAL,
                         'enrolled_by' => $actor->id,
                         'enrolled_at' => now(),
+                        'starts_at' => $startsAt,
+                        'ends_at' => $endsAt,
                     ]);
 
                     $this->audit->record('enrollments.created', $enrollment, null, [
                         'course' => $course->title,
                         'student' => $student->email,
                         'source' => $enrollment->source,
+                        'ends_at' => $endsAt?->toDateString(),
                     ]);
 
                     return $enrollment;
                 })
                 ->values();
+        });
+    }
+
+    /**
+     * Cambia la vigencia de una matrícula: extenderla, acortarla o quitarle el límite.
+     */
+    public function updateValidity(Enrollment $enrollment, ?CarbonInterface $startsAt, ?CarbonInterface $endsAt): Enrollment
+    {
+        if (! $enrollment->isActive()) {
+            throw new ApiException(ErrorCode::EnrollmentNotActive, 'La matrícula está cancelada.', 409);
+        }
+
+        return DB::transaction(function () use ($enrollment, $startsAt, $endsAt) {
+            $before = ['starts_at' => $enrollment->starts_at?->toDateString(), 'ends_at' => $enrollment->ends_at?->toDateString()];
+
+            $enrollment->update(['starts_at' => $startsAt, 'ends_at' => $endsAt]);
+
+            $after = ['starts_at' => $startsAt?->toDateString(), 'ends_at' => $endsAt?->toDateString()];
+
+            if ($before !== $after) {
+                $this->audit->record('enrollments.updated', $enrollment, $before, $after + ['student' => $enrollment->student?->email]);
+            }
+
+            return $enrollment;
         });
     }
 
@@ -131,7 +167,9 @@ class EnrollmentService
     }
 
     /**
-     * Matrícula activa del alumno en el curso; si no la tiene, el curso no existe para él.
+     * Matrícula del alumno que hoy le da acceso al curso (RN-003). Sin
+     * matrícula, el curso no existe para él; con una fuera de vigencia, se
+     * le dice por qué no puede entrar.
      */
     public function activeFor(User $student, string $courseId): Enrollment
     {
@@ -146,6 +184,22 @@ class EnrollmentService
         if (! $enrollment || ! $enrollment->course->currentVersion) {
             throw new ApiException(ErrorCode::NotFound, 'El curso no existe.', 404);
         }
+
+        match ($enrollment->state()) {
+            Enrollment::STATE_EXPIRED => throw new ApiException(
+                ErrorCode::EnrollmentExpired,
+                'Tu acceso a este curso venció el '.$enrollment->ends_at->locale('es')->translatedFormat('j \d\e F \d\e Y').'. Comunícate con tu academia para extenderlo.',
+                403,
+                ['ends_at' => $enrollment->ends_at->toIso8601String()]
+            ),
+            Enrollment::STATE_UPCOMING => throw new ApiException(
+                ErrorCode::EnrollmentNotStarted,
+                'Tu acceso a este curso empieza el '.$enrollment->starts_at->locale('es')->translatedFormat('j \d\e F \d\e Y').'.',
+                403,
+                ['starts_at' => $enrollment->starts_at->toIso8601String()]
+            ),
+            default => null,
+        };
 
         return $enrollment;
     }
