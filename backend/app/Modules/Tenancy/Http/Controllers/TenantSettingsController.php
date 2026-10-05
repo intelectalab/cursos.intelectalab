@@ -17,7 +17,13 @@ class TenantSettingsController extends Controller
     {
         return ApiResponse::success(
             $this->settings->get($request->attributes->get('tenant')),
-            ['currencies' => TenantSettingsService::CURRENCIES]
+            [
+                'currencies' => TenantSettingsService::CURRENCIES,
+                'session_minutes' => [
+                    'min' => config('identity.session_lifetime_min'),
+                    'max' => config('identity.session_lifetime_max'),
+                ],
+            ]
         );
     }
 
@@ -35,6 +41,11 @@ class TenantSettingsController extends Controller
             'contact_address' => ['nullable', 'string', 'max:255'],
             'terms' => ['nullable', 'string', 'max:50000'],
             'privacy_policy' => ['nullable', 'string', 'max:50000'],
+            'session_minutes' => [
+                'required', 'integer',
+                'min:'.config('identity.session_lifetime_min'),
+                'max:'.config('identity.session_lifetime_max'),
+            ],
         ], ['secondary_currency.different' => 'La moneda secundaria debe ser distinta de la principal.']);
 
         return ApiResponse::success($this->settings->update($request->attributes->get('tenant'), $data));

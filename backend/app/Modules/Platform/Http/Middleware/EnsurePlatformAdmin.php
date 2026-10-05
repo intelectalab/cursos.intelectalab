@@ -3,6 +3,7 @@
 namespace App\Modules\Platform\Http\Middleware;
 
 use App\Modules\Platform\Domain\Models\PlatformAdmin;
+use App\Shared\Auth\TokenIssuer;
 use App\Shared\Tenancy\TenantContext;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
@@ -24,6 +25,8 @@ class EnsurePlatformAdmin
         if (! $admin instanceof PlatformAdmin || ! $admin->isActive()) {
             throw new AuthenticationException;
         }
+
+        TokenIssuer::touch($admin->currentAccessToken());
 
         return $this->context->runAsSystem(fn () => $next($request));
     }

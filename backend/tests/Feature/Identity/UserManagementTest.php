@@ -110,6 +110,48 @@ class UserManagementTest extends TestCase
             ->assertJsonPath('code', 'LAST_ADMINISTRATOR');
     }
 
+    public function test_user_document_is_validated_by_type_and_unique_per_organization(): void
+    {
+        $this->provisionTenant('acme', 'admin@acme.com');
+        $token = $this->login('acme', 'admin@acme.com');
+        $url = $this->tenantUrl('acme', '/users');
+
+        $id = $this->withToken($token)
+            ->postJson($url, $this->payload(['doc_type' => 'DNI', 'doc_number' => '45678912']))
+            ->assertCreated()
+            ->assertJsonPath('data.doc_type', 'DNI')
+            ->assertJsonPath('data.doc_number', '45678912')
+            ->json('data.id');
+
+        $invalid = [
+            ['doc_type' => 'DNI', 'doc_number' => '1234'],          // el DNI tiene 8 dígitos
+            ['doc_type' => 'DNI', 'doc_number' => '45678912'],      // repetido en la organización
+            ['doc_type' => 'CEDULA', 'doc_number' => '45678912'],   // tipo desconocido
+            ['doc_type' => 'PASAPORTE'],                            // falta el número
+        ];
+
+        foreach ($invalid as $i => $document) {
+            $this->withToken($token)
+                ->postJson($url, $this->payload(['email' => "otro{$i}@acme.com"] + $document))
+                ->assertStatus(422)
+                ->assertJsonPath('code', 'VALIDATION_ERROR');
+        }
+
+        // Editar al mismo usuario conservando su documento no choca consigo mismo
+        $this->withToken($token)->putJson("{$url}/{$id}", [
+            'first_name' => 'Lucía',
+            'last_name' => 'Paredes',
+            'doc_type' => 'DNI',
+            'doc_number' => '45678912',
+            'status' => User::STATUS_ACTIVE,
+        ])->assertOk();
+
+        // El documento es opcional
+        $this->withToken($token)->postJson($url, $this->payload(['email' => 'sin-doc@acme.com']))
+            ->assertCreated()
+            ->assertJsonPath('data.doc_type', null);
+    }
+
     public function test_user_management_requires_permissions(): void
     {
         $tenant = $this->provisionTenant('acme');

@@ -37,6 +37,8 @@ class SessionPresenter
             'first_name' => $user->first_name,
             'last_name' => $user->last_name,
             'phone' => $user->phone,
+            'doc_type' => $user->doc_type,
+            'doc_number' => $user->doc_number,
             'status' => $user->status,
             'roles' => $user->roles->pluck('name')->values(),
             'role_ids' => $user->roles->pluck('id')->values(),

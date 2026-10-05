@@ -22,6 +22,13 @@ class User extends Authenticatable
 
     public const STATUS_INACTIVE = 'INACTIVE';
 
+    /** Tipos de documento y la validación de su número */
+    public const DOCUMENT_TYPES = [
+        'DNI' => ['label' => 'DNI', 'rule' => 'digits:8'],
+        'CE' => ['label' => 'Carné de extranjería', 'rule' => 'regex:/^[A-Za-z0-9]{6,12}$/'],
+        'PASAPORTE' => ['label' => 'Pasaporte', 'rule' => 'regex:/^[A-Za-z0-9]{6,12}$/'],
+    ];
+
     protected $fillable = [
         'tenant_id',
         'email',
@@ -29,6 +36,8 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'phone',
+        'doc_type',
+        'doc_number',
         'status',
         'last_login_at',
     ];

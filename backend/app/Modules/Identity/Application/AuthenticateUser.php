@@ -3,6 +3,7 @@
 namespace App\Modules\Identity\Application;
 
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Auth\TokenIssuer;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
@@ -20,7 +21,10 @@ class AuthenticateUser
 
     private const DECAY_SECONDS = 60;
 
-    public function __construct(private readonly TenantContext $context) {}
+    public function __construct(
+        private readonly TenantContext $context,
+        private readonly TenantSettingsService $settings,
+    ) {}
 
     /**
      * @return array{0: User, 1: string} usuario y token de acceso
@@ -66,6 +70,6 @@ class AuthenticateUser
 
         $user->forceFill(['last_login_at' => now()])->save();
 
-        return [$user, TokenIssuer::issue($user)];
+        return [$user, TokenIssuer::issue($user, $this->settings->sessionMinutes())];
     }
 }

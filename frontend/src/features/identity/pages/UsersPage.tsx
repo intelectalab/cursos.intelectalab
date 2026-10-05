@@ -24,7 +24,7 @@ import {
   THead,
   Tr,
 } from '../../../shared/ui';
-import { identityApi, type PageMeta, type Role, type UserRow } from '../api';
+import { DOCUMENT_TYPES, identityApi, type DocumentType, type PageMeta, type Role, type UserRow } from '../api';
 
 const STATUS_LABEL: Record<UserRow['status'], string> = { ACTIVE: 'Activo', INACTIVE: 'Inactivo' };
 
@@ -37,6 +37,8 @@ interface FormState {
   last_name: string;
   email: string;
   phone: string;
+  doc_type: DocumentType | '';
+  doc_number: string;
   password: string;
   status: UserRow['status'];
   roles: string[];
@@ -47,6 +49,8 @@ const EMPTY_FORM: FormState = {
   last_name: '',
   email: '',
   phone: '',
+  doc_type: '',
+  doc_number: '',
   password: '',
   status: 'ACTIVE',
   roles: [],
@@ -62,7 +66,14 @@ interface UserFormProps {
 const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) => {
   const [form, setForm] = useState<FormState>(
     user
-      ? { ...EMPTY_FORM, ...user, phone: user.phone ?? '', roles: user.role_ids }
+      ? {
+          ...EMPTY_FORM,
+          ...user,
+          phone: user.phone ?? '',
+          doc_type: user.doc_type ?? '',
+          doc_number: user.doc_number ?? '',
+          roles: user.role_ids,
+        }
       : EMPTY_FORM,
   );
   const [processing, setProcessing] = useState(false);
@@ -87,7 +98,13 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
     setProcessing(true);
     setError(null);
 
-    const base = { first_name: form.first_name, last_name: form.last_name, phone: form.phone || null };
+    const base = {
+      first_name: form.first_name,
+      last_name: form.last_name,
+      phone: form.phone || null,
+      doc_type: form.doc_type || null,
+      doc_number: form.doc_type ? form.doc_number : null,
+    };
 
     try {
       if (user) {
@@ -129,6 +146,31 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
           </Field>
           <Field label="Apellidos">
             <input className={INPUT_CLASS} required maxLength={100} value={form.last_name} onChange={set('last_name')} />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Tipo de documento (opcional)">
+            <select className={INPUT_CLASS} value={form.doc_type} onChange={set('doc_type')}>
+              <option value="">Sin documento</option>
+              {Object.entries(DOCUMENT_TYPES).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Número de documento">
+            <input
+              className={INPUT_CLASS}
+              required={form.doc_type !== ''}
+              disabled={form.doc_type === ''}
+              inputMode={form.doc_type === 'DNI' ? 'numeric' : undefined}
+              maxLength={form.doc_type === 'DNI' ? 8 : 12}
+              placeholder={form.doc_type === 'DNI' ? '8 dígitos' : undefined}
+              value={form.doc_type === '' ? '' : form.doc_number}
+              onChange={set('doc_number')}
+            />
           </Field>
         </div>
 

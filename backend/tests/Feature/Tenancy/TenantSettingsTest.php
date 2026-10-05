@@ -25,6 +25,7 @@ class TenantSettingsTest extends TestCase
             'contact_address' => 'Av. Principal 123, Lima',
             'terms' => 'Términos de la academia.',
             'privacy_policy' => 'Política de privacidad.',
+            'session_minutes' => 30,
         ];
     }
 
@@ -39,6 +40,7 @@ class TenantSettingsTest extends TestCase
             ->assertJsonPath('data.name', 'Organización acme')
             ->assertJsonPath('data.primary_currency', 'PEN')
             ->assertJsonPath('data.timezone', 'America/Lima')
+            ->assertJsonPath('data.session_minutes', 30)
             ->assertJsonPath('meta.currencies', ['PEN', 'USD']);
 
         $this->withToken($token)->putJson($url, $this->payload())
@@ -64,9 +66,10 @@ class TenantSettingsTest extends TestCase
             'primary_currency' => 'EUR',
             'secondary_currency' => 'EUR',
             'timezone' => 'Marte/Olimpo',
+            'session_minutes' => 2,
         ]))
             ->assertStatus(422)
-            ->assertJsonStructure(['details' => ['primary_currency', 'secondary_currency', 'timezone']]);
+            ->assertJsonStructure(['details' => ['primary_currency', 'secondary_currency', 'timezone', 'session_minutes']]);
 
         $this->withToken($token)->putJson($this->tenantUrl('acme', '/settings'), $this->payload(['secondary_currency' => 'PEN']))
             ->assertStatus(422)

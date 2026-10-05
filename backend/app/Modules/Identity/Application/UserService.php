@@ -25,6 +25,8 @@ class UserService
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'phone' => $data['phone'] ?? null,
+                'doc_type' => $data['doc_type'] ?? null,
+                'doc_number' => $data['doc_number'] ?? null,
                 'status' => User::STATUS_ACTIVE,
             ]);
 
@@ -53,6 +55,8 @@ class UserService
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'phone' => $data['phone'] ?? null,
+                'doc_type' => $data['doc_type'] ?? null,
+                'doc_number' => $data['doc_number'] ?? null,
                 'status' => $data['status'],
             ]);
 
@@ -72,6 +76,6 @@ class UserService
      */
     private function snapshot(User $user): array
     {
-        return $user->only(['email', 'first_name', 'last_name', 'phone', 'status']);
+        return $user->only(['email', 'first_name', 'last_name', 'phone', 'doc_type', 'doc_number', 'status']);
     }
 }

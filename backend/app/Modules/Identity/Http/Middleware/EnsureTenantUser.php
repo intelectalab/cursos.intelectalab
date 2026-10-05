@@ -3,6 +3,8 @@
 namespace App\Modules\Identity\Http\Middleware;
 
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantSettingsService;
+use App\Shared\Auth\TokenIssuer;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
@@ -14,6 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureTenantUser
 {
+    public function __construct(private readonly TenantSettingsService $settings) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -22,6 +26,9 @@ class EnsureTenantUser
         if (! $user instanceof User || ! $user->isActive()) {
             throw new AuthenticationException;
         }
+
+        // La actividad mantiene viva la sesión; sin actividad, vence sola
+        TokenIssuer::touch($user->currentAccessToken(), $this->settings->sessionMinutes());
 
         return $next($request);
     }

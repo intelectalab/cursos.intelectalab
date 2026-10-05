@@ -7,12 +7,16 @@ return [
     | Política de sesiones (RF-AUTH-002)
     |--------------------------------------------------------------------------
     |
-    | Minutos de vigencia de una sesión desde que se inicia. Al vencer, el
-    | usuario debe volver a iniciar sesión.
+    | Minutos de inactividad tras los cuales una sesión se cierra. Es el valor
+    | por defecto: cada organización puede cambiarlo en su configuración.
     |
     */
 
-    'session_lifetime_minutes' => (int) env('AUTH_SESSION_LIFETIME', 720),
+    'session_lifetime_minutes' => (int) env('AUTH_SESSION_LIFETIME', 30),
+
+    'session_lifetime_min' => 5,
+
+    'session_lifetime_max' => 1440,
 
     /*
     |--------------------------------------------------------------------------

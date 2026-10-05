@@ -27,6 +27,8 @@ class TenantSettingsService
         'contact_address' => null,
         'terms' => null,
         'privacy_policy' => null,
+        // null = valor por defecto de la plataforma
+        'session_minutes' => null,
     ];
 
     public function __construct(private readonly AuditLogger $audit) {}
@@ -38,11 +40,25 @@ class TenantSettingsService
     {
         $stored = TenantSetting::query()->where('key', self::KEY)->value('value') ?? [];
 
+        $settings = array_merge(self::DEFAULTS, array_intersect_key($stored, self::DEFAULTS));
+        $settings['session_minutes'] ??= config('identity.session_lifetime_minutes');
+
         return [
             'name' => $tenant->name,
             'legal_name' => $tenant->legal_name,
             'tax_id' => $tenant->tax_id,
-        ] + array_merge(self::DEFAULTS, array_intersect_key($stored, self::DEFAULTS));
+        ] + $settings;
+    }
+
+    /**
+     * Minutos de inactividad tras los que se cierra una sesión en la
+     * organización del contexto actual.
+     */
+    public function sessionMinutes(): int
+    {
+        $stored = TenantSetting::query()->where('key', self::KEY)->value('value') ?? [];
+
+        return (int) ($stored['session_minutes'] ?? config('identity.session_lifetime_minutes'));
     }
 
     /**

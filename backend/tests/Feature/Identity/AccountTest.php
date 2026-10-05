@@ -138,15 +138,42 @@ class AccountTest extends TestCase
         $this->withToken($studentToken)->getJson($this->tenantUrl('acme', '/auth/me'))->assertOk();
     }
 
-    public function test_sessions_expire_according_to_policy(): void
+    public function test_session_closes_after_inactivity_and_stays_open_while_in_use(): void
     {
         $this->provisionTenant('acme', 'admin@acme.com');
         $token = $this->login('acme', 'admin@acme.com');
+        $me = $this->tenantUrl('acme', '/auth/me');
 
-        $this->travel(config('identity.session_lifetime_minutes') - 1)->minutes();
-        $this->withToken($token)->getJson($this->tenantUrl('acme', '/auth/me'))->assertOk();
+        // Con actividad la sesión sigue viva más allá de los 30 minutos
+        foreach (range(1, 3) as $ignored) {
+            $this->travel(20)->minutes();
+            $this->withToken($token)->getJson($me)->assertOk();
+        }
 
-        $this->travel(2)->minutes();
+        // Sin actividad durante más de 30 minutos, se cierra
+        $this->travel(31)->minutes();
+        $this->withToken($token)->getJson($me)->assertUnauthorized();
+    }
+
+    public function test_administrator_changes_the_inactivity_timeout_of_the_organization(): void
+    {
+        $this->provisionTenant('acme', 'admin@acme.com');
+        $this->provisionTenant('otra', 'admin@otra.com');
+        $admin = $this->login('acme', 'admin@acme.com');
+
+        $settings = $this->withToken($admin)->getJson($this->tenantUrl('acme', '/settings'))->json('data');
+        $this->withToken($admin)
+            ->putJson($this->tenantUrl('acme', '/settings'), ['session_minutes' => 10] + $settings)
+            ->assertOk()
+            ->assertJsonPath('data.session_minutes', 10);
+
+        $token = $this->login('acme', 'admin@acme.com');
+        $other = $this->login('otra', 'admin@otra.com');
+
+        $this->travel(11)->minutes();
+
+        // Vence a los 10 minutos en esta organización; la otra conserva los 30
         $this->withToken($token)->getJson($this->tenantUrl('acme', '/auth/me'))->assertUnauthorized();
+        $this->withToken($other)->getJson($this->tenantUrl('otra', '/auth/me'))->assertOk();
     }
 }

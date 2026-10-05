@@ -1,5 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, CheckCircle2, FileText, Globe2, Phone, Settings as SettingsIcon, type LucideIcon } from 'lucide-react';
+import {
+  Building2,
+  CheckCircle2,
+  FileText,
+  Globe2,
+  Phone,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, Card, ErrorState, Field, IconChip, INPUT_CLASS, LoadingState, PageHeader, type Tone } from '../../../shared/ui';
@@ -16,13 +25,23 @@ interface Settings {
   contact_address: string | null;
   terms: string | null;
   privacy_policy: string | null;
+  session_minutes: number;
+}
+
+interface Limits {
+  min: number;
+  max: number;
 }
 
 const CURRENCY_LABEL: Record<string, string> = { PEN: 'Soles (PEN)', USD: 'Dólares (USD)' };
 
 const fetchSettings = async () => {
   const response = await api.get('/settings');
-  return { settings: response.data.data as Settings, currencies: response.data.meta.currencies as string[] };
+  return {
+    settings: response.data.data as Settings,
+    currencies: response.data.meta.currencies as string[],
+    sessionLimits: response.data.meta.session_minutes as Limits,
+  };
 };
 
 const Section: React.FC<{ title: string; text: string; icon: LucideIcon; tone: Tone; children: React.ReactNode }> = ({
@@ -50,6 +69,7 @@ export const SettingsPage: React.FC = () => {
 
   const [form, setForm] = useState<Settings | null>(null);
   const [currencies, setCurrencies] = useState<string[]>([]);
+  const [sessionLimits, setSessionLimits] = useState<Limits>({ min: 5, max: 1440 });
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
   const [status, setStatus] = useState<'idle' | 'processing' | 'saved'>('idle');
@@ -65,6 +85,7 @@ export const SettingsPage: React.FC = () => {
         if (!active) return;
         setForm(result.settings);
         setCurrencies(result.currencies);
+        setSessionLimits(result.sessionLimits);
         setState('ready');
       })
       .catch((err) => {
@@ -207,6 +228,29 @@ export const SettingsPage: React.FC = () => {
           </Field>
           <Field label="Dirección">
             <input {...text('contact_address')} maxLength={255} />
+          </Field>
+        </div>
+      </Section>
+
+      <Section icon={ShieldCheck} tone="warning" title="Seguridad" text="Protección de las sesiones de todos los usuarios de la organización.">
+        <div className="max-w-xs">
+          <Field
+            label="Cierre de sesión por inactividad (minutos)"
+            hint={`Entre ${sessionLimits.min} y ${sessionLimits.max}. Aplica a las sesiones que se inicien desde ahora.`}
+          >
+            <input
+              className={INPUT_CLASS}
+              type="number"
+              required
+              min={sessionLimits.min}
+              max={sessionLimits.max}
+              disabled={!editable}
+              value={form.session_minutes}
+              onChange={(event) => {
+                setForm({ ...form, session_minutes: Number(event.target.value) });
+                setStatus('idle');
+              }}
+            />
           </Field>
         </div>
       </Section>

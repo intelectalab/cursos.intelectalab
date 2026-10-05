@@ -1,11 +1,21 @@
 import { api } from '../../shared/api/client';
 
+export type DocumentType = 'DNI' | 'CE' | 'PASAPORTE';
+
+export const DOCUMENT_TYPES: Record<DocumentType, string> = {
+  DNI: 'DNI',
+  CE: 'Carné de extranjería',
+  PASAPORTE: 'Pasaporte',
+};
+
 export interface UserRow {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
   phone: string | null;
+  doc_type: DocumentType | null;
+  doc_number: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   roles: string[];
   role_ids: string[];
@@ -40,6 +50,8 @@ export interface UserInput {
   first_name: string;
   last_name: string;
   phone: string | null;
+  doc_type: DocumentType | null;
+  doc_number: string | null;
 }
 
 export interface RoleInput {
