@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pencil, Plus, Search } from 'lucide-react';
+import { Pencil, Plus, Search, UserCog, Users } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
   Alert,
+  Avatar,
   Badge,
   Button,
   Card,
+  CHECKBOX_CLASS,
   EmptyState,
   ErrorState,
   Field,
@@ -14,6 +16,13 @@ import {
   LoadingState,
   Modal,
   PageHeader,
+  Pagination,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
 } from '../../../shared/ui';
 import { identityApi, type PageMeta, type Role, type UserRow } from '../api';
 
@@ -98,6 +107,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
   return (
     <Modal
       title={user ? 'Editar usuario' : 'Nuevo usuario'}
+      subtitle={user ? user.email : 'Tendrá acceso a tu organización con los roles que elijas.'}
       onClose={onClose}
       footer={
         <>
@@ -110,7 +120,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
         </>
       }
     >
-      <form id="user-form" onSubmit={handleSubmit} className="space-y-3.5">
+      <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
         {error && <Alert>{error}</Alert>}
 
         <div className="grid grid-cols-2 gap-3">
@@ -160,22 +170,24 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
         </div>
 
         <fieldset>
-          <legend className="block text-[11px] font-semibold text-slate-700 mb-1.5">Roles</legend>
+          <legend className="block text-[13px] font-medium text-slate-700 mb-1.5">Roles</legend>
           <div className="grid grid-cols-2 gap-2">
-            {roles.map((role) => (
-              <label
-                key={role.id}
-                className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-700 cursor-pointer hover:bg-slate-50"
-              >
-                <input
-                  type="checkbox"
-                  className="accent-[#084586]"
-                  checked={form.roles.includes(role.id)}
-                  onChange={() => toggleRole(role.id)}
-                />
-                <span className="truncate">{role.name}</span>
-              </label>
-            ))}
+            {roles.map((role) => {
+              const checked = form.roles.includes(role.id);
+              return (
+                <label
+                  key={role.id}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 border rounded-xl text-[13px] cursor-pointer transition-colors ${
+                    checked
+                      ? 'border-brand-300 bg-brand-50 text-brand-800'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <input type="checkbox" className={CHECKBOX_CLASS} checked={checked} onChange={() => toggleRole(role.id)} />
+                  <span className="truncate font-medium">{role.name}</span>
+                </label>
+              );
+            })}
           </div>
         </fieldset>
       </form>
@@ -230,11 +242,12 @@ export const UsersPage: React.FC = () => {
     <div>
       <PageHeader
         title="Usuarios"
+        icon={UserCog}
         subtitle="Personas con acceso a tu organización y los roles que tienen asignados."
         action={
           canCreate &&
           canPickRoles && (
-            <Button variant="primary" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => setEditing('new')}>
+            <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setEditing('new')}>
               Nuevo usuario
             </Button>
           )
@@ -242,9 +255,9 @@ export const UsersPage: React.FC = () => {
       />
 
       <Card>
-        <div className="flex flex-wrap items-center gap-3 p-4 border-b border-slate-200">
+        <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-200/80">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               className={`${INPUT_CLASS} pl-9`}
               placeholder="Buscar por nombre o correo"
@@ -257,7 +270,7 @@ export const UsersPage: React.FC = () => {
             />
           </div>
           <select
-            className={`${INPUT_CLASS} w-auto`}
+            className={`${INPUT_CLASS} !w-48`}
             aria-label="Filtrar por estado"
             value={status}
             onChange={(event) => {
@@ -275,77 +288,84 @@ export const UsersPage: React.FC = () => {
         {state === 'error' && <ErrorState message={errorMessage} onRetry={load} />}
         {state === 'ready' && rows.length === 0 && (
           <EmptyState
-            title={filtered ? 'Sin resultados' : 'Aún no hay usuarios'}
+            icon={Users}
+            title={filtered ? 'Sin resultados con estos filtros' : 'Aún no hay usuarios'}
             text={filtered ? 'Prueba con otra búsqueda o cambia el filtro de estado.' : undefined}
+            action={
+              filtered && (
+                <Button
+                  onClick={() => {
+                    setSearch('');
+                    setStatus('');
+                    setPage(1);
+                  }}
+                >
+                  Quitar filtros
+                </Button>
+              )
+            }
           />
         )}
 
         {state === 'ready' && rows.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500">
-                  <th className="px-4 py-2.5 font-semibold">Nombre</th>
-                  <th className="px-4 py-2.5 font-semibold">Correo</th>
-                  <th className="px-4 py-2.5 font-semibold">Roles</th>
-                  <th className="px-4 py-2.5 font-semibold">Estado</th>
-                  <th className="px-4 py-2.5 font-semibold">Último acceso</th>
-                  {canUpdate && <th className="px-4 py-2.5" />}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
-                      {user.first_name} {user.last_name}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.map((role) => (
-                          <Badge key={role} tone="info">
-                            {role}
-                          </Badge>
-                        ))}
+          <Table>
+            <THead>
+              <Th>Usuario</Th>
+              <Th>Roles</Th>
+              <Th>Estado</Th>
+              <Th>Último acceso</Th>
+              {canUpdate && <Th />}
+            </THead>
+            <TBody>
+              {rows.map((user) => (
+                <Tr key={user.id}>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={`${user.first_name} ${user.last_name}`} />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900 truncate">
+                          {user.first_name} {user.last_name}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">{user.email}</p>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={user.status === 'ACTIVE' ? 'success' : 'neutral'}>{STATUS_LABEL[user.status]}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(user.last_login_at)}</td>
-                    {canUpdate && (
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          icon={<Pencil className="w-3 h-3" />}
-                          onClick={() => setEditing(user)}
-                          disabled={!canPickRoles}
-                          title={canPickRoles ? undefined : 'Necesitas el permiso para consultar roles'}
-                        >
-                          Editar
-                        </Button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </Td>
+                  <Td>
+                    <div className="flex flex-wrap gap-1.5">
+                      {user.roles.map((role) => (
+                        <Badge key={role} tone="brand">
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
+                  </Td>
+                  <Td>
+                    <Badge tone={user.status === 'ACTIVE' ? 'success' : 'neutral'} dot>
+                      {STATUS_LABEL[user.status]}
+                    </Badge>
+                  </Td>
+                  <Td className="text-slate-500 whitespace-nowrap tnum">{formatDate(user.last_login_at)}</Td>
+                  {canUpdate && (
+                    <Td className="text-right">
+                      <Button
+                        size="sm"
+                        icon={<Pencil className="w-3.5 h-3.5" />}
+                        onClick={() => setEditing(user)}
+                        disabled={!canPickRoles}
+                        title={canPickRoles ? undefined : 'Necesitas el permiso para consultar roles'}
+                      >
+                        Editar
+                      </Button>
+                    </Td>
+                  )}
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
         )}
 
-        {state === 'ready' && meta && meta.last_page > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 text-xs text-slate-500">
-            <span>
-              Página {meta.page} de {meta.last_page} · {meta.total} usuarios
-            </span>
-            <div className="flex gap-2">
-              <Button disabled={meta.page <= 1} onClick={() => setPage(meta.page - 1)}>
-                Anterior
-              </Button>
-              <Button disabled={meta.page >= meta.last_page} onClick={() => setPage(meta.page + 1)}>
-                Siguiente
-              </Button>
-            </div>
-          </div>
+        {state === 'ready' && meta && (
+          <Pagination page={meta.page} lastPage={meta.last_page} total={meta.total} noun="usuarios" onPage={setPage} />
         )}
       </Card>
 

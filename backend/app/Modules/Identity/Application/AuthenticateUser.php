@@ -3,6 +3,7 @@
 namespace App\Modules\Identity\Application;
 
 use App\Modules\Identity\Domain\Models\User;
+use App\Shared\Auth\TokenIssuer;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Tenancy\TenantContext;
@@ -65,6 +66,6 @@ class AuthenticateUser
 
         $user->forceFill(['last_login_at' => now()])->save();
 
-        return [$user, $user->createToken('auth-token')->plainTextToken];
+        return [$user, TokenIssuer::issue($user)];
     }
 }

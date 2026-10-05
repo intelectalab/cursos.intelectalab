@@ -151,7 +151,7 @@ class ExportAccessDocsCommand extends Command
             '| --- | --- | --- | --- |',
             '| Academia demo | `http://demo.localhost:5173` | `admin@plataforma.com` | Administrador |',
             '| Academia demo | `http://demo.localhost:5173` | `alumno@plataforma.com` | Alumno |',
-            '| Plataforma (solo API por ahora) | `http://localhost:5173/api/v1/platform` | `plataforma@intelectalab.test` | Administrador de plataforma |',
+            '| Consola de plataforma | `http://localhost:5173/platform` | `plataforma@intelectalab.test` | Administrador de plataforma |',
             '',
             'En otros ambientes el administrador de plataforma se crea con `php artisan platform:create-admin`.',
             '',

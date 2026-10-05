@@ -23,13 +23,16 @@ type State =
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 const Notice: React.FC<{ title: string; text: string; action?: React.ReactNode }> = ({ title, text, action }) => (
-  <div className="min-h-screen flex flex-col items-center justify-center bg-[#F0F4F8] p-6 text-center">
-    <div className="w-12 h-12 rounded-xl bg-[#084586]/10 text-[#084586] flex items-center justify-center mb-4">
-      <Building2 className="w-6 h-6" />
+  <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-6 text-center">
+    <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-sky-500/25 blur-[110px] pointer-events-none" />
+    <div className="relative w-full max-w-[420px] bg-white rounded-3xl shadow-pop p-9">
+      <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4 ring-8 ring-brand-50/50">
+        <Building2 className="w-5 h-5" />
+      </div>
+      <h1 className="text-lg font-bold text-slate-900 tracking-tight">{title}</h1>
+      <p className="text-[13px] text-slate-500 mt-1.5">{text}</p>
+      {action && <div className="mt-6">{action}</div>}
     </div>
-    <h1 className="text-lg font-bold text-slate-900">{title}</h1>
-    <p className="text-xs text-slate-500 mt-1 max-w-sm">{text}</p>
-    {action && <div className="mt-5">{action}</div>}
   </div>
 );
 
@@ -64,8 +67,8 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   if (state.status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F0F4F8]">
-        <Loader2 className="w-6 h-6 animate-spin text-[#084586]" aria-label="Cargando" />
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
+        <Loader2 className="w-6 h-6 animate-spin text-brand-600" aria-label="Cargando" />
       </div>
     );
   }
@@ -78,7 +81,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         action={
           <a
             href={centralUrl(guessCentralDomain(), '/register')}
-            className="text-xs font-bold text-[#0284C7] hover:text-[#084586]"
+            className="inline-flex items-center justify-center h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-brand-700 to-brand-600 hover:from-brand-800 hover:to-brand-700"
           >
             Registrar nueva organización
           </a>
@@ -105,7 +108,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="text-xs font-bold text-[#0284C7] hover:text-[#084586] cursor-pointer"
+            className="inline-flex items-center justify-center h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-r from-brand-700 to-brand-600 hover:from-brand-800 hover:to-brand-700 cursor-pointer"
           >
             Reintentar
           </button>

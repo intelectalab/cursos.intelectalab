@@ -1,6 +1,9 @@
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
-import { LogOut, Building2, Bell, Shield, Menu } from 'lucide-react';
+import { APP_MODULES } from '../../config/modules';
+import { Avatar } from '../../shared/ui';
+import { ChevronRight, Globe, LogOut, PanelLeft } from 'lucide-react';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -9,76 +12,67 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { user, tenant, logout } = useAuth();
+  const { pathname } = useLocation();
 
-  const initials = `${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`.toUpperCase() || 'U';
+  const current = APP_MODULES.find((module) => pathname.startsWith(module.href));
+  const section = current?.name ?? (pathname.startsWith('/account') ? 'Mi cuenta' : '');
+  const fullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim();
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20 select-none shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-      {/* Botón Hamburguesa e Información del Tenant */}
-      <div className="flex items-center gap-3">
+    <header className="h-16 shrink-0 bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-20">
+      {/* Menú y ubicación */}
+      <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
           onClick={onToggleSidebar}
           aria-label="Alternar barra lateral"
-          className="p-2 text-slate-500 hover:text-[#084586] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          className="p-2 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors cursor-pointer"
         >
-          <Menu className="w-5 h-5" />
+          <PanelLeft className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200/90 px-3 py-1.5 rounded-lg">
-          <div className="w-6 h-6 rounded-md bg-[#084586]/10 text-[#084586] flex items-center justify-center">
-            <Building2 className="w-3.5 h-3.5 text-[#084586]" />
-          </div>
-          <div className="hidden sm:flex flex-col">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
-              Organización
-            </span>
-            <span className="text-xs font-bold text-slate-800 tracking-tight mt-0.5">
-              {tenant?.name}
-            </span>
-          </div>
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Activo
-          </span>
-        </div>
+        <nav className="flex items-center gap-1.5 text-[13px] min-w-0" aria-label="Ubicación">
+          <span className="hidden sm:inline text-slate-500 truncate">{tenant?.name}</span>
+          {section && (
+            <>
+              <ChevronRight className="hidden sm:inline w-3.5 h-3.5 text-slate-300 shrink-0" />
+              <span className="font-semibold text-slate-900 truncate" aria-current="page">
+                {section}
+              </span>
+            </>
+          )}
+        </nav>
       </div>
 
-      {/* Perfil y Acciones */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      {/* Organización, cuenta y salida */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="hidden lg:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-brand-50 text-brand-700 text-xs font-medium ring-1 ring-inset ring-brand-100">
+          <Globe className="w-3.5 h-3.5" />
+          {window.location.hostname}
+        </span>
+
+        <div className="hidden sm:block h-6 w-px bg-slate-200" />
+
+        <Link
+          to="/account"
+          title="Mi cuenta"
+          className="flex items-center gap-2.5 rounded-xl pl-1 pr-2.5 py-1 hover:bg-slate-100 transition-colors"
+        >
+          <Avatar name={fullName} />
+          <div className="hidden md:block text-left leading-tight">
+            <p className="text-[13px] font-semibold text-slate-900">{fullName}</p>
+            <p className="text-xs text-slate-500">{user?.roles[0]}</p>
+          </div>
+        </Link>
+
         <button
           type="button"
-          className="p-2 text-slate-400 hover:text-[#084586] hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
-          title="Notificaciones del Sistema"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#0284C7] rounded-full ring-2 ring-white" />
-        </button>
-
-        <div className="h-6 w-px bg-slate-200" />
-
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-[#062F5E] via-[#084586] to-[#0284C7] text-white flex items-center justify-center font-bold text-xs shadow-sm shadow-[#062F5E]/20">
-            {initials}
-          </div>
-          <div className="hidden md:block text-left">
-            <p className="text-xs font-bold text-slate-900 leading-tight">
-              {user?.first_name} {user?.last_name}
-            </p>
-            <div className="flex items-center gap-1 mt-0.5">
-              <Shield className="w-3 h-3 text-[#0284C7]" />
-              <span className="text-[10px] font-semibold text-[#084586] uppercase tracking-wide">
-                {user?.roles[0]}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <button
           onClick={logout}
-          title="Cerrar Sesión"
-          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer ml-1"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-[18px] h-[18px]" />
         </button>
       </div>
     </header>

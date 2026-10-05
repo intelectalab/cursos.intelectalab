@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Lock, Plus, Trash2 } from 'lucide-react';
+import { Lock, Plus, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { can } from '../../../shared/auth/permissions';
@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Card,
+  CHECKBOX_CLASS,
   EmptyState,
   ErrorState,
   Field,
@@ -166,55 +167,65 @@ export const RolesPage: React.FC = () => {
     <div>
       <PageHeader
         title="Roles y permisos"
+        icon={ShieldCheck}
         subtitle="Crea roles propios y define a qué módulos accede cada uno. Los roles base no se pueden modificar."
         action={
           canCreate && (
-            <Button variant="primary" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => select(NEW_DRAFT)}>
+            <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => select(NEW_DRAFT)}>
               Nuevo rol
             </Button>
           )
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4 items-start">
-        <Card className="p-2">
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5 items-start">
+        <Card className="p-2 lg:sticky lg:top-2">
+          <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-slate-500">Roles de la organización</p>
           <ul className="space-y-0.5">
             {draft?.id === null && (
-              <li className="px-3 py-2.5 rounded-lg bg-[#084586]/10 text-xs font-semibold text-[#084586]">
+              <li className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-brand-50 ring-1 ring-inset ring-brand-200 text-[13px] font-semibold text-brand-800">
+                <Plus className="w-4 h-4" />
                 Nuevo rol
               </li>
             )}
-            {roles.map((role) => (
-              <li key={role.id}>
-                <button
-                  type="button"
-                  onClick={() => select(toDraft(role))}
-                  className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-left text-xs cursor-pointer transition-colors ${
-                    draft?.id === role.id ? 'bg-[#084586]/10 text-[#084586]' : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <span className="min-w-0">
-                    <span className="block font-semibold truncate">{role.name}</span>
-                    <span className="block text-[11px] text-slate-500">
-                      {role.users_count} {role.users_count === 1 ? 'usuario' : 'usuarios'}
+            {roles.map((role) => {
+              const active = draft?.id === role.id;
+              return (
+                <li key={role.id}>
+                  <button
+                    type="button"
+                    onClick={() => select(toDraft(role))}
+                    aria-current={active || undefined}
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-left text-[13px] cursor-pointer transition-colors ${
+                      active
+                        ? 'bg-brand-50 ring-1 ring-inset ring-brand-200 text-brand-800'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-semibold truncate">{role.name}</span>
+                      <span className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+                        <Users className="w-3 h-3" />
+                        {role.users_count} {role.users_count === 1 ? 'usuario' : 'usuarios'}
+                      </span>
                     </span>
-                  </span>
-                  {role.is_system && <Badge>Base</Badge>}
-                </button>
-              </li>
-            ))}
+                    {role.is_system ? <Badge>Base</Badge> : <Badge tone="violet">Propio</Badge>}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </Card>
 
         {!draft ? (
           <Card>
-            <EmptyState title="Selecciona un rol" />
+            <EmptyState icon={ShieldCheck} title="Selecciona un rol" text="Elige un rol de la lista o crea uno nuevo." />
           </Card>
         ) : (
-          <form onSubmit={handleSave} className="space-y-4">
-            <Card className="p-5 space-y-3.5">
+          <form onSubmit={handleSave} className="space-y-5">
+            <Card className="p-5 space-y-4">
               {isSystem && (
-                <div className="flex items-start gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600">
+                <div className="flex items-start gap-2.5 px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[13px] text-slate-600">
                   <Lock className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
                   <span>
                     Este es un rol base de la plataforma: no se puede modificar ni eliminar. Para un acceso distinto,
@@ -248,9 +259,19 @@ export const RolesPage: React.FC = () => {
             </Card>
 
             {hasFullAccess ? (
-              <Card className="p-5 text-xs text-slate-600">
-                Este rol tiene <strong className="text-slate-900">acceso total</strong> a todos los módulos de la
-                organización.
+              <Card className="relative overflow-hidden p-6">
+                <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-sky-400/15 blur-3xl pointer-events-none" />
+                <div className="relative flex items-center gap-3.5">
+                  <span className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-sky-500 text-white flex items-center justify-center shadow-md shadow-brand-700/25">
+                    <ShieldCheck className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Acceso total</p>
+                    <p className="text-[13px] text-slate-500">
+                      Este rol puede usar todos los módulos de la organización, incluidos los que se agreguen después.
+                    </p>
+                  </div>
+                </div>
               </Card>
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -261,19 +282,27 @@ export const RolesPage: React.FC = () => {
                   const allSelected = selectable.length > 0 && selectable.every((c) => draft.permissions.includes(c));
 
                   return (
-                    <Card key={module.module}>
-                      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200">
-                        <div>
-                          <h3 className="text-xs font-bold text-slate-900">{module.name}</h3>
-                          <p className="text-[11px] text-slate-500">
-                            {selectedCount} de {codes.length} permisos
-                          </p>
+                    <Card key={module.module} className="overflow-hidden">
+                      <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200/80 bg-slate-50/60">
+                        <div className="min-w-0">
+                          <h3 className="text-[13px] font-semibold text-slate-900">{module.name}</h3>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="h-1.5 w-20 rounded-full bg-slate-200 overflow-hidden">
+                              <span
+                                className="block h-full rounded-full bg-gradient-to-r from-brand-600 to-sky-500 transition-all"
+                                style={{ width: `${(selectedCount / codes.length) * 100}%` }}
+                              />
+                            </span>
+                            <span className="text-xs text-slate-500 tnum">
+                              {selectedCount} de {codes.length}
+                            </span>
+                          </div>
                         </div>
                         {editable && selectable.length > 0 && (
-                          <label className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 cursor-pointer">
+                          <label className="flex items-center gap-2 shrink-0 whitespace-nowrap text-xs font-medium text-slate-600 cursor-pointer">
                             <input
                               type="checkbox"
-                              className="accent-[#084586]"
+                              className={CHECKBOX_CLASS}
                               checked={allSelected}
                               onChange={(event) => toggleModule(module, event.target.checked)}
                             />
@@ -284,22 +313,31 @@ export const RolesPage: React.FC = () => {
                       <ul className="p-2">
                         {module.permissions.map((permission) => {
                           const allowed = grantable(permission.code);
+                          const checked = draft.permissions.includes(permission.code);
                           return (
                             <li key={permission.code}>
                               <label
-                                className={`flex items-start gap-2.5 px-2 py-1.5 rounded-md text-xs ${
-                                  editable && allowed ? 'cursor-pointer hover:bg-slate-50' : ''
+                                className={`flex items-start gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-colors ${
+                                  editable && allowed ? 'cursor-pointer hover:bg-brand-50/50' : ''
                                 }`}
                                 title={editable && !allowed ? 'No puedes otorgar un permiso que tu usuario no tiene' : undefined}
                               >
                                 <input
                                   type="checkbox"
-                                  className="accent-[#084586] mt-0.5"
+                                  className={`${CHECKBOX_CLASS} mt-0.5`}
                                   disabled={!editable || !allowed}
-                                  checked={draft.permissions.includes(permission.code)}
+                                  checked={checked}
                                   onChange={() => toggle(permission.code)}
                                 />
-                                <span className={editable && !allowed ? 'text-slate-400' : 'text-slate-700'}>
+                                <span
+                                  className={
+                                    editable && !allowed
+                                      ? 'text-slate-400'
+                                      : checked
+                                        ? 'text-slate-900 font-medium'
+                                        : 'text-slate-600'
+                                  }
+                                >
                                   {permission.description}
                                 </span>
                               </label>
@@ -314,12 +352,12 @@ export const RolesPage: React.FC = () => {
             )}
 
             {editable && (
-              <div className="flex items-center justify-between gap-3">
+              <div className="sticky bottom-0 flex items-center justify-between gap-3 px-5 py-3.5 bg-white/90 backdrop-blur border border-slate-200/80 rounded-2xl shadow-raised">
                 <div>
                   {draft.id && canDelete && (
                     <Button
                       variant="danger"
-                      icon={<Trash2 className="w-3.5 h-3.5" />}
+                      icon={<Trash2 className="w-4 h-4" />}
                       onClick={handleDelete}
                       processing={processing === 'delete'}
                       disabled={processing !== null}

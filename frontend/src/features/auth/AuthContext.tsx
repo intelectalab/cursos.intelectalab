@@ -12,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (data: AuthSession) => void;
   logout: () => Promise<void>;
+  refresh: () => Promise<void>;
   hasPermission: (permission: string | string[]) => boolean;
 }
 
@@ -39,8 +40,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clear();
   }, [clear]);
 
-  // La sesión guardada se revalida contra el servidor al cargar la aplicación:
-  // roles y permisos pueden haber cambiado, o el token haber sido revocado.
+  // Vuelve a leer usuario, organización y permisos desde el servidor
+  const refresh = useCallback(async () => {
+    const saved = loadSession();
+    if (!saved) return;
+
+    const response = await api.get('/auth/me');
+    login({ ...response.data.data, token: saved.token });
+  }, [login]);
+
+  // La sesión guardada se revalida al cargar la aplicación: roles y permisos
+  // pueden haber cambiado, o el token haber sido revocado.
   useEffect(() => {
     const saved = loadSession();
     if (!saved) return;
@@ -77,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!session,
         login,
         logout,
+        refresh,
         hasPermission: (permission) => can(permissions, permission),
       }}
     >

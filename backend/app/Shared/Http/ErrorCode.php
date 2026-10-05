@@ -24,6 +24,7 @@ enum ErrorCode: string
     case InvalidCredentials = 'INVALID_CREDENTIALS';
     case TooManyAttempts = 'TOO_MANY_ATTEMPTS';
     case AccountInactive = 'ACCOUNT_INACTIVE';
+    case InvalidResetToken = 'INVALID_RESET_TOKEN';
     case PermissionDenied = 'PERMISSION_DENIED';
     case PrivilegeEscalation = 'PRIVILEGE_ESCALATION';
     case RoleIsSystem = 'ROLE_IS_SYSTEM';

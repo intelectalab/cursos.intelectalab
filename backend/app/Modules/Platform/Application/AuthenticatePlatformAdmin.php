@@ -3,6 +3,7 @@
 namespace App\Modules\Platform\Application;
 
 use App\Modules\Platform\Domain\Models\PlatformAdmin;
+use App\Shared\Auth\TokenIssuer;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Support\Facades\Hash;
@@ -54,6 +55,6 @@ class AuthenticatePlatformAdmin
 
         $admin->forceFill(['last_login_at' => now()])->save();
 
-        return [$admin, $admin->createToken('platform-token')->plainTextToken];
+        return [$admin, TokenIssuer::issue($admin)];
     }
 }

@@ -1,6 +1,71 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
 
+/*
+  Tokens de marca IntelectaLab. Los componentes usan estos nombres
+  (brand-*, canvas, shadow-card…) en lugar de colores sueltos.
+*/
 @theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Azul de marca: del azul marino del logo al celeste de acento */
+  --color-brand-50: #eef5fc;
+  --color-brand-100: #d9e8f7;
+  --color-brand-200: #b5d2ef;
+  --color-brand-300: #85b4e3;
+  --color-brand-400: #4e8fd3;
+  --color-brand-500: #1f6fbf;
+  --color-brand-600: #0f5aa6;
+  --color-brand-700: #084586;
+  --color-brand-800: #062f5e;
+  --color-brand-900: #041e3d;
+  --color-brand-950: #03152b;
+
+  /* Fondo de la aplicación */
+  --color-canvas: #f3f6fb;
+
+  --shadow-card: 0 1px 2px rgb(6 47 94 / 0.04), 0 6px 20px -8px rgb(6 47 94 / 0.1);
+  --shadow-raised: 0 2px 4px rgb(6 47 94 / 0.06), 0 14px 32px -10px rgb(6 47 94 / 0.18);
+  --shadow-pop: 0 24px 56px -12px rgb(3 21 43 / 0.35);
+
   --color-erp-bg: #F8FAFC;
   --color-erp-border: #E2E8F0;
+}
+
+@layer base {
+  body {
+    @apply bg-canvas text-slate-700 antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Foco visible en todo control */
+  :focus-visible {
+    outline: 2px solid var(--color-sky-500);
+    outline-offset: 2px;
+  }
+}
+
+/* Cifras alineadas en columnas numéricas y KPI */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@utility animate-rise {
+  animation: rise-in 0.28s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

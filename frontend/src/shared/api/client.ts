@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { loadSession } from '../auth/sessionStorage';
+import { currentToken } from '../auth/sessionStorage';
 
 // Formato de error estándar de la API
 export interface ApiError {
@@ -20,7 +20,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = loadSession()?.token;
+  const token = currentToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -31,7 +31,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     // Token vencido o revocado: se cierra la sesión local
-    if (axios.isAxiosError(error) && error.response?.status === 401 && loadSession()) {
+    if (axios.isAxiosError(error) && error.response?.status === 401 && currentToken()) {
       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
     }
     return Promise.reject(error);

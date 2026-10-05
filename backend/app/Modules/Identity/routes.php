@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Identity\Http\Controllers\AccountController;
 use App\Modules\Identity\Http\Controllers\AuthController;
 use App\Modules\Identity\Http\Controllers\RoleController;
 use App\Modules\Identity\Http\Controllers\UserController;
@@ -8,10 +9,18 @@ use Illuminate\Support\Facades\Route;
 // Todo el módulo opera dentro del subdominio de una organización
 Route::middleware('tenant')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/forgot-password', [AccountController::class, 'forgotPassword'])->middleware('throttle:5,1');
+    Route::post('/auth/reset-password', [AccountController::class, 'resetPassword'])->middleware('throttle:10,1');
 
     Route::middleware(['auth:sanctum', 'tenant.user'])->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+        // Cuenta propia: no requiere permisos adicionales
+        Route::put('/auth/password', [AccountController::class, 'changePassword']);
+        Route::get('/auth/sessions', [AccountController::class, 'sessions']);
+        Route::delete('/auth/sessions', [AccountController::class, 'revokeOtherSessions']);
+        Route::delete('/auth/sessions/{session}', [AccountController::class, 'revokeSession'])->whereNumber('session');
 
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.read');
         Route::post('/users', [UserController::class, 'store'])->middleware('permission:users.create');

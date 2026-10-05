@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { useTenant } from '../../../shared/tenancy/TenantContext';
@@ -258,12 +258,12 @@ export const Login: React.FC = () => {
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                   Contraseña
                 </label>
-                <a 
-                  href="#reset" 
+                <Link
+                  to="/forgot-password" 
                   className="text-[11px] font-medium text-slate-400 hover:text-[#0284C7] transition-colors"
                 >
                   ¿Olvidaste tu contraseña?
-                </a>
+                </Link>
               </div>
               <div className="relative group">
                 <Lock className="w-4 h-4 text-slate-400 group-focus-within:text-[#0284C7] transition-colors absolute left-3.5 top-3.5 pointer-events-none" />

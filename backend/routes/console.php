@@ -2,6 +2,10 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+
+// Limpieza diaria de sesiones vencidas (RF-AUTH-002)
+Schedule::command('sanctum:prune-expired --hours=24')->daily();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
