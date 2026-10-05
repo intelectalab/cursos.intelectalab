@@ -160,6 +160,7 @@ export const coursesApi = {
       course: response.data.data as CourseDetail,
       canEditContent: response.data.meta.can_edit_content as boolean,
       canManageActivities: response.data.meta.can_manage_activities as boolean,
+      canReview: response.data.meta.can_review as boolean,
     };
   },
   async create(input: CourseInput) {

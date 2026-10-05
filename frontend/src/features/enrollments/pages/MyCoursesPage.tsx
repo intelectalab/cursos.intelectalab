@@ -44,8 +44,20 @@ const CourseCard: React.FC<{ course: MyCourse }> = ({ course }) => (
           </span>
         )}
       </div>
-      <span className="inline-flex items-center gap-1.5 mt-auto pt-4 text-[13px] font-semibold text-brand-700">
-        Entrar al curso <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+      <div className="mt-auto pt-4">
+        <div className="flex items-baseline justify-between text-xs mb-1.5">
+          <span className="text-slate-500">Avance</span>
+          <span className="font-semibold text-slate-800 tnum">{course.progress_percent ?? 0}%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+          <div
+            className={`h-full rounded-full ${course.progress_percent === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-600 to-sky-500'}`}
+            style={{ width: `${course.progress_percent ?? 0}%` }}
+          />
+        </div>
+      </div>
+      <span className="inline-flex items-center gap-1.5 pt-3 text-[13px] font-semibold text-brand-700">
+        {course.progress_percent === 100 ? 'Repasar el curso' : course.progress_percent ? 'Continuar' : 'Entrar al curso'} <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
       </span>
     </div>
   </Link>

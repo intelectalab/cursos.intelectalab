@@ -77,6 +77,43 @@ class ClassroomPresenter
     }
 
     /**
+     * Actividad tal como se publicó, con todo su contenido (preguntas y
+     * respuestas incluidas): es para el servidor, no para enviarla al alumno.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function activityOf(CourseVersion $version, string $activityId): ?array
+    {
+        foreach ($version->snapshot['sections'] ?? [] as $section) {
+            foreach ($section['activities'] ?? [] as $activity) {
+                if ($activity['id'] === $activityId) {
+                    return $activity;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Actividades de la versión, en orden, con el título de su sección.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function activitiesOf(CourseVersion $version): array
+    {
+        $activities = [];
+
+        foreach ($version->snapshot['sections'] ?? [] as $section) {
+            foreach ($section['activities'] ?? [] as $activity) {
+                $activities[] = $activity + ['section' => $section['title']];
+            }
+        }
+
+        return $activities;
+    }
+
+    /**
      * @param  array<string, mixed>  $resource
      * @return array<string, mixed>
      */

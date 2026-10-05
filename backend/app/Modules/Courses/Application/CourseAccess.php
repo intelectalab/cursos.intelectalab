@@ -67,6 +67,25 @@ class CourseAccess
     }
 
     /**
+     * Seguimiento de los alumnos: revisar entregas y ver notas y avance.
+     */
+    public function canReview(User $user, Course $course): bool
+    {
+        return $user->hasPermission('submissions.review')
+            || ($user->hasPermission('submissions.assigned.review') && $this->teaches($user, $course));
+    }
+
+    /**
+     * El curso debe existir para quien revisa: uno ajeno responde 404.
+     */
+    public function assertCanReview(User $user, Course $course): void
+    {
+        if (! $this->canReview($user, $course)) {
+            throw new ApiException(ErrorCode::NotFound, 'El curso no existe.', 404);
+        }
+    }
+
+    /**
      * Un curso ajeno responde igual que uno inexistente.
      */
     public function assertCanView(User $user, Course $course): void

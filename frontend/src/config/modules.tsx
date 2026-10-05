@@ -2,7 +2,6 @@ import type React from 'react';
 import {
   LayoutDashboard,
   BookOpen,
-  ClipboardCheck,
   GraduationCap,
   Library,
   Users,
@@ -89,24 +88,6 @@ export const APP_MODULES: ModuleItem[] = [
     group: 'operation',
     permission: 'question_banks.read',
     component: QuestionBanksPage,
-  },
-  {
-    id: 'academic',
-    name: 'Académico',
-    description: 'Entregas, notas y progreso',
-    href: '/academic',
-    icon: ClipboardCheck,
-    tone: 'violet',
-    group: 'operation',
-    permission: 'courses.read',
-    component: () => (
-      <ComingSoon
-        title="Académico"
-        description="Entregas de los alumnos, notas y progreso."
-        icon={ClipboardCheck}
-        features={['Revisión de tareas', 'Resultados de cuestionarios', 'Respuestas de encuestas', 'Progreso por alumno']}
-      />
-    ),
   },
   {
     id: 'crm',

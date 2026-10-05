@@ -4,7 +4,9 @@ namespace App\Modules\Enrollments\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Enrollments\Application\EnrollmentService;
+use App\Modules\Enrollments\Application\ProgressService;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
+use App\Modules\Enrollments\Domain\Models\EnrollmentProgress;
 use App\Modules\Enrollments\Http\ClassroomPresenter;
 use App\Modules\Files\Application\FileStorage;
 use App\Modules\Files\Domain\Models\File;
@@ -22,7 +24,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class MyCoursesController extends Controller
 {
-    public function __construct(private readonly EnrollmentService $enrollments) {}
+    public function __construct(
+        private readonly EnrollmentService $enrollments,
+        private readonly ProgressService $progress,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -35,17 +40,37 @@ class MyCoursesController extends Controller
             ->get();
 
         return ApiResponse::success(
-            $enrollments->map(fn (Enrollment $enrollment) => ClassroomPresenter::summary($enrollment))->values()
+            $enrollments->map(fn (Enrollment $enrollment) => ClassroomPresenter::summary($enrollment) + [
+                'progress_percent' => $this->progress->summary($enrollment)['percent'],
+            ])->values()
         );
     }
 
     public function show(Request $request, string $course, TenantSettingsService $settings): JsonResponse
     {
+        $enrollment = $this->enrollments->activeFor($request->user(), $course);
+
         return ApiResponse::success(
-            ClassroomPresenter::classroom($this->enrollments->activeFor($request->user(), $course)),
+            ClassroomPresenter::classroom($enrollment) + ['progress' => $this->progress->summary($enrollment)],
             // Escala en la que se muestran las notas de la organización
             ['grade_scale' => $settings->gradeScale()]
         );
+    }
+
+    /**
+     * Un recurso cuenta como completado cuando el alumno lo abre.
+     */
+    public function completeResource(Request $request, string $course, string $resource): JsonResponse
+    {
+        $enrollment = $this->enrollments->activeFor($request->user(), $course);
+
+        if (! in_array($resource, $this->progress->items($enrollment->course->currentVersion)[EnrollmentProgress::TYPE_RESOURCE], true)) {
+            throw new ApiException(ErrorCode::NotFound, 'El recurso no existe.', 404);
+        }
+
+        $this->progress->complete($enrollment, EnrollmentProgress::TYPE_RESOURCE, $resource);
+
+        return ApiResponse::success($this->progress->summary($enrollment));
     }
 
     /**

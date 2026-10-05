@@ -33,6 +33,12 @@ return [
             'limit' => 'image',
             'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
         ],
+        // Entrega de una tarea: documentos, imágenes o un comprimido
+        'task_submission' => [
+            'visibility' => 'private',
+            'limit' => 'document',
+            'extensions' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'zip'],
+        ],
         'course_material' => [
             'visibility' => 'private',
             'limit' => 'document',

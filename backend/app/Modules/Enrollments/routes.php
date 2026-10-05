@@ -19,5 +19,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::get('/me/courses/{course}', [MyCoursesController::class, 'show'])->whereUuid('course');
         Route::get('/me/courses/{course}/resources/{resource}/download', [MyCoursesController::class, 'download'])
             ->whereUuid(['course', 'resource']);
+        Route::post('/me/courses/{course}/resources/{resource}/complete', [MyCoursesController::class, 'completeResource'])
+            ->whereUuid(['course', 'resource']);
     });
 });

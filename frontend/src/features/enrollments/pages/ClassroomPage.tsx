@@ -1,12 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Download, ExternalLink, FileText, Link2, Paperclip, Video, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Download, ExternalLink, FileText, Link2, Paperclip, Video, type LucideIcon } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
-import { Alert, Badge, Button, Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { Badge, Button, Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { ACTIVITY_LABEL, toScale } from '../../academic/api';
+import { QuizPanel } from '../../academic/components/QuizPanel';
+import { SurveyPanel, TaskPanel } from '../../academic/components/StudentPanels';
 import { ACTIVITY_ICON } from '../../academic/icons';
+import { studentApi, type ActivityState, type QuizState, type SurveyState, type TaskState } from '../../academic/studentApi';
 import { formatSize, RESOURCE_LABEL, type ResourceType } from '../../courses/api';
-import { enrollmentsApi, type Classroom, type ClassroomActivity, type ClassroomResource } from '../api';
+import { enrollmentsApi, type Classroom, type ClassroomActivity, type ClassroomResource, type Progress } from '../api';
 
 const RESOURCE_ICON: Record<ResourceType, LucideIcon> = { VIDEO: Video, DOCUMENT: Paperclip, LINK: Link2, TEXT: FileText };
 
@@ -90,29 +93,51 @@ const ResourceView: React.FC<{ courseId: string; resource: ClassroomResource }> 
   );
 };
 
-const ActivityView: React.FC<{ activity: ClassroomActivity; gradeScale: number }> = ({ activity, gradeScale }) => {
+const ActivityView: React.FC<{
+  courseId: string;
+  activity: ClassroomActivity;
+  state: ActivityState | undefined;
+  gradeScale: number;
+  onChanged: () => Promise<void>;
+}> = ({ courseId, activity, state, gradeScale, onChanged }) => {
   const facts: string[] = [];
 
   if (activity.type === 'QUIZ') {
     facts.push(`${activity.questions_count} ${activity.questions_count === 1 ? 'pregunta' : 'preguntas'}`);
     if (activity.passing_percent != null) facts.push(`Se aprueba con ${toScale(activity.passing_percent, gradeScale)} de ${gradeScale}`);
-    facts.push(activity.max_attempts ? `${activity.max_attempts} ${activity.max_attempts === 1 ? 'intento' : 'intentos'}` : 'Intentos ilimitados');
     if (activity.time_limit_minutes) facts.push(`${activity.time_limit_minutes} minutos`);
-  } else if (activity.type === 'TASK') {
-    facts.push(`Entrega: ${[activity.allow_text && 'texto', activity.allow_file && 'archivo'].filter(Boolean).join(' y ')}`);
-  } else {
+  } else if (activity.type === 'SURVEY') {
     facts.push(`${activity.questions_count} ${activity.questions_count === 1 ? 'pregunta' : 'preguntas'}`);
   }
 
   return (
     <div className="space-y-4">
       {activity.description && <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap break-words">{activity.description}</p>}
-      <div className="flex flex-wrap gap-2">
-        {facts.map((fact) => (
-          <Badge key={fact}>{fact}</Badge>
-        ))}
-      </div>
-      <Alert tone="info">Todavía no se puede rendir desde aquí. Estará disponible muy pronto.</Alert>
+      {facts.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {facts.map((fact) => (
+            <Badge key={fact}>{fact}</Badge>
+          ))}
+        </div>
+      )}
+
+      {!state ? (
+        <LoadingState />
+      ) : activity.type === 'QUIZ' ? (
+        <QuizPanel courseId={courseId} activityId={activity.id} state={state as QuizState} gradeScale={gradeScale} onChanged={onChanged} />
+      ) : activity.type === 'TASK' ? (
+        <TaskPanel
+          courseId={courseId}
+          activityId={activity.id}
+          allowText={activity.allow_text ?? false}
+          allowFile={activity.allow_file ?? false}
+          state={state as TaskState}
+          gradeScale={gradeScale}
+          onChanged={onChanged}
+        />
+      ) : (
+        <SurveyPanel courseId={courseId} activityId={activity.id} state={state as SurveyState} onChanged={onChanged} />
+      )}
     </div>
   );
 };
@@ -120,6 +145,8 @@ const ActivityView: React.FC<{ activity: ClassroomActivity; gradeScale: number }
 export const ClassroomPage: React.FC = () => {
   const { courseId = '' } = useParams();
   const [classroom, setClassroom] = useState<Classroom | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const [states, setStates] = useState<Record<string, ActivityState>>({});
   const [gradeScale, setGradeScale] = useState(20);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
@@ -128,11 +155,12 @@ export const ClassroomPage: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    enrollmentsApi
-      .classroom(courseId)
-      .then((result) => {
+    Promise.all([enrollmentsApi.classroom(courseId), studentApi.states(courseId)])
+      .then(([result, activityStates]) => {
         if (!active) return;
         setClassroom(result.classroom);
+        setProgress(result.classroom.progress);
+        setStates(activityStates);
         setGradeScale(result.gradeScale);
         setState('ready');
       })
@@ -146,6 +174,13 @@ export const ClassroomPage: React.FC = () => {
     };
   }, [courseId, attempt]);
 
+  // Tras rendir o entregar: estado de las actividades y avance al día
+  const refresh = useCallback(async () => {
+    const [result, activityStates] = await Promise.all([enrollmentsApi.classroom(courseId), studentApi.states(courseId)]);
+    setProgress(result.classroom.progress);
+    setStates(activityStates);
+  }, [courseId]);
+
   const items = useMemo<Item[]>(
     () =>
       (classroom?.sections ?? []).flatMap((section) => [
@@ -154,6 +189,25 @@ export const ClassroomPage: React.FC = () => {
       ]),
     [classroom],
   );
+
+  const index = Math.max(0, items.findIndex((item) => item.key === currentKey));
+  const current = items[index] as Item | undefined;
+  const openResourceId = current?.kind === 'resource' ? current.resource.id : null;
+
+  // Un recurso cuenta como visto al abrirlo; el servidor lleva la cuenta
+  useEffect(() => {
+    if (!openResourceId || progress?.resource_ids.includes(openResourceId)) return;
+    let active = true;
+    enrollmentsApi
+      .completeResource(courseId, openResourceId)
+      .then((result) => active && setProgress(result))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+    // El avance se actualiza con la respuesta: no debe volver a disparar la marca
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, openResourceId]);
 
   if (state === 'loading') return <LoadingState />;
   if (state === 'error' || !classroom) {
@@ -170,8 +224,9 @@ export const ClassroomPage: React.FC = () => {
     );
   }
 
-  const index = Math.max(0, items.findIndex((item) => item.key === currentKey));
-  const current = items[index];
+
+  const isDone = (item: Item) =>
+    item.kind === 'resource' ? progress?.resource_ids.includes(item.resource.id) : progress?.activity_ids.includes(item.activity.id);
 
   const go = (key: string) => {
     setCurrentKey(key);
@@ -184,13 +239,38 @@ export const ClassroomPage: React.FC = () => {
         <ArrowLeft className="w-4 h-4" /> Mis cursos
       </Link>
 
-      <div className="mb-5">
-        {classroom.category && <p className="text-xs font-semibold text-brand-600 mb-1">{classroom.category}</p>}
-        <h1 className="text-[22px] leading-7 font-bold text-slate-900 tracking-tight">{classroom.title}</h1>
-        {classroom.summary && <p className="text-[13px] text-slate-500 mt-1">{classroom.summary}</p>}
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
+        <div className="min-w-0">
+          {classroom.category && <p className="text-xs font-semibold text-brand-600 mb-1">{classroom.category}</p>}
+          <h1 className="text-[22px] leading-7 font-bold text-slate-900 tracking-tight">{classroom.title}</h1>
+          {classroom.summary && <p className="text-[13px] text-slate-500 mt-1">{classroom.summary}</p>}
+        </div>
+        {progress && progress.total > 0 && (
+          <div className="w-full sm:w-64">
+            <div className="flex items-baseline justify-between text-xs mb-1.5">
+              <span className="font-medium text-slate-600">Tu avance</span>
+              <span className="font-semibold text-slate-900 tnum">
+                {progress.percent}% · {progress.completed} de {progress.total}
+              </span>
+            </div>
+            <div
+              className="h-2 rounded-full bg-slate-200 overflow-hidden"
+              role="progressbar"
+              aria-valuenow={progress.percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Avance del curso"
+            >
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-600 to-sky-500'}`}
+                style={{ width: `${progress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {items.length === 0 ? (
+      {!current ? (
         <Card>
           <EmptyState title="Este curso aún no tiene contenido" />
         </Card>
@@ -210,7 +290,14 @@ export const ClassroomPage: React.FC = () => {
               {current.kind === 'resource' ? (
                 <ResourceView key={current.key} courseId={classroom.course_id} resource={current.resource} />
               ) : (
-                <ActivityView activity={current.activity} gradeScale={gradeScale} />
+                <ActivityView
+                  key={current.key}
+                  courseId={classroom.course_id}
+                  activity={current.activity}
+                  state={states[current.activity.id]}
+                  gradeScale={gradeScale}
+                  onChanged={refresh}
+                />
               )}
             </div>
 
@@ -241,6 +328,7 @@ export const ClassroomPage: React.FC = () => {
                       .filter((item) => (item.kind === 'resource' ? section.resources.includes(item.resource) : section.activities.includes(item.activity)))
                       .map((item) => {
                         const selected = item.key === current.key;
+                        const done = isDone(item);
                         const Icon = item.kind === 'resource' ? RESOURCE_ICON[item.resource.type] : ACTIVITY_ICON[item.activity.type].icon;
                         return (
                           <li key={item.key}>
@@ -253,7 +341,13 @@ export const ClassroomPage: React.FC = () => {
                               }`}
                             >
                               <Icon className={`w-4 h-4 shrink-0 ${selected ? 'text-brand-600' : 'text-slate-400'}`} />
-                              <span className="truncate">{item.kind === 'resource' ? item.resource.title : item.activity.title}</span>
+                              <span className="truncate flex-1">{item.kind === 'resource' ? item.resource.title : item.activity.title}</span>
+                              {done && (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" aria-hidden="true" />
+                                  <span className="sr-only">Completado</span>
+                                </>
+                              )}
                             </button>
                           </li>
                         );

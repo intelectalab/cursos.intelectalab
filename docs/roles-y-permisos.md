@@ -44,7 +44,7 @@ Se agregará en el sprint S8. Será el contacto de una empresa cliente (uno o va
 
 ### Administrador
 
-Acceso total a todos los módulos de su academia (56 permisos). No alcanza las operaciones de plataforma.
+Acceso total a todos los módulos de su academia (57 permisos). No alcanza las operaciones de plataforma.
 
 ### Alumno
 
@@ -140,6 +140,7 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | `activities.assigned.manage` | Gestionar actividades de los cursos asignados | ✔ |  | ✔ |  |  |  |
 | `question_banks.read` | Consultar los bancos de preguntas | ✔ |  | ✔ |  |  |  |
 | `question_banks.manage` | Crear y editar bancos de preguntas | ✔ |  | ✔ |  |  |  |
+| `submissions.review` | Revisar entregas y ver el avance en todos los cursos | ✔ |  |  |  |  |  |
 | `submissions.assigned.review` | Revisar entregas de los cursos asignados | ✔ |  | ✔ |  |  |  |
 
 ### Matrículas y portal del alumno

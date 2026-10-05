@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-05, al cerrar la entrega 2 de S3.
+Última actualización: 2026-10-05, al cerrar S3 (entrega 3).
 
 ## Dónde estamos
 
-**Sprint actual: S3 — Académico (entregas 1 y 2 de 3 terminadas).**
+**Sprint actual: S3 — Académico, terminado. Toca empezar S4.**
 
-**Siguiente paso:** S3 · entrega 3, rendir cuestionarios, entregar y revisar tareas, encuestas y progreso.
+**Siguiente paso:** S4 — Matrículas y portal del alumno. Parte ya está hecha (matrícula manual, Mis cursos y aula); falta definir el alcance restante, que depende de las decisiones 10 y 11.
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -19,8 +19,8 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S2 | Cursos: contenido, videos de YouTube, profesores y publicación con versiones | Hecho |
 | S3 · entrega 1 | Banco de preguntas, cuestionarios, tareas y encuestas | Hecho |
 | S3 · entrega 2 | Matrícula mínima y aula del alumno | Hecho |
-| S3 · entrega 3 | Rendir cuestionarios, entregar y revisar tareas, encuestas y progreso | **Siguiente** |
-| S4 | Matrículas y portal del alumno | Pendiente |
+| S3 · entrega 3 | Rendir cuestionarios, entregar y revisar tareas, encuestas y progreso | Hecho |
+| S4 | Matrículas y portal del alumno (parte adelantada en S3) | **Siguiente** |
 | S5 | Venta a personas (B2C): catálogo, compra y órdenes | Pendiente |
 | S6 | Pagos | Pendiente |
 | S7 | Certificados | Pendiente |
@@ -30,9 +30,10 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S11 | Promociones | Pendiente |
 | S12–S13 | Endurecimiento y pruebas de aceptación | Pendiente |
 
-- **Avance del plan:** 3 de 14 sprints completos, más dos de las tres entregas de S3.
-- **Calidad:** 122 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
-- **Qué no se puede hacer todavía:** un alumno ya entra a sus cursos y ve el contenido, pero aún no puede rendir cuestionarios, entregar tareas ni responder encuestas; llega con la entrega 3 de S3. Tampoco hay compra: la matrícula la hace el personal a mano.
+- **Avance del plan:** 4 de 14 sprints completos (S0 a S3), con parte de S4 adelantada.
+- **Calidad:** 131 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
+- **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
+- **Qué no se puede hacer todavía:** comprar un curso (la matrícula la hace el personal a mano), pagar, ni emitir certificados.
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
 El detalle de cada bloque terminado está en [avances/](avances/README.md).
@@ -100,9 +101,16 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Matricular muchos alumnos desde un archivo.
 - Avisar al alumno por correo cuando se le matricula (depende de la decisión 3).
 
+**De rendir actividades (S3, entrega 3)**
+
+- Recuperar las respuestas ya marcadas al retomar un intento abierto.
+- Que quien revisa vea el detalle de cada intento, la nota final del curso y pueda exportar las notas.
+- Fechas límite para las tareas (depende de la decisión 10).
+- Revisar en teléfono las pantallas de rendir, entregar y seguimiento.
+
 
 ## 5. Orden propuesto
 
 1. Limpieza del repositorio (sección 2).
 2. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging.
-3. Terminar S3 (entrega 3), en paralelo con lo anterior.
+3. S4 Matrículas, en paralelo con lo anterior.

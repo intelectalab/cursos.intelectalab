@@ -5,6 +5,7 @@ import {
   ArchiveRestore,
   ArrowLeft,
   BookOpen,
+  ChartNoAxesColumn,
   CheckCircle2,
   GraduationCap,
   History,
@@ -54,14 +55,16 @@ import { ContentTab } from '../components/ContentTab';
 import { academicApi, type Activity } from '../../academic/api';
 import { SectionActivities } from '../../academic/components/SectionActivities';
 import { StudentsTab } from '../../enrollments/components/StudentsTab';
+import { TrackingTab } from '../../academic/components/TrackingTab';
 
-type TabId = 'content' | 'info' | 'teachers' | 'students' | 'versions';
+type TabId = 'content' | 'info' | 'teachers' | 'students' | 'tracking' | 'versions';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'content', label: 'Contenido', icon: Layers },
   { id: 'info', label: 'Información', icon: Info },
   { id: 'teachers', label: 'Profesores', icon: Users },
   { id: 'students', label: 'Alumnos', icon: GraduationCap },
+  { id: 'tracking', label: 'Seguimiento', icon: ChartNoAxesColumn },
   { id: 'versions', label: 'Versiones', icon: History },
 ];
 
@@ -436,6 +439,7 @@ export const CourseEditorPage: React.FC = () => {
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [canEditContent, setCanEditContent] = useState(false);
   const [canManageActivities, setCanManageActivities] = useState(false);
+  const [canReview, setCanReview] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [gradeScale, setGradeScale] = useState(20);
   const [options, setOptions] = useState<CourseOptions | null>(null);
@@ -450,6 +454,7 @@ export const CourseEditorPage: React.FC = () => {
     setCourse(result.course);
     setCanEditContent(result.canEditContent);
     setCanManageActivities(result.canManageActivities);
+    setCanReview(result.canReview);
     setActivities(academic.activities);
     setGradeScale(academic.gradeScale);
   }, [courseId]);
@@ -462,6 +467,7 @@ export const CourseEditorPage: React.FC = () => {
         setCourse(result.course);
         setCanEditContent(result.canEditContent);
         setCanManageActivities(result.canManageActivities);
+        setCanReview(result.canReview);
         setActivities(academic.activities);
         setGradeScale(academic.gradeScale);
         setOptions(loadedOptions);
@@ -583,7 +589,7 @@ export const CourseEditorPage: React.FC = () => {
 
       {/* Pestañas */}
       <div className="flex gap-1 mb-5 border-b border-slate-200 overflow-x-auto overflow-y-hidden" role="tablist" aria-label="Secciones del curso">
-        {TABS.filter(({ id }) => id !== 'students' || hasPermission('enrollments.read')).map(({ id, label, icon: Icon }) => (
+        {TABS.filter(({ id }) => (id !== 'students' || hasPermission('enrollments.read')) && (id !== 'tracking' || canReview)).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -625,6 +631,7 @@ export const CourseEditorPage: React.FC = () => {
       {tab === 'info' && <InfoTab course={course} options={options} editable={canUpdate && !archived} onChanged={reload} />}
       {tab === 'teachers' && <TeachersTab course={course} options={options} editable={canUpdate} onChanged={reload} />}
       {tab === 'students' && <StudentsTab course={course} />}
+      {tab === 'tracking' && <TrackingTab courseId={course.id} />}
       {tab === 'versions' && <VersionsTab course={course} />}
 
       {dialog === 'publish' && <PublishModal course={course} onClose={() => setDialog(null)} onDone={closeAndReload} />}

@@ -70,6 +70,7 @@ class PermissionCatalog
                     'activities.assigned.manage' => 'Gestionar actividades de los cursos asignados',
                     'question_banks.read' => 'Consultar los bancos de preguntas',
                     'question_banks.manage' => 'Crear y editar bancos de preguntas',
+                    'submissions.review' => 'Revisar entregas y ver el avance en todos los cursos',
                     'submissions.assigned.review' => 'Revisar entregas de los cursos asignados',
                 ],
             ],

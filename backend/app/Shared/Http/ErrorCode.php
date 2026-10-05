@@ -37,4 +37,9 @@ enum ErrorCode: string
     case QuestionInUse = 'QUESTION_IN_USE';
 
     case EnrollmentNotActive = 'ENROLLMENT_NOT_ACTIVE';
+
+    case NoAttemptsLeft = 'NO_ATTEMPTS_LEFT';
+    case AttemptClosed = 'ATTEMPT_CLOSED';
+    case SubmissionGraded = 'SUBMISSION_GRADED';
+    case SurveyAlreadyAnswered = 'SURVEY_ALREADY_ANSWERED';
 }

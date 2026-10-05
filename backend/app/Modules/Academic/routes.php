@@ -2,6 +2,8 @@
 
 use App\Modules\Academic\Http\Controllers\ActivityController;
 use App\Modules\Academic\Http\Controllers\QuestionBankController;
+use App\Modules\Academic\Http\Controllers\ReviewController;
+use App\Modules\Academic\Http\Controllers\StudentActivityController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () {
@@ -35,4 +37,32 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
             Route::delete('/activities/{activity}', [ActivityController::class, 'destroy']);
             Route::put('/activities/{activity}/questions', [ActivityController::class, 'setQuestions']);
         });
+
+    // Seguimiento: quien revisa todos los cursos o el profesor en los suyos
+    Route::middleware('permission:submissions.review,submissions.assigned.review')
+        ->prefix('/courses/{course}')
+        ->whereUuid(['course', 'submission', 'activity'])
+        ->group(function () {
+            Route::get('/tracking', [ReviewController::class, 'tracking']);
+            Route::get('/submissions', [ReviewController::class, 'submissions']);
+            Route::post('/submissions/{submission}/grade', [ReviewController::class, 'grade']);
+            Route::get('/submissions/{submission}/download', [ReviewController::class, 'download']);
+            Route::get('/activities/{activity}/survey-results', [ReviewController::class, 'surveyResults']);
+        });
+
+    // Alumno: consultar sus actividades…
+    Route::middleware('permission:activities.self')->whereUuid(['course', 'activity', 'attempt'])->group(function () {
+        Route::get('/me/courses/{course}/activities', [StudentActivityController::class, 'index']);
+        Route::get('/me/courses/{course}/activities/{activity}', [StudentActivityController::class, 'show']);
+        Route::get('/me/courses/{course}/activities/{activity}/submission/download', [StudentActivityController::class, 'downloadSubmission']);
+        Route::get('/me/attempts/{attempt}', [StudentActivityController::class, 'showAttempt']);
+    });
+
+    // …y rendirlas (Maestro §7.2: activity.attempt)
+    Route::middleware('permission:activities.attempt')->whereUuid(['course', 'activity', 'attempt'])->group(function () {
+        Route::post('/me/courses/{course}/activities/{activity}/attempts', [StudentActivityController::class, 'startAttempt']);
+        Route::post('/me/attempts/{attempt}/submit', [StudentActivityController::class, 'submitAttempt']);
+        Route::post('/me/courses/{course}/activities/{activity}/submission', [StudentActivityController::class, 'submitTask']);
+        Route::post('/me/courses/{course}/activities/{activity}/survey', [StudentActivityController::class, 'answerSurvey']);
+    });
 });

@@ -35,6 +35,17 @@ export interface MyCourse {
   sections_count: number;
   resources_count: number;
   activities_count: number;
+  // Solo en el listado de Mis cursos
+  progress_percent?: number;
+}
+
+// Avance calculado en el servidor sobre la versión publicada
+export interface Progress {
+  percent: number;
+  completed: number;
+  total: number;
+  resource_ids: string[];
+  activity_ids: string[];
 }
 
 export interface ClassroomResource {
@@ -71,6 +82,7 @@ export interface ClassroomSection {
 export interface Classroom extends MyCourse {
   description: string | null;
   sections: ClassroomSection[];
+  progress: Progress;
 }
 
 export const enrollmentsApi = {
@@ -95,6 +107,9 @@ export const enrollmentsApi = {
   async classroom(course: string) {
     const response = await api.get(`/me/courses/${course}`);
     return { classroom: response.data.data as Classroom, gradeScale: response.data.meta.grade_scale as number };
+  },
+  async completeResource(course: string, resource: string) {
+    return (await api.post(`/me/courses/${course}/resources/${resource}/complete`)).data.data as Progress;
   },
   // El material es privado: se pide con la sesión y se entrega al navegador como descarga
   async download(course: string, resource: ClassroomResource) {
