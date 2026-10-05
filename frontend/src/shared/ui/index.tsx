@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, CheckCircle2, Inbox, Loader2, X, type LucideIcon } from 'lucide-react';
 
 // Piezas compartidas del producto. Las pantallas componen estas piezas y no
@@ -339,15 +340,17 @@ export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  // Se monta en <body>: dentro de la pantalla quedaría atrapado bajo la cabecera
+  // y limitado al alto del contenido (la animación de entrada crea su propia capa)
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-950/55 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-brand-950/55 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-pop flex flex-col max-h-[90vh] animate-rise">
-        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-slate-200/80">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-pop flex flex-col max-h-[90dvh] animate-rise">
+        <div className="flex items-start justify-between gap-4 px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/80">
           <div>
             <h2 className="text-base font-semibold text-slate-900">{title}</h2>
             {subtitle && <p className="text-[13px] text-slate-500 mt-0.5">{subtitle}</p>}
@@ -361,13 +364,14 @@ export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="px-6 py-5 overflow-y-auto">{children}</div>
+        <div className="px-5 sm:px-6 py-5 overflow-y-auto">{children}</div>
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-200/80 bg-slate-50/60 rounded-b-2xl flex justify-end gap-2.5">
+          <div className="px-5 sm:px-6 py-4 border-t border-slate-200/80 bg-slate-50/60 rounded-b-2xl flex justify-end gap-2.5">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };

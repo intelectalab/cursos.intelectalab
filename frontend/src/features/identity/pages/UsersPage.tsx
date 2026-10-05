@@ -140,7 +140,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
       <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
         {error && <Alert>{error}</Alert>}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Nombres">
             <input className={INPUT_CLASS} required maxLength={100} value={form.first_name} onChange={set('first_name')} />
           </Field>
@@ -149,7 +149,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Tipo de documento (opcional)">
             <select className={INPUT_CLASS} value={form.doc_type} onChange={set('doc_type')}>
               <option value="">Sin documento</option>
@@ -185,7 +185,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Teléfono (opcional)">
             <input className={INPUT_CLASS} maxLength={30} value={form.phone} onChange={set('phone')} />
           </Field>
@@ -213,7 +213,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
 
         <fieldset>
           <legend className="block text-[13px] font-medium text-slate-700 mb-1.5">Roles</legend>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {roles.map((role) => {
               const checked = form.roles.includes(role.id);
               return (

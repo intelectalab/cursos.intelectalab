@@ -7,6 +7,7 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-05 | S0 — Fundación | [2026-10-05-s0-fundacion.md](2026-10-05-s0-fundacion.md) |
 | 2026-10-06 | S1 — Identidad | [2026-10-06-s1-identidad.md](2026-10-06-s1-identidad.md) |
 | 2026-10-06 | Rediseño visual del back-office | [2026-10-06-rediseno-visual.md](2026-10-06-rediseno-visual.md) |
+| 2026-10-05 | Vista móvil del menú lateral | [2026-10-05-vista-movil-menu.md](2026-10-05-vista-movil-menu.md) |
 
 Documentos relacionados:
 
@@ -16,6 +17,5 @@ Documentos relacionados:
 
 ## Qué sigue
 
-1. Vista móvil del menú lateral.
-2. Almacenamiento de archivos por academia.
-3. S2 — Cursos: cursos, versiones, secciones, recursos y publicación.
+1. Almacenamiento de archivos por academia.
+2. S2 — Cursos: cursos, versiones, secciones, recursos y publicación.
