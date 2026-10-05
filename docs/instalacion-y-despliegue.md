@@ -187,6 +187,6 @@ Comprobación tras desplegar:
 
 ## 10. Herramientas solo de desarrollo
 
-- **Laravel Boost:** `composer require laravel/boost --dev` y `php artisan boost:install`. Registra un servidor MCP (`.mcp.json` en la raíz y en `backend/`) y guías en `backend/CLAUDE.md`. No se despliega.
+- **Laravel Boost:** `composer require laravel/boost --dev` y `php artisan boost:install`. Registra un servidor MCP (`.mcp.json` en la raíz y en `backend/`) y guías en `backend/CLAUDE.md`. No se despliega. Estos archivos (`.claude/`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, `boost.json`) están en `.gitignore`: cada desarrollador los genera en su equipo con `php artisan boost:install`.
 - **Docker Compose:** PostgreSQL y Adminer (puerto 8080) para desarrollo.
 - **Datos de demostración:** `backend/database/seeders/DemoTenantSeeder.php`.

@@ -19,3 +19,10 @@ pgdata/
 *.log
 .DS_Store
 Thumbs.db
+
+# Claude Code y Laravel Boost (herramientas de desarrollo, se regeneran con php artisan boost:install)
+.claude/
+.mcp.json
+CLAUDE.md
+AGENTS.md
+boost.json
