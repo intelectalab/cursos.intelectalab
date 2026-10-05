@@ -4,6 +4,7 @@ namespace App\Modules\Tenancy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Tenancy\Application\ProvisionTenant;
+use App\Modules\Tenancy\Application\TenantLogoService;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Modules\Tenancy\Http\Requests\RegisterTenantRequest;
 use App\Shared\Http\ApiResponse;
@@ -16,13 +17,13 @@ class TenantController extends Controller
      * Contexto público del host actual: la organización del subdominio,
      * o null en el dominio central.
      */
-    public function current(Request $request): JsonResponse
+    public function current(Request $request, TenantLogoService $logo): JsonResponse
     {
         /** @var Tenant|null $tenant */
         $tenant = $request->attributes->get('tenant');
 
         return ApiResponse::success(
-            $tenant ? $this->present($tenant) : null,
+            $tenant ? $this->present($tenant) + ['logo_url' => $logo->url()] : null,
             ['central_domain' => config('tenancy.central_domain')]
         );
     }

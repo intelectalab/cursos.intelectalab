@@ -30,4 +30,7 @@ enum ErrorCode: string
     case RoleIsSystem = 'ROLE_IS_SYSTEM';
     case RoleInUse = 'ROLE_IN_USE';
     case LastAdministrator = 'LAST_ADMINISTRATOR';
+
+    case CourseNotPublishable = 'COURSE_NOT_PUBLISHABLE';
+    case CourseInvalidState = 'COURSE_INVALID_STATE';
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Building2, Loader2 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { centralUrl, guessCentralDomain } from './hosts';
@@ -7,12 +7,15 @@ export interface CurrentTenant {
   id: string;
   name: string;
   slug: string;
+  logo_url: string | null;
 }
 
 interface TenantContextType {
   // null en el dominio central de la plataforma
   tenant: CurrentTenant | null;
   centralDomain: string;
+  // Refleja en toda la aplicación un cambio hecho en Configuración
+  setLogoUrl: (logoUrl: string | null) => void;
 }
 
 type State =
@@ -63,6 +66,14 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       active = false;
     };
+  }, []);
+
+  const setLogoUrl = useCallback((logoUrl: string | null) => {
+    setState((current) =>
+      current.status === 'ready' && current.tenant
+        ? { ...current, tenant: { ...current.tenant, logo_url: logoUrl } }
+        : current,
+    );
   }, []);
 
   if (state.status === 'loading') {
@@ -118,7 +129,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   return (
-    <TenantContext.Provider value={{ tenant: state.tenant, centralDomain: state.centralDomain }}>
+    <TenantContext.Provider value={{ tenant: state.tenant, centralDomain: state.centralDomain, setLogoUrl }}>
       {children}
     </TenantContext.Provider>
   );

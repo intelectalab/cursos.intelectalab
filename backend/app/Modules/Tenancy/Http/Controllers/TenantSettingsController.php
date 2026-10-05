@@ -3,6 +3,8 @@
 namespace App\Modules\Tenancy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Files\Application\FileStorage;
+use App\Modules\Tenancy\Application\TenantLogoService;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -11,13 +13,20 @@ use Illuminate\Validation\Rule;
 
 class TenantSettingsController extends Controller
 {
-    public function __construct(private readonly TenantSettingsService $settings) {}
+    public function __construct(
+        private readonly TenantSettingsService $settings,
+        private readonly TenantLogoService $logo,
+    ) {}
 
     public function show(Request $request): JsonResponse
     {
         return ApiResponse::success(
-            $this->settings->get($request->attributes->get('tenant')),
+            $this->settings->get($request->attributes->get('tenant')) + ['logo_url' => $this->logo->url()],
             [
+                'logo' => [
+                    'max_kb' => config('files.limits.image'),
+                    'extensions' => config('files.purposes.'.TenantLogoService::PURPOSE.'.extensions'),
+                ],
                 'currencies' => TenantSettingsService::CURRENCIES,
                 'session_minutes' => [
                     'min' => config('identity.session_lifetime_min'),
@@ -48,6 +57,24 @@ class TenantSettingsController extends Controller
             ],
         ], ['secondary_currency.different' => 'La moneda secundaria debe ser distinta de la principal.']);
 
-        return ApiResponse::success($this->settings->update($request->attributes->get('tenant'), $data));
+        return ApiResponse::success(
+            $this->settings->update($request->attributes->get('tenant'), $data) + ['logo_url' => $this->logo->url()]
+        );
+    }
+
+    public function uploadLogo(Request $request, FileStorage $storage): JsonResponse
+    {
+        $request->validate(['file' => $storage->rules(TenantLogoService::PURPOSE)]);
+
+        return ApiResponse::success([
+            'logo_url' => $this->logo->replace($request->attributes->get('tenant'), $request->file('file')),
+        ]);
+    }
+
+    public function removeLogo(Request $request): JsonResponse
+    {
+        $this->logo->remove($request->attributes->get('tenant'));
+
+        return ApiResponse::success(['logo_url' => null]);
     }
 }

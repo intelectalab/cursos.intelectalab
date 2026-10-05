@@ -8,14 +8,16 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-06 | S1 — Identidad | [2026-10-06-s1-identidad.md](2026-10-06-s1-identidad.md) |
 | 2026-10-06 | Rediseño visual del back-office | [2026-10-06-rediseno-visual.md](2026-10-06-rediseno-visual.md) |
 | 2026-10-05 | Vista móvil del menú lateral | [2026-10-05-vista-movil-menu.md](2026-10-05-vista-movil-menu.md) |
+| 2026-10-05 | Almacenamiento de archivos por academia | [2026-10-05-almacenamiento-de-archivos.md](2026-10-05-almacenamiento-de-archivos.md) |
+| 2026-10-05 | S2 — Cursos | [2026-10-05-s2-cursos.md](2026-10-05-s2-cursos.md) |
 
 Documentos relacionados:
 
 - [Decisiones de arquitectura](../adr/0001-arquitectura-base.md)
 - [Roles y accesos](../roles-y-permisos.md) (se genera con `php artisan access:docs`)
 - [Instalación y despliegue](../instalacion-y-despliegue.md)
+- [Pendientes](../pendientes.md)
 
 ## Qué sigue
 
-1. Almacenamiento de archivos por academia.
-2. S2 — Cursos: cursos, versiones, secciones, recursos y publicación.
+1. S3 — Académico: actividades, cuestionarios, tareas, encuestas y progreso.

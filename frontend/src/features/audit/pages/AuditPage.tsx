@@ -44,6 +44,14 @@ const ACTION_LABEL: Record<string, string> = {
   'tenants.provisioned': 'Organización creada',
   'tenants.status_changed': 'Estado de la organización cambiado',
   'tenant_settings.updated': 'Configuración actualizada',
+  'tenant_settings.logo_updated': 'Logo actualizado',
+  'tenant_settings.logo_removed': 'Logo eliminado',
+  'courses.created': 'Curso creado',
+  'courses.updated': 'Curso editado',
+  'courses.published': 'Curso publicado',
+  'courses.archived': 'Curso archivado',
+  'courses.restored': 'Curso restaurado',
+  'courses.teachers_updated': 'Profesores del curso cambiados',
   'users.created': 'Usuario creado',
   'users.updated': 'Usuario editado',
   'users.roles_updated': 'Roles de usuario cambiados',
@@ -62,6 +70,7 @@ function actionTone(action: string): Tone {
   if (action.startsWith('auth.')) return 'warning';
   if (action.startsWith('roles.')) return 'violet';
   if (action.startsWith('users.')) return 'brand';
+  if (action.startsWith('courses.')) return 'success';
   return 'info';
 }
 
@@ -70,6 +79,7 @@ const GROUPS = [
   ['users', 'Usuarios'],
   ['roles', 'Roles'],
   ['auth', 'Contraseñas'],
+  ['courses', 'Cursos'],
   ['tenant', 'Organización'],
   ['access', 'Accesos denegados'],
 ];

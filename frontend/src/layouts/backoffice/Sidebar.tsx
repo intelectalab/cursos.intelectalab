@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
+import { useTenant } from '../../shared/tenancy/TenantContext';
 import { APP_MODULES, MODULE_GROUPS, type ModuleGroup, type ModuleItem } from '../../config/modules';
 import { can } from '../../shared/auth/permissions';
 import { Avatar } from '../../shared/ui';
@@ -35,6 +36,7 @@ const Logo: React.FC = () => (
 
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawerOpen, onClose }) => {
   const { user, tenant, permissions } = useAuth();
+  const logoUrl = useTenant().tenant?.logo_url;
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -126,9 +128,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
             isCollapsed ? 'justify-center px-2' : 'gap-3 px-5'
           }`}
         >
-          <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-brand-600 to-sky-500 p-2 shadow-lg shadow-sky-500/25 ring-1 ring-white/20">
-            <Logo />
-          </div>
+          {logoUrl ? (
+            // Logo propio de la academia, sobre blanco para que se lea con cualquier color
+            <img
+              src={logoUrl}
+              alt=""
+              className="w-9 h-9 shrink-0 rounded-xl bg-white object-contain p-1 shadow-lg shadow-sky-500/25 ring-1 ring-white/20"
+            />
+          ) : (
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-brand-600 to-sky-500 p-2 shadow-lg shadow-sky-500/25 ring-1 ring-white/20">
+              <Logo />
+            </div>
+          )}
           {!isCollapsed && (
             <div className="min-w-0 leading-tight overflow-hidden whitespace-nowrap">
               <span className="text-white font-extrabold text-[15px] tracking-tight">

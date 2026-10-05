@@ -4,7 +4,7 @@ Guía de respaldo para instalar el sistema en un servidor. Se actualiza cada vez
 
 > **Estado:** todavía no se ha hecho un despliegue real. Los pasos de instalación local están probados; los de servidor (sección 5 en adelante) describen lo que el sistema necesita, pero no se han ejecutado en un servidor. Los puntos sin resolver están en la sección 9.
 
-Última actualización: 2026-10-06 (cierre de S1).
+Última actualización: 2026-10-05 (S2 Cursos).
 
 ## 1. Componentes
 
@@ -14,7 +14,7 @@ Guía de respaldo para instalar el sistema en un servidor. Se actualiza cada vez
 | Aplicación web | `frontend/` | React 19 + Vite 8 + Tailwind 4 (se compila a archivos estáticos) |
 | Base de datos | — | PostgreSQL 15 |
 
-No hay servicios adicionales obligatorios por ahora (ni Redis, ni almacenamiento externo, ni proveedor de correo).
+No hay servicios adicionales obligatorios por ahora (ni Redis, ni almacenamiento externo, ni proveedor de correo). Los archivos de las academias se guardan en el disco del servidor.
 
 ## 2. Requisitos del servidor
 
@@ -138,7 +138,20 @@ CREATE SCHEMA erp AUTHORIZATION erp_app;
 | `AUTH_SESSION_LIFETIME` | `30` | Minutos de inactividad por defecto; cada academia puede cambiarlo en Configuración |
 | `AUTH_PASSWORD_RESET_MINUTES` | `60` | Vigencia del enlace de recuperación |
 
+| `FILES_DISK` | `local` | Dónde se guardan los archivos de las academias. `local` = `storage/app/private`. Para un servicio compatible con S3: `s3` más las variables `AWS_*` y el paquete `league/flysystem-aws-s3-v3` |
+| `FILES_IMAGE_MAX_KB` | `2048` | Tamaño máximo de imágenes (logo, portadas) |
+| `FILES_DOCUMENT_MAX_KB` | `51200` | Tamaño máximo de documentos y materiales |
+
 `DEMO_ADMIN_PASSWORD` solo se usa en el entorno local.
+
+### Subida de archivos
+
+El servidor debe aceptar archivos al menos tan grandes como los límites anteriores; si no, la subida falla antes de llegar a la aplicación:
+
+- PHP (`php.ini`): `upload_max_filesize = 64M` y `post_max_size = 64M`. El valor por defecto de PHP es 2M.
+- Nginx: `client_max_body_size 64m;` (por defecto 1m).
+
+La carpeta `backend/storage/app/private` contiene los archivos de todas las academias. Debe conservarse entre despliegues (no reemplazarla al publicar una versión nueva) e incluirse en los respaldos junto con la base de datos.
 
 ## 8. Pasos de despliegue
 
@@ -178,7 +191,7 @@ Comprobación tras desplegar:
 | Proxy y HTTPS | Si TLS termina en un proxy, hay que configurar los proxies de confianza de Laravel; de lo contrario los enlaces de recuperación de contraseña saldrán con `http://`. Sin configurar. |
 | CORS | `backend/config/cors.php` acepta cualquier origen. Como la web y la API comparten origen, se puede restringir. Sin ajustar. |
 | Correo | Sin proveedor. La recuperación de contraseña no llega al usuario hasta definirlo. |
-| Archivos | Aún no hay almacenamiento de archivos (se agregará antes de Cursos). |
+| Archivos | Se guardan en el disco del servidor. Falta decidir si se pasa a un servicio externo, y respaldar la carpeta de archivos. |
 | Colas | Aún no hay trabajos en cola ni proceso `queue:work`. |
 | Respaldos | Sin política de respaldo de la base de datos (Maestro PD-014). |
 | `config:cache` y `route:cache` | No se han probado con este código. |

@@ -2,6 +2,7 @@ import type React from 'react';
 import {
   LayoutDashboard,
   BookOpen,
+  ClipboardCheck,
   Users,
   CreditCard,
   BarChart3,
@@ -12,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Dashboard } from '../features/dashboard/pages/Dashboard';
+import { CoursesPage } from '../features/courses/pages/CoursesPage';
 import { UsersPage } from '../features/identity/pages/UsersPage';
 import { RolesPage } from '../features/identity/pages/RolesPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
@@ -51,20 +53,32 @@ export const APP_MODULES: ModuleItem[] = [
     component: Dashboard,
   },
   {
+    id: 'courses',
+    name: 'Cursos',
+    description: 'Cursos, contenido y publicación',
+    href: '/courses',
+    icon: BookOpen,
+    tone: 'violet',
+    group: 'operation',
+    // El profesor entra con el permiso de cursos asignados
+    permission: ['courses.read', 'courses.assigned.read'],
+    component: CoursesPage,
+  },
+  {
     id: 'academic',
     name: 'Académico',
-    description: 'Cursos, contenidos, evaluaciones y matrículas',
+    description: 'Evaluaciones, tareas y matrículas',
     href: '/academic',
-    icon: BookOpen,
+    icon: ClipboardCheck,
     tone: 'violet',
     group: 'operation',
     permission: 'courses.read',
     component: () => (
       <ComingSoon
         title="Académico"
-        description="Cursos, contenidos, evaluaciones y matrículas."
-        icon={BookOpen}
-        features={['Cursos y secciones', 'Recursos y actividades', 'Cuestionarios y tareas', 'Matrículas y progreso']}
+        description="Evaluaciones, tareas y matrículas."
+        icon={ClipboardCheck}
+        features={['Actividades', 'Cuestionarios y tareas', 'Encuestas', 'Matrículas y progreso']}
       />
     ),
   },

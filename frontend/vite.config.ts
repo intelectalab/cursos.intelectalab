@@ -14,7 +14,8 @@ export default defineConfig({
     // ({organización}.localhost) para que el backend resuelva el tenant.
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        // API_PORT permite levantar el backend en otro puerto si el 8000 está ocupado
+        target: `http://127.0.0.1:${process.env.API_PORT ?? 8000}`,
         changeOrigin: false,
       },
     },

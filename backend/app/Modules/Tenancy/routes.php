@@ -14,4 +14,6 @@ Route::post('/tenants', [TenantController::class, 'register'])
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () {
     Route::get('/settings', [TenantSettingsController::class, 'show'])->middleware('permission:tenant_settings.read');
     Route::put('/settings', [TenantSettingsController::class, 'update'])->middleware('permission:tenant_settings.update');
+    Route::post('/settings/logo', [TenantSettingsController::class, 'uploadLogo'])->middleware('permission:tenant_settings.update');
+    Route::delete('/settings/logo', [TenantSettingsController::class, 'removeLogo'])->middleware('permission:tenant_settings.update');
 });

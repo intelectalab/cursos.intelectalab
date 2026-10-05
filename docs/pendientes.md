@@ -4,19 +4,19 @@ Actualizado: 2026-10-05. Lista para revisar con jefatura: qué falta, qué decis
 
 ## Dónde estamos
 
-- **Hecho:** base del sistema (varias academias, cada una en su subdominio, con sus datos aislados), inicio de sesión, usuarios, roles y permisos, configuración de la academia, auditoría, consola de plataforma y vista para teléfono y tableta.
-- **Calidad:** 57 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
-- **Avance del plan:** 2 de 14 sprints (S0 y S1). Sigue S2 Cursos.
+- **Hecho:** base del sistema (varias academias, cada una en su subdominio, con sus datos aislados), inicio de sesión, usuarios, roles y permisos, configuración de la academia, auditoría, consola de plataforma, vista para teléfono y tableta, almacenamiento de archivos con el logo de la academia, y cursos (contenido, profesores y publicación con versiones).
+- **Calidad:** 76 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
+- **Avance del plan:** 3 de 14 sprints (S0, S1 y S2). Sigue S3 Académico.
 
 ## 1. Decisiones que necesitamos de jefatura
 
 | # | Tema | Qué hay que decidir | Qué bloquea |
 | --- | --- | --- | --- |
-| 1 | Servidor de staging | Qué servidor se usa (proveedor, quién lo paga, quién da el acceso). Hoy no existe ninguno. | Que otras personas puedan probar el sistema |
+| 1 | Servidor de staging | Será un servidor "Elastic" (falta precisar el servicio exacto). Aún no hay acceso: falta que lo entreguen. | Que otras personas puedan probar el sistema |
 | 2 | Dominio | Un dominio con subdominios comodín (`*.dominio`) y su certificado. Cada academia vive en un subdominio. | Staging y producción |
 | 3 | Proveedor de correo | Qué servicio envía los correos. Hoy no se envía ninguno: quedan en un registro interno. | Recuperar contraseña e invitar usuarios |
-| 4 | Almacenamiento de archivos | Guardar en el propio servidor (recomendado para empezar) o en un servicio externo. Límites de tamaño por archivo. | Logo de la academia y materiales de cursos (S2) |
-| 5 | Videos de los cursos | Se suben al sistema o se enlazan desde un servicio de video. | S2 Cursos |
+| 4 | Almacenamiento de archivos | Ya funciona guardando en el propio servidor (2 MB por imagen, 50 MB por documento). Falta confirmar si se queda así o se pasa a un servicio externo; el cambio es de configuración. | Nada por ahora |
+| 5 | Videos de los cursos | Resuelto: se alojan en YouTube y ya se pueden agregar a los cursos. A tener presente: un video «No listado» lo ve cualquiera con el enlace, aunque no esté matriculado. | Nada |
 | 6 | Respaldos | Cada cuánto se respalda la base de datos y dónde se guarda la copia. | Salida a producción |
 | 7 | Cuentas de prueba | Quiénes probarán en staging y con qué cuentas y datos. | Pruebas en staging |
 | 8 | Pasarela de pagos y facturación | Proveedor de pagos, Yape y comprobantes electrónicos. No urge todavía. | S6 Pagos |
@@ -45,18 +45,21 @@ Actualizado: 2026-10-05. Lista para revisar con jefatura: qué falta, qué decis
 **De lo ya construido**
 
 - Invitar usuarios por correo (hoy el administrador pone la contraseña inicial). Depende del punto 3 de decisiones.
-- Logo de la academia. Depende del almacenamiento de archivos.
+- Mostrar el logo de la academia en la pantalla de inicio de sesión y en los correos.
 - Que el administrador pueda cerrar las sesiones de otro usuario.
 - Tablas en formato tarjeta para el teléfono (hoy se desplazan de lado).
 - Revisar en teléfono el inicio de sesión, el registro y la consola de plataforma.
 - Tema oscuro (opcional).
 
+**De Cursos (S2)**
+
+- Ver el contenido de una versión anterior y volver a ella.
+- Mover recursos entre secciones y eliminar cursos creados por error.
+
 **Sprints por construir**
 
 | Sprint | Contenido |
 | --- | --- |
-| Previo | Almacenamiento de archivos por academia |
-| S2 | Cursos: cursos, versiones, secciones, recursos y publicación |
 | S3 | Académico |
 | S4 | Matrículas |
 | S5 | Venta a personas (B2C) |
@@ -72,4 +75,4 @@ Actualizado: 2026-10-05. Lista para revisar con jefatura: qué falta, qué decis
 
 1. Limpieza del repositorio (sección 2).
 2. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging.
-3. Almacenamiento de archivos y S2 Cursos, en paralelo con lo anterior.
+3. S3 Académico, en paralelo con lo anterior.

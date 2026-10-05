@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, CheckCircle2, Inbox, Loader2, X, type LucideIcon } from 'lucide-react';
 
@@ -373,5 +373,50 @@ export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children
       </div>
     </div>,
     document.body,
+  );
+};
+
+// Confirmación de una acción que no se deshace. Si falla, el error queda a la vista.
+export const ConfirmModal: React.FC<{
+  title: string;
+  text: string;
+  confirmLabel: string;
+  variant?: 'danger' | 'primary';
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}> = ({ title, text, confirmLabel, variant = 'danger', onClose, onConfirm }) => {
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const confirm = async () => {
+    setProcessing(true);
+    setError(null);
+    try {
+      await onConfirm();
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      setError(message ?? 'No se pudo completar la acción.');
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={title}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>Cancelar</Button>
+          <Button variant={variant} processing={processing} onClick={confirm}>
+            {confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        {error && <Alert>{error}</Alert>}
+        <p className="text-[13px] leading-relaxed text-slate-600">{text}</p>
+      </div>
+    </Modal>
   );
 };

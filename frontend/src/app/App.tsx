@@ -7,6 +7,7 @@ import { Login } from '../features/auth/pages/Login';
 import { Register } from '../features/auth/pages/Register';
 import { ForgotPassword, ResetPassword } from '../features/auth/pages/PasswordRecovery';
 import { AccountPage } from '../features/account/pages/AccountPage';
+import { CourseEditorPage } from '../features/courses/pages/CourseEditorPage';
 import { PlatformConsole } from '../features/platform/pages/PlatformConsole';
 import { APP_MODULES } from '../config/modules';
 
@@ -35,6 +36,14 @@ function TenantRoutes() {
           <Route element={<AppLayout />}>
             {/* Cuenta propia: disponible para cualquier usuario autenticado */}
             <Route path="/account" element={<AccountPage />} />
+            <Route
+              path="/courses/:courseId"
+              element={
+                <PermissionGate permission={['courses.read', 'courses.assigned.read']}>
+                  <CourseEditorPage />
+                </PermissionGate>
+              }
+            />
             {APP_MODULES.map((mod) => {
               const Component = mod.component;
               return (

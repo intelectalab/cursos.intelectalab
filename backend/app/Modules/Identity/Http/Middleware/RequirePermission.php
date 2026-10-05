@@ -13,12 +13,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Autorización server-side por permiso: `permission:courses.publish`.
+ * Con varios (`permission:courses.read,courses.assigned.read`) basta uno;
+ * el controlador acota después el alcance de cada uno.
  */
 class RequirePermission
 {
     public function __construct(private readonly AuditLogger $audit) {}
 
-    public function handle(Request $request, Closure $next, string $permission): Response
+    public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         $user = $request->user();
 
@@ -26,7 +28,9 @@ class RequirePermission
             throw new AuthenticationException;
         }
 
-        if (! $user->hasPermission($permission)) {
+        $permission = $permissions[0];
+
+        if (! collect($permissions)->contains(fn (string $code) => $user->hasPermission($code))) {
             $this->audit->record('access.denied', 'permission', after: [
                 'permission' => $permission,
                 'path' => $request->path(),
