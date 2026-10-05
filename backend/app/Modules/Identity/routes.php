@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 // Todo el módulo opera dentro del subdominio de una organización
 Route::middleware('tenant')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login']);
+    // Registro público de compradores: crea una cuenta de alumno
+    Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
     Route::post('/auth/forgot-password', [AccountController::class, 'forgotPassword'])->middleware('throttle:5,1');
     Route::post('/auth/reset-password', [AccountController::class, 'resetPassword'])->middleware('throttle:10,1');
 

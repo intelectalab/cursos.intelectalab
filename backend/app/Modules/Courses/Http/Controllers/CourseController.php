@@ -181,6 +181,8 @@ class CourseController extends Controller
             'level' => ['nullable', Rule::in(Course::LEVELS)],
             'duration_hours' => ['nullable', 'integer', 'min:1', 'max:5000'],
             'access_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
+            // Vacío = no está en venta; 0 = gratuito
+            'price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
             'language' => ['required', Rule::in(Course::LANGUAGES)],
         ]);
     }

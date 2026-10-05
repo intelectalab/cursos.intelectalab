@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-05, al cerrar S4.
+Última actualización: 2026-10-05, al cerrar S5.
 
 ## Dónde estamos
 
-**Sprint actual: S4 — Matrículas y portal del alumno, terminado. Toca empezar S5.**
+**Sprint actual: S5 — Venta a personas (B2C), terminado. Toca empezar S6.**
 
-**Siguiente paso:** S5 — Venta a personas (B2C): catálogo, compra y órdenes. Antes de construir hay que definir su alcance, porque el pago real depende de la decisión 8.
+**Siguiente paso:** S6 — Pagos. No se puede empezar el cobro en línea sin la decisión 8 (pasarela, Yape y facturación). Si la decisión demora, conviene adelantar S7 Certificados, que no depende de ella.
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -21,8 +21,9 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S3 · entrega 2 | Matrícula mínima y aula del alumno | Hecho |
 | S3 · entrega 3 | Rendir cuestionarios, entregar y revisar tareas, encuestas y progreso | Hecho |
 | S4 | Matrículas y portal del alumno: vigencia, gestión general, curso completado, inicio del alumno y cursos disponibles | Hecho |
-| S5 | Venta a personas (B2C): catálogo, compra y órdenes | **Siguiente** |
-| S6 | Pagos | Pendiente |
+| — | Escalas de notas guardadas por academia | Hecho |
+| S5 | Venta a personas (B2C): catálogo público, registro, compra, órdenes y pago confirmado por el personal | Hecho |
+| S6 | Pagos | **Siguiente** (ver decisión 8) |
 | S7 | Certificados | Pendiente |
 | S8 | Empresas y CRM (B2B) | Pendiente |
 | S9 | SCORM | Pendiente (ver decisión 9) |
@@ -30,10 +31,11 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S11 | Promociones | Pendiente |
 | S12–S13 | Endurecimiento y pruebas de aceptación | Pendiente |
 
-- **Avance del plan:** 5 de 14 sprints completos (S0 a S4).
-- **Calidad:** 138 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
+- **Avance del plan:** 6 de 14 sprints completos (S0 a S5).
+- **Calidad:** 154 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
-- **Qué no se puede hacer todavía:** comprar un curso (la matrícula la hace el personal a mano; el alumno solo ve la ficha de los cursos disponibles), pagar, ni emitir certificados.
+- **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
+- **Qué no se puede hacer todavía:** pagar en línea, emitir comprobantes ni certificados.
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
 El detalle de cada bloque terminado está en [avances/](avances/README.md).
@@ -51,7 +53,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 | 7 | Cuentas de prueba | Quiénes probarán en staging y con qué cuentas y datos. | Pruebas en staging |
 | 10 | Vigencia de la matrícula | Resuelto: cada curso define sus "días de acceso" (vacío = no vence) y el personal ajusta la vigencia de cada matrícula. Falta que cada academia decida qué valor pone a sus cursos. | Nada |
 | 11 | Curso archivado | Resuelto: quienes ya estaban matriculados conservan el acceso; solo se bloquean las matrículas nuevas. | Nada |
-| 8 | Pasarela de pagos y facturación | Proveedor de pagos, Yape y comprobantes electrónicos. No urge todavía. | S6 Pagos |
+| 8 | Pasarela de pagos y facturación | Proveedor de pagos, Yape y comprobantes electrónicos. **Ya urge:** es lo siguiente. Mientras tanto la venta funciona con pago por fuera y confirmación manual. También falta definir la política de reembolsos. | S6 Pagos |
 | 9 | SCORM | Si la academia ya tiene cursos en SCORM o clientes que los pidan, y en qué versiones. Si no hay ninguno, S9 se puede posponer. | S9 SCORM |
 
 ## 2. Limpieza del repositorio
@@ -94,6 +96,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Pregunta de respuesta abierta, con revisión manual.
 - Preguntas al azar tomadas de un banco e importación de preguntas desde un archivo.
 - Intercalar actividades y recursos dentro de una sección.
+- Escalas de notas no numéricas (letras, conceptos, aprobado / desaprobado) o distintas por curso. Hoy la academia guarda sus propias escalas numéricas (nombre y nota máxima) y elige cuál usar.
 
 **De matrículas y aula (S3, entrega 2)**
 
@@ -105,6 +108,18 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Avisos por correo: matrícula creada, acceso por vencer y vencido (depende de la decisión 3).
 - Que el alumno pueda solicitar una matrícula o una extensión desde el portal.
 - Revisar en teléfono las pantallas de Matrículas, inicio del alumno y cursos disponibles.
+
+**De venta a personas (S5)**
+
+- Cobro en línea, comprobantes e IGV (S6; depende de la decisión 8).
+- Reembolsos y anulación de órdenes pagadas (falta definir la política).
+- Avisos por correo: orden creada, pago confirmado y orden por vencer (depende de la decisión 3).
+- Que el comprador adjunte su comprobante de pago en la orden.
+- Verificar el correo al registrarse y poder desactivar el registro público por academia.
+- Volver a comprar un curso con la matrícula vencida (hoy la extensión la hace el personal).
+- Que el personal registre una venta a nombre de un alumno.
+- Buscador y filtros en el catálogo; cupones, carrito y paquetes (S11); segunda moneda y tipo de cambio.
+- Revisar en teléfono el checkout y la confirmación de pago.
 
 **De rendir actividades (S3, entrega 3)**
 
@@ -118,4 +133,4 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 1. Limpieza del repositorio (sección 2).
 2. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging.
-3. S5 Venta a personas, en paralelo con lo anterior.
+3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6. Si demora, adelantar S7 Certificados.

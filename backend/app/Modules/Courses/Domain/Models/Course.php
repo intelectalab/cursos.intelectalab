@@ -36,6 +36,7 @@ class Course extends Model
         'level',
         'duration_hours',
         'access_days',
+        'price',
         'language',
         'cover_file_id',
         'status',
@@ -51,10 +52,19 @@ class Course extends Model
         return [
             'duration_hours' => 'integer',
             'access_days' => 'integer',
+            'price' => 'decimal:2',
             'has_pending_changes' => 'boolean',
             'published_at' => 'datetime',
             'archived_at' => 'datetime',
         ];
+    }
+
+    /**
+     * En venta: publicado y con precio (0 = gratuito). Sin precio solo admite matrícula manual.
+     */
+    public function isForSale(): bool
+    {
+        return $this->status === self::STATUS_PUBLISHED && $this->current_version_id !== null && $this->price !== null;
     }
 
     public function isArchived(): bool

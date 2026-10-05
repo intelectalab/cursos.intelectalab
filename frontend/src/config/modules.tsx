@@ -8,6 +8,7 @@ import {
   Library,
   Users,
   CreditCard,
+  Receipt,
   BarChart3,
   Settings,
   UserCog,
@@ -21,6 +22,8 @@ import { QuestionBanksPage } from '../features/academic/pages/QuestionBanksPage'
 import { MyCoursesPage } from '../features/enrollments/pages/MyCoursesPage';
 import { AvailableCoursesPage } from '../features/enrollments/pages/AvailableCoursesPage';
 import { EnrollmentsPage } from '../features/enrollments/pages/EnrollmentsPage';
+import { MyOrdersPage } from '../features/sales/pages/MyOrdersPages';
+import { OrdersPage } from '../features/sales/pages/OrdersPage';
 import { UsersPage } from '../features/identity/pages/UsersPage';
 import { RolesPage } from '../features/identity/pages/RolesPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
@@ -82,6 +85,18 @@ export const APP_MODULES: ModuleItem[] = [
     component: AvailableCoursesPage,
   },
   {
+    id: 'my-orders',
+    name: 'Mis compras',
+    description: 'Tus órdenes y el estado de cada pago',
+    href: '/my-orders',
+    icon: Receipt,
+    tone: 'success',
+    group: 'general',
+    // Compran los alumnos; el servidor exige además orders.create
+    permission: 'student.portal',
+    component: MyOrdersPage,
+  },
+  {
     id: 'courses',
     name: 'Cursos',
     description: 'Cursos, contenido y publicación',
@@ -137,20 +152,14 @@ export const APP_MODULES: ModuleItem[] = [
   {
     id: 'billing',
     name: 'Ventas y pagos',
-    description: 'Órdenes, pagos y comprobantes',
+    description: 'Órdenes de compra y confirmación de pagos',
     href: '/billing',
     icon: CreditCard,
     tone: 'success',
     group: 'operation',
-    permission: 'orders.read',
-    component: () => (
-      <ComingSoon
-        title="Ventas y pagos"
-        description="Órdenes, pagos y comprobantes."
-        icon={CreditCard}
-        features={['Órdenes de venta', 'Pagos y conciliación', 'Comprobantes', 'Promociones y cupones']}
-      />
-    ),
+    // Soporte las consulta en solo lectura
+    permission: ['orders.read', 'orders.support.read'],
+    component: OrdersPage,
   },
   {
     id: 'reports',

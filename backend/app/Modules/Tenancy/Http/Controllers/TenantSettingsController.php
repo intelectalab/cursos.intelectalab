@@ -4,6 +4,7 @@ namespace App\Modules\Tenancy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Files\Application\FileStorage;
+use App\Modules\Tenancy\Application\GradeScaleService;
 use App\Modules\Tenancy\Application\TenantLogoService;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiResponse;
@@ -16,6 +17,7 @@ class TenantSettingsController extends Controller
     public function __construct(
         private readonly TenantSettingsService $settings,
         private readonly TenantLogoService $logo,
+        private readonly GradeScaleService $scales,
     ) {}
 
     public function show(Request $request): JsonResponse
@@ -28,10 +30,18 @@ class TenantSettingsController extends Controller
                     'extensions' => config('files.purposes.'.TenantLogoService::PURPOSE.'.extensions'),
                 ],
                 'currencies' => TenantSettingsService::CURRENCIES,
-                'grade_scales' => TenantSettingsService::GRADE_SCALES,
+                'grade_scales' => $this->scales->all(),
+                'grade_scale_max_score' => [
+                    'min' => GradeScaleService::MAX_SCORE_MIN,
+                    'max' => GradeScaleService::MAX_SCORE_MAX,
+                ],
                 'session_minutes' => [
                     'min' => config('identity.session_lifetime_min'),
                     'max' => config('identity.session_lifetime_max'),
+                ],
+                'order_expiration_hours' => [
+                    'min' => TenantSettingsService::ORDER_EXPIRATION_MIN,
+                    'max' => TenantSettingsService::ORDER_EXPIRATION_MAX,
                 ],
             ]
         );
@@ -51,7 +61,13 @@ class TenantSettingsController extends Controller
             'contact_address' => ['nullable', 'string', 'max:255'],
             'terms' => ['nullable', 'string', 'max:50000'],
             'privacy_policy' => ['nullable', 'string', 'max:50000'],
-            'grade_scale' => ['required', 'integer', Rule::in(TenantSettingsService::GRADE_SCALES)],
+            'grade_scale' => ['required', 'integer', Rule::in($this->scales->availableMaxScores())],
+            'payment_instructions' => ['nullable', 'string', 'max:5000'],
+            'order_expiration_hours' => [
+                'nullable', 'integer',
+                'min:'.TenantSettingsService::ORDER_EXPIRATION_MIN,
+                'max:'.TenantSettingsService::ORDER_EXPIRATION_MAX,
+            ],
             'session_minutes' => [
                 'required', 'integer',
                 'min:'.config('identity.session_lifetime_min'),

@@ -15,9 +15,6 @@ class TenantSettingsService
 {
     public const KEY = 'general';
 
-    /** Escalas de calificación: vigesimal o centesimal */
-    public const GRADE_SCALES = [20, 100];
-
     /** Monedas soportadas (RN-019) */
     public const CURRENCIES = ['PEN', 'USD'];
 
@@ -32,9 +29,20 @@ class TenantSettingsService
         'privacy_policy' => null,
         // null = valor por defecto de la plataforma
         'session_minutes' => null,
-        // Nota máxima con la que se muestran las calificaciones
+        // Nota máxima de la escala en uso (GradeScaleService)
         'grade_scale' => 20,
+        // Cómo pagar una orden mientras no haya pasarela: cuenta bancaria, Yape, etc.
+        'payment_instructions' => null,
+        // null = valor por defecto de la plataforma
+        'order_expiration_hours' => null,
     ];
+
+    /** Horas que una orden pendiente espera su pago */
+    public const ORDER_EXPIRATION_HOURS = 72;
+
+    public const ORDER_EXPIRATION_MIN = 1;
+
+    public const ORDER_EXPIRATION_MAX = 720;
 
     public function __construct(private readonly AuditLogger $audit) {}
 
@@ -47,6 +55,7 @@ class TenantSettingsService
 
         $settings = array_merge(self::DEFAULTS, array_intersect_key($stored, self::DEFAULTS));
         $settings['session_minutes'] ??= config('identity.session_lifetime_minutes');
+        $settings['order_expiration_hours'] ??= self::ORDER_EXPIRATION_HOURS;
 
         return [
             'name' => $tenant->name,
@@ -60,6 +69,32 @@ class TenantSettingsService
         $stored = TenantSetting::query()->where('key', self::KEY)->value('value') ?? [];
 
         return (int) ($stored['grade_scale'] ?? self::DEFAULTS['grade_scale']);
+    }
+
+    /**
+     * Moneda en la que la organización fija sus precios y cobra (RN-019).
+     */
+    public function currency(): string
+    {
+        return $this->stored()['primary_currency'] ?? self::DEFAULTS['primary_currency'];
+    }
+
+    public function paymentInstructions(): ?string
+    {
+        return $this->stored()['payment_instructions'] ?? null;
+    }
+
+    public function orderExpirationHours(): int
+    {
+        return (int) ($this->stored()['order_expiration_hours'] ?? self::ORDER_EXPIRATION_HOURS);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function stored(): array
+    {
+        return TenantSetting::query()->where('key', self::KEY)->value('value') ?? [];
     }
 
     /**

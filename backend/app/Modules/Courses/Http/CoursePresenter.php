@@ -28,6 +28,8 @@ class CoursePresenter
             'duration_hours' => $course->duration_hours,
             // Días de acceso que recibe cada matrícula nueva; null = no vence
             'access_days' => $course->access_days,
+            // Precio de venta en la moneda de la organización; null = no está en venta, 0 = gratuito
+            'price' => $course->price,
             'language' => $course->language,
             'status' => $course->status,
             'cover_url' => $course->cover?->publicUrl(),

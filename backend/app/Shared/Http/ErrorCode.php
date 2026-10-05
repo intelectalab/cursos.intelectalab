@@ -31,6 +31,8 @@ enum ErrorCode: string
     case RoleInUse = 'ROLE_IN_USE';
     case LastAdministrator = 'LAST_ADMINISTRATOR';
 
+    case GradeScaleInUse = 'GRADE_SCALE_IN_USE';
+
     case CourseNotPublishable = 'COURSE_NOT_PUBLISHABLE';
     case CourseInvalidState = 'COURSE_INVALID_STATE';
 
@@ -39,6 +41,12 @@ enum ErrorCode: string
     case EnrollmentNotActive = 'ENROLLMENT_NOT_ACTIVE';
     case EnrollmentExpired = 'ENROLLMENT_EXPIRED';
     case EnrollmentNotStarted = 'ENROLLMENT_NOT_STARTED';
+
+    case CourseNotForSale = 'COURSE_NOT_FOR_SALE';
+    case PriceChanged = 'PRICE_CHANGED';
+    case AlreadyEnrolled = 'ALREADY_ENROLLED';
+    case OrderAlreadyPending = 'ORDER_ALREADY_PENDING';
+    case OrderNotPending = 'ORDER_NOT_PENDING';
 
     case NoAttemptsLeft = 'NO_ATTEMPTS_LEFT';
     case AttemptClosed = 'ATTEMPT_CLOSED';

@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Modules\Academic\Application\ActivityContent;
 use App\Modules\Courses\Application\CourseContentExtension;
+use App\Modules\Sales\Application\Payments\ManualPaymentGateway;
+use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Support\Facades\Event;
@@ -20,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Contenido que otros módulos aportan a los cursos al publicarlos
         $this->app->tag([ActivityContent::class], CourseContentExtension::TAG);
+
+        // Cobro de las órdenes: manual mientras no haya proveedor de pagos (PD-001)
+        $this->app->bind(PaymentGateway::class, ManualPaymentGateway::class);
     }
 
     /**

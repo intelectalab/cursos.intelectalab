@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { useTenant } from '../../../shared/tenancy/TenantContext';
 import { centralUrl } from '../../../shared/tenancy/hosts';
+import { nextPath, withNext } from '../../../shared/auth/next';
 import { 
   Lock, 
   Mail, 
@@ -20,7 +21,11 @@ import {
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isAuthenticated } = useAuth();
+  // Quien llega desde el catálogo vuelve a su compra después de entrar
+  const next = nextPath(location.search, '/dashboard');
+  const signUp = next === '/dashboard' ? '/signup' : withNext('/signup', next);
   const { tenant, centralDomain } = useTenant();
 
   const [email, setEmail] = useState('');
@@ -31,7 +36,7 @@ export const Login: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={next} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,7 +47,7 @@ export const Login: React.FC = () => {
     try {
       const response = await api.post('/auth/login', { email, password });
       login(response.data.data);
-      navigate('/dashboard', { replace: true });
+      navigate(next, { replace: true });
     } catch (err) {
       setStatus('error');
       setErrorMessage(
@@ -324,8 +329,22 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
-          {/* Enlace de Registro de Organización */}
+          {/* Compradores: cuenta nueva y catálogo público */}
           <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+            <p className="text-xs text-slate-500 mb-2">¿Quieres llevar un curso y aún no tienes cuenta?</p>
+            <div className="flex items-center justify-center gap-4">
+              <Link to={signUp} className="text-xs font-bold text-[#0284C7] hover:text-[#084586] transition-colors">
+                Crear cuenta
+              </Link>
+              <span className="text-slate-300" aria-hidden="true">|</span>
+              <Link to="/catalog" className="text-xs font-bold text-[#0284C7] hover:text-[#084586] transition-colors">
+                Ver cursos
+              </Link>
+            </div>
+          </div>
+
+          {/* Enlace de Registro de Organización */}
+          <div className="mt-5 pt-5 border-t border-slate-100 text-center">
             <p className="text-xs text-slate-500 mb-2">
               ¿Tu empresa aún no cuenta con un espacio de trabajo?
             </p>

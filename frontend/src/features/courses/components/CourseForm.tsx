@@ -73,6 +73,19 @@ export const CourseFields: React.FC<{
             onChange={(event) => set('access_days', event.target.value ? Number(event.target.value) : null)}
           />
         </Field>
+        <Field label="Precio (opcional)" hint="En la moneda de tu academia. Vacío: no está en venta. 0: gratuito.">
+          <input
+            className={INPUT_CLASS}
+            type="number"
+            min={0}
+            max={99999999.99}
+            step="0.01"
+            placeholder="No está en venta"
+            disabled={disabled}
+            value={value.price ?? ''}
+            onChange={(event) => set('price', event.target.value !== '' ? Number(event.target.value) : null)}
+          />
+        </Field>
         <Field label="Idioma">
           <select className={INPUT_CLASS} disabled={disabled} value={value.language} onChange={(event) => set('language', event.target.value)}>
             {(options?.languages ?? ['es']).map((language) => (

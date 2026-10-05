@@ -1,14 +1,17 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { EmptyState } from '../../shared/ui';
+import { withNext } from '../../shared/auth/next';
 
 export const ProtectedRoute: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { pathname } = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Quien iba a comprar vuelve a su compra después de entrar
+    return <Navigate to={pathname.startsWith('/checkout/') ? withNext('/login', pathname) : '/login'} replace />;
   }
 
   return <Outlet />;

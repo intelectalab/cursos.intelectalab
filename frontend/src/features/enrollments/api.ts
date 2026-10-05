@@ -160,6 +160,9 @@ export interface AvailableCourse {
   sections_count: number;
   resources_count: number;
   activities_count: number;
+  // null = no está en venta (solo matrícula manual); "0.00" = gratuito
+  price: string | null;
+  currency: string;
 }
 
 export interface AvailableCourseDetail extends AvailableCourse {

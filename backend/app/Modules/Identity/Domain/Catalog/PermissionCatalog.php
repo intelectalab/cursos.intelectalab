@@ -98,6 +98,7 @@ class PermissionCatalog
                 'permissions' => [
                     'orders.read' => 'Consultar órdenes',
                     'orders.create' => 'Crear órdenes',
+                    'orders.cancel' => 'Cancelar órdenes pendientes',
                     'orders.support.read' => 'Consultar órdenes para atención de soporte',
                     'checkout.validate' => 'Validar cupones en el checkout',
                 ],
@@ -106,6 +107,7 @@ class PermissionCatalog
                 'name' => 'Pagos y finanzas',
                 'permissions' => [
                     'payments.create' => 'Registrar pagos',
+                    'payments.confirm' => 'Confirmar pagos recibidos',
                     'payments.refund' => 'Reembolsar pagos',
                     'wallet.use' => 'Usar la billetera',
                 ],

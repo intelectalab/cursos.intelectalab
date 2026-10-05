@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Matrícula (RF-ENR-001, FP-05): solicitud → validar elegibilidad → crear →
- * habilitar acceso. Hoy la hace el personal a mano; la compra (S5) y las
- * licencias (S8) crearán matrículas por este mismo servicio.
+ * habilitar acceso. La hace el personal a mano o el pago de una orden
+ * (S5); las licencias (S8) crearán matrículas por este mismo servicio.
  */
 class EnrollmentService
 {
@@ -60,11 +60,19 @@ class EnrollmentService
      * calcula desde el inicio (o desde hoy).
      *
      * @param  list<string>  $studentIds
+     * @param  bool  $requirePublished  una compra ya pagada se matricula aunque el curso se haya archivado después
      * @return Collection<int, Enrollment> las matrículas creadas (quien ya estaba matriculado se omite)
      */
-    public function enroll(Course $course, array $studentIds, User $actor, ?CarbonInterface $startsAt = null, ?CarbonInterface $endsAt = null): Collection
-    {
-        if ($course->status !== Course::STATUS_PUBLISHED) {
+    public function enroll(
+        Course $course,
+        array $studentIds,
+        User $actor,
+        ?CarbonInterface $startsAt = null,
+        ?CarbonInterface $endsAt = null,
+        string $source = Enrollment::SOURCE_MANUAL,
+        bool $requirePublished = true,
+    ): Collection {
+        if ($requirePublished && $course->status !== Course::STATUS_PUBLISHED) {
             throw new ApiException(
                 ErrorCode::CourseInvalidState,
                 'Solo se puede matricular en un curso publicado.',
@@ -88,7 +96,7 @@ class EnrollmentService
             $endsAt = Carbon::instance($startsAt ?? now())->addDays($course->access_days)->endOfDay();
         }
 
-        return DB::transaction(function () use ($course, $students, $actor, $startsAt, $endsAt) {
+        return DB::transaction(function () use ($course, $students, $actor, $startsAt, $endsAt, $source) {
             $already = Enrollment::query()
                 ->where('course_id', $course->id)
                 ->where('status', Enrollment::STATUS_ACTIVE)
@@ -97,12 +105,12 @@ class EnrollmentService
 
             return $students
                 ->reject(fn (User $student) => $already->contains($student->id))
-                ->map(function (User $student) use ($course, $actor, $startsAt, $endsAt) {
+                ->map(function (User $student) use ($course, $actor, $startsAt, $endsAt, $source) {
                     $enrollment = Enrollment::create([
                         'course_id' => $course->id,
                         'student_id' => $student->id,
                         'status' => Enrollment::STATUS_ACTIVE,
-                        'source' => Enrollment::SOURCE_MANUAL,
+                        'source' => $source,
                         'enrolled_by' => $actor->id,
                         'enrolled_at' => now(),
                         'starts_at' => $startsAt,

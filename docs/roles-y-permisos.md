@@ -44,7 +44,7 @@ Se agregará en el sprint S8. Será el contacto de una empresa cliente (uno o va
 
 ### Administrador
 
-Acceso total a todos los módulos de su academia (58 permisos). No alcanza las operaciones de plataforma.
+Acceso total a todos los módulos de su academia (60 permisos). No alcanza las operaciones de plataforma.
 
 ### Alumno
 
@@ -168,6 +168,7 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: |
 | `orders.read` | Consultar órdenes | ✔ |  |  |  | ✔ |  |
 | `orders.create` | Crear órdenes | ✔ | ✔ |  |  | ✔ |  |
+| `orders.cancel` | Cancelar órdenes pendientes | ✔ |  |  |  |  |  |
 | `orders.support.read` | Consultar órdenes para atención de soporte | ✔ |  |  | ✔ |  |  |
 | `checkout.validate` | Validar cupones en el checkout | ✔ | ✔ |  |  |  |  |
 
@@ -176,6 +177,7 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | Permiso | Descripción | Administrador | Alumno | Profesor | Soporte | Ventas/CRM | B2B autorizado |
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: |
 | `payments.create` | Registrar pagos | ✔ | ✔ |  |  |  |  |
+| `payments.confirm` | Confirmar pagos recibidos | ✔ |  |  |  |  |  |
 | `payments.refund` | Reembolsar pagos | ✔ |  |  |  |  |  |
 | `wallet.use` | Usar la billetera | ✔ | ✔ |  |  |  |  |
 

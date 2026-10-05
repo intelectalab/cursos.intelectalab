@@ -4,11 +4,14 @@ namespace App\Modules\Identity\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Identity\Application\AuthenticateUser;
+use App\Modules\Identity\Application\RegisterStudent;
 use App\Modules\Identity\Http\Requests\LoginRequest;
 use App\Modules\Identity\Http\SessionPresenter;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -21,6 +24,29 @@ class AuthController extends Controller
         );
 
         return ApiResponse::success(SessionPresenter::make($user, $token));
+    }
+
+    /**
+     * Alta de un comprador: queda con el rol Alumno y la sesión iniciada.
+     */
+    public function register(Request $request, RegisterStudent $register, TenantContext $context): JsonResponse
+    {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
+            'email' => [
+                'required', 'email', 'max:180',
+                Rule::unique('users', 'email')->where('tenant_id', $context->tenantId()),
+            ],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], ['email.unique' => 'Ya existe una cuenta con ese correo. Inicia sesión para continuar.']);
+
+        [$user, $token] = $register->handle($data);
+
+        return ApiResponse::success(SessionPresenter::make($user, $token), null, 201);
     }
 
     public function me(Request $request): JsonResponse

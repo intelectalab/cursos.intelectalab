@@ -26,6 +26,9 @@ class CourseService
 
     private const EDITABLE = ['title', 'summary', 'description', 'category', 'level', 'duration_hours', 'language'];
 
+    /** Se aplican al guardar, sin pasar por una publicación */
+    private const COMMERCIAL = ['access_days', 'price'];
+
     public function __construct(
         private readonly FileStorage $storage,
         private readonly AuditLogger $audit,
@@ -39,6 +42,7 @@ class CourseService
         return DB::transaction(function () use ($actor, $data) {
             $course = Course::create($this->attributes($data) + [
                 'access_days' => $data['access_days'] ?? null,
+                'price' => $data['price'] ?? null,
                 'status' => Course::STATUS_DRAFT,
                 'created_by' => $actor->id,
             ]);
@@ -67,14 +71,15 @@ class CourseService
                 $this->audit->record('courses.updated', $course, $before, $course->only(self::EDITABLE));
             }
 
-            // Regla de matrícula, no contenido: no genera cambios por publicar
+            // Reglas de matrícula y de venta, no contenido: no generan cambios por publicar
             $course->access_days = $data['access_days'] ?? null;
+            $course->price = $data['price'] ?? null;
 
-            if ($course->isDirty('access_days')) {
-                $previous = $course->getOriginal('access_days');
+            if ($course->isDirty(self::COMMERCIAL)) {
+                $previous = array_intersect_key($course->getOriginal(), $course->getDirty());
                 $course->save();
 
-                $this->audit->record('courses.updated', $course, ['access_days' => $previous], ['access_days' => $course->access_days]);
+                $this->audit->record('courses.updated', $course, $previous, array_intersect_key($course->only(self::COMMERCIAL), $previous));
             }
 
             return $course;

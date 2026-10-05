@@ -170,7 +170,7 @@ Frontend, desde `frontend/`:
 1. `npm ci`
 2. `npm run build` — genera `frontend/dist`, que es lo que publica el servidor web.
 
-Tarea programada (cron), necesaria para limpiar las sesiones vencidas:
+Tarea programada (cron), necesaria para limpiar las sesiones vencidas (diario) y marcar como vencidas las órdenes sin pago (`orders:expire`, cada hora):
 
 ```
 * * * * * cd /var/www/erp/backend && php artisan schedule:run >> /dev/null 2>&1

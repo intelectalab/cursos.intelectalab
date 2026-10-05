@@ -1,8 +1,15 @@
 <?php
 
+use App\Modules\Courses\Http\Controllers\CatalogController;
 use App\Modules\Courses\Http\Controllers\CourseContentController;
 use App\Modules\Courses\Http\Controllers\CourseController;
 use Illuminate\Support\Facades\Route;
+
+// Catálogo público de la organización: los cursos en venta, sin iniciar sesión
+Route::middleware(['tenant', 'throttle:120,1'])->group(function () {
+    Route::get('/catalog/courses', [CatalogController::class, 'index']);
+    Route::get('/catalog/courses/{course}', [CatalogController::class, 'show'])->whereUuid('course');
+});
 
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () {
     // Consulta: todos los cursos (courses.read) o solo los asignados (profesor)

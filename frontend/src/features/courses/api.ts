@@ -49,6 +49,8 @@ export interface CourseSummary {
   duration_hours: number | null;
   // Días de acceso de cada matrícula nueva; null = no vence
   access_days: number | null;
+  // Precio de venta en la moneda de la academia; null = no está en venta, "0.00" = gratuito
+  price: string | null;
   language: string;
   status: CourseStatus;
   cover_url: string | null;
@@ -118,6 +120,7 @@ export interface CourseInput {
   level: CourseLevel | null;
   duration_hours: number | null;
   access_days: number | null;
+  price: number | null;
   language: string;
 }
 
@@ -129,6 +132,7 @@ export const EMPTY_COURSE: CourseInput = {
   level: null,
   duration_hours: null,
   access_days: null,
+  price: null,
   language: 'es',
 };
 

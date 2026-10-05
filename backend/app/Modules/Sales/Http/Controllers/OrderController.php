@@ -1,0 +1,168 @@
+<?php
+
+namespace App\Modules\Sales\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Modules\Courses\Domain\Models\Course;
+use App\Modules\Sales\Application\OrderService;
+use App\Modules\Sales\Application\Payments\PaymentGateway;
+use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\Payment;
+use App\Modules\Sales\Http\OrderPresenter;
+use App\Shared\Http\ApiResponse;
+use App\Shared\Tenancy\TenantContext;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+
+/**
+ * Órdenes de compra: el comprador crea y consulta las suyas (/me/orders);
+ * el personal ve todas, confirma los pagos recibidos y cancela pendientes.
+ */
+class OrderController extends Controller
+{
+    private const RELATIONS = ['customer', 'currency', 'items', 'payment.confirmer'];
+
+    public function __construct(
+        private readonly OrderService $orders,
+        private readonly PaymentGateway $gateway,
+    ) {}
+
+    /**
+     * Checkout (Maestro §7.2, POST /orders): el comprador es quien tiene la sesión.
+     */
+    public function store(Request $request, TenantContext $context): JsonResponse
+    {
+        $data = $request->validate([
+            'course_id' => ['required', 'uuid', Rule::exists('courses', 'id')->where('tenant_id', $context->tenantId())],
+            // Total que el comprador vio en pantalla; el servidor lo contrasta con el precio vigente (RN-008)
+            'expected_total' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $order = $this->orders->place(
+            $request->user(),
+            Course::query()->with('currentVersion')->findOrFail($data['course_id']),
+            isset($data['expected_total']) ? (string) $data['expected_total'] : null,
+        );
+
+        return $this->respondToCustomer($order, 201);
+    }
+
+    public function mine(Request $request): JsonResponse
+    {
+        $orders = Order::query()
+            ->where('customer_id', $request->user()->id)
+            ->with(self::RELATIONS)
+            ->orderByDesc('number')
+            ->get();
+
+        return ApiResponse::success($orders->map(fn (Order $order) => OrderPresenter::make($order))->values());
+    }
+
+    public function showMine(Request $request, string $order): JsonResponse
+    {
+        return $this->respondToCustomer($this->own($request, $order));
+    }
+
+    public function cancelMine(Request $request, string $order): JsonResponse
+    {
+        return $this->respondToCustomer($this->orders->cancel($this->own($request, $order), $request->user()));
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        $filters = $request->validate([
+            'status' => ['nullable', Rule::in(Order::STATUSES)],
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $orders = Order::query()
+            ->with(self::RELATIONS)
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->inState($status))
+            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
+                $like = '%'.mb_strtolower($search).'%';
+                $number = ctype_digit($search) ? (int) $search : null;
+
+                $q->where(fn (Builder $match) => $match
+                    ->when($number, fn (Builder $byNumber) => $byNumber->where('number', $number))
+                    ->orWhereHas('customer', fn (Builder $customer) => $customer
+                        ->whereRaw('lower(email) like ?', [$like])
+                        ->orWhereRaw('lower(first_name) like ?', [$like])
+                        ->orWhereRaw('lower(last_name) like ?', [$like]))
+                    ->orWhereHas('items', fn (Builder $items) => $items->whereRaw('lower(title) like ?', [$like])));
+            })
+            ->orderByDesc('number')
+            ->paginate($filters['per_page'] ?? 50);
+
+        return ApiResponse::paginated($orders, fn (Order $order) => OrderPresenter::make($order));
+    }
+
+    /**
+     * Catálogos de la pantalla de órdenes.
+     */
+    public function options(): JsonResponse
+    {
+        return ApiResponse::success([
+            'statuses' => Order::STATUSES,
+            'payment_methods' => Payment::METHODS,
+        ]);
+    }
+
+    public function show(Order $order): JsonResponse
+    {
+        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+    }
+
+    /**
+     * El personal confirma que recibió el pago: la orden queda pagada y el comprador, matriculado.
+     */
+    public function confirmPayment(Request $request, Order $order): JsonResponse
+    {
+        $data = $request->validate([
+            'method' => ['required', Rule::in(Payment::METHODS)],
+            'reference' => ['nullable', 'string', 'max:120'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'paid_at' => ['nullable', 'date', 'before_or_equal:now'],
+        ]);
+
+        $order = $this->orders->applyPayment($order, $request->user(), [
+            'paid_at' => isset($data['paid_at']) ? Carbon::parse($data['paid_at']) : null,
+        ] + $data);
+
+        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+    }
+
+    public function cancel(Request $request, Order $order): JsonResponse
+    {
+        $order = $this->orders->cancel($order, $request->user());
+
+        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+    }
+
+    /**
+     * Una orden ajena no existe para el comprador.
+     */
+    private function own(Request $request, string $order): Order
+    {
+        return Order::query()->where('customer_id', $request->user()->id)->findOrFail($order);
+    }
+
+    /**
+     * Mientras la orden espera su pago, el comprador ve cómo pagarla.
+     */
+    private function respondToCustomer(Order $order, int $status = 200): JsonResponse
+    {
+        $order->load(self::RELATIONS);
+
+        return ApiResponse::success(
+            OrderPresenter::make($order) + [
+                'payment_instructions' => $order->isPayable() ? $this->gateway->instructions($order) : null,
+            ],
+            null,
+            $status
+        );
+    }
+}

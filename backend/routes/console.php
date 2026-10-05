@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schedule;
 // Limpieza diaria de sesiones vencidas (RF-AUTH-002)
 Schedule::command('sanctum:prune-expired --hours=24')->daily();
 
+// Órdenes pendientes cuyo plazo de pago ya pasó (S5)
+Schedule::command('orders:expire')->hourly();
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');

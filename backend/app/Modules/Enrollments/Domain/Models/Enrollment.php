@@ -32,6 +32,9 @@ class Enrollment extends Model
 
     public const SOURCE_MANUAL = 'MANUAL';
 
+    /** La creó el pago de una orden de compra */
+    public const SOURCE_PURCHASE = 'PURCHASE';
+
     protected $fillable = [
         'tenant_id',
         'course_id',
