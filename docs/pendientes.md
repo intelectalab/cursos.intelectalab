@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-05, al cerrar S5.
+Última actualización: 2026-10-05, al cerrar S7 (certificados y reportes).
 
 ## Dónde estamos
 
-**Sprint actual: S5 — Venta a personas (B2C), terminado. Toca empezar S6.**
+**Sprint actual: S7 — Certificados y reportes, terminado.** Se adelantó a S6, que espera la decisión 8.
 
-**Siguiente paso:** S6 — Pagos. No se puede empezar el cobro en línea sin la decisión 8 (pasarela, Yape y facturación). Si la decisión demora, conviene adelantar S7 Certificados, que no depende de ella.
+**Siguiente paso:** S6 Pagos, si ya está la decisión 8 (pasarela, Yape, facturación y quién cobra). Si no, S8 Empresas y CRM, que no depende de ella. De S6 se puede adelantar sin proveedor: el registro de transacciones con una pasarela simulada, que el comprador adjunte su comprobante y los datos de facturación.
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -23,19 +23,22 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S4 | Matrículas y portal del alumno: vigencia, gestión general, curso completado, inicio del alumno y cursos disponibles | Hecho |
 | — | Escalas de notas guardadas por academia | Hecho |
 | S5 | Venta a personas (B2C): catálogo público, registro, compra, órdenes y pago confirmado por el personal | Hecho |
-| S6 | Pagos | **Siguiente** (ver decisión 8) |
-| S7 | Certificados | Pendiente |
+| S6 | Pagos | **Siguiente**, en espera de la decisión 8 |
+| S7 · entrega 1 | Certificados: emisión automática, PDF con QR, verificación pública, anulación | Hecho |
+| S7 · entrega 2 | Reportes: tablero de indicadores con periodo y comparación | Hecho |
 | S8 | Empresas y CRM (B2B) | Pendiente |
 | S9 | SCORM | Pendiente (ver decisión 9) |
 | S10 | Operación | Pendiente |
 | S11 | Promociones | Pendiente |
 | S12–S13 | Endurecimiento y pruebas de aceptación | Pendiente |
 
-- **Avance del plan:** 6 de 14 sprints completos (S0 a S5).
-- **Calidad:** 154 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
+- **Avance del plan:** 7 de 14 sprints completos (S0 a S5 y S7). S6 está en espera.
+- **Calidad:** 165 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
-- **Qué no se puede hacer todavía:** pagar en línea, emitir comprobantes ni certificados.
+- **Certificados:** el curso que lo indique entrega un certificado en PDF, con código y QR, a quien lo completa; cualquiera lo verifica en una página pública; el personal puede emitir a mano y anular.
+- **Reportes:** tablero con ingresos, órdenes, matrículas, alumnos activos, cursos completados y certificados de un periodo, comparados con el periodo anterior; cursos más vendidos y finalización por curso.
+- **Qué no se puede hacer todavía:** pagar en línea ni emitir comprobantes.
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
 El detalle de cada bloque terminado está en [avances/](avances/README.md).
@@ -121,6 +124,25 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Buscador y filtros en el catálogo; cupones, carrito y paquetes (S11); segunda moneda y tipo de cambio.
 - Revisar en teléfono el checkout y la confirmación de pago.
 
+**De certificados (S7, entrega 1)**
+
+- Nota mínima para el certificado (depende de definir la nota final del curso).
+- Aviso por correo al emitir el certificado (depende de la decisión 3).
+- Más de una plantilla o un editor de diseño; plantilla por curso.
+- Que el alumno vea desde "Mis cursos" que ya tiene certificado, y que el profesor vea los de sus cursos.
+- Emitir de una vez todos los certificados pendientes.
+- Pantalla para ver las consultas de verificación registradas.
+- Probar el QR con un teléfono cuando haya servidor; revisar en teléfono las pantallas nuevas.
+
+**De reportes (S7, entrega 2)**
+
+- Exportar a Excel o CSV.
+- Reportes por curso, por alumno y por vendedor; filtros por curso o categoría.
+- Reportes del profesor sobre sus cursos.
+- Indicadores de notas, de abandono y de pagos por medio.
+- Mostrar las cifras principales en el inicio del administrador.
+- Probar con volumen real y en teléfono.
+
 **De rendir actividades (S3, entrega 3)**
 
 - Recuperar las respuestas ya marcadas al retomar un intento abierto.
@@ -133,4 +155,4 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 1. Limpieza del repositorio (sección 2).
 2. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging.
-3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6. Si demora, adelantar S7 Certificados.
+3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6; si demora, seguir con S8 Empresas y CRM.

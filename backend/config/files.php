@@ -39,6 +39,12 @@ return [
             'limit' => 'document',
             'extensions' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'zip'],
         ],
+        // Firma que aparece en los certificados: solo la ve el personal y el PDF
+        'certificate_signature' => [
+            'visibility' => 'private',
+            'limit' => 'image',
+            'extensions' => ['png', 'jpg', 'jpeg'],
+        ],
         'course_material' => [
             'visibility' => 'private',
             'limit' => 'document',

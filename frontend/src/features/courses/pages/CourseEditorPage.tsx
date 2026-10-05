@@ -78,6 +78,7 @@ function toInput(course: CourseDetail): CourseInput {
     duration_hours: course.duration_hours,
     access_days: course.access_days,
     price: course.price !== null ? Number(course.price) : null,
+    issues_certificate: course.issues_certificate,
     language: course.language,
   };
 }

@@ -48,6 +48,9 @@ enum ErrorCode: string
     case OrderAlreadyPending = 'ORDER_ALREADY_PENDING';
     case OrderNotPending = 'ORDER_NOT_PENDING';
 
+    case CertificateNotEligible = 'CERTIFICATE_NOT_ELIGIBLE';
+    case CertificateRevoked = 'CERTIFICATE_REVOKED';
+
     case NoAttemptsLeft = 'NO_ATTEMPTS_LEFT';
     case AttemptClosed = 'ATTEMPT_CLOSED';
     case SubmissionGraded = 'SUBMISSION_GRADED';

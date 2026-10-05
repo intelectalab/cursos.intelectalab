@@ -51,6 +51,8 @@ export interface CourseSummary {
   access_days: number | null;
   // Precio de venta en la moneda de la academia; null = no está en venta, "0.00" = gratuito
   price: string | null;
+  // Quien completa el curso recibe certificado
+  issues_certificate: boolean;
   language: string;
   status: CourseStatus;
   cover_url: string | null;
@@ -121,6 +123,7 @@ export interface CourseInput {
   duration_hours: number | null;
   access_days: number | null;
   price: number | null;
+  issues_certificate: boolean;
   language: string;
 }
 
@@ -133,6 +136,7 @@ export const EMPTY_COURSE: CourseInput = {
   duration_hours: null,
   access_days: null,
   price: null,
+  issues_certificate: false,
   language: 'es',
 };
 

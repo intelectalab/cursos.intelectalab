@@ -25,7 +25,7 @@ No hay servicios adicionales obligatorios por ahora (ni Redis, ni almacenamiento
 | Node.js / npm (solo para compilar el frontend) | 22.18.0 / 10.9.3 | Node 20 |
 | PostgreSQL | 15 | 15 |
 
-**Extensiones de PHP:** `pdo_pgsql`, `pgsql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `fileinfo`, `bcmath`, `curl`, `zip`.
+**Extensiones de PHP:** `pdo_pgsql`, `pgsql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `fileinfo`, `bcmath`, `curl`, `zip`, `gd` (dibuja el QR e incrusta el logo y la firma en el PDF de los certificados; sin ella no se generan).
 
 ## 3. Dependencias
 
@@ -35,6 +35,8 @@ No hay servicios adicionales obligatorios por ahora (ni Redis, ni almacenamiento
 | --- | --- | --- |
 | `laravel/framework` | 12.69.2 | Framework |
 | `laravel/sanctum` | 4.3.3 | Sesiones por token |
+| `dompdf/dompdf` | 3.1.6 | PDF de los certificados |
+| `bacon/bacon-qr-code` | 3.1.1 | Código QR de los certificados |
 
 Solo de desarrollo (no se instalan en el servidor con `--no-dev`): `laravel/boost` 2.10.1, `laravel/pint` 1.32.1, `laravel/pail` 1.2.7, `phpunit/phpunit` 11.5.56, `mockery/mockery` 1.6.15, `nunomaduro/collision` 8.9.5, `fakerphp/faker` 1.24.1.
 

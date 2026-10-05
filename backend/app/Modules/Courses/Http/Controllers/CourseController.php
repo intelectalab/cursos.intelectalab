@@ -183,6 +183,8 @@ class CourseController extends Controller
             'access_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
             // Vacío = no está en venta; 0 = gratuito
             'price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+            // Quien completa el curso recibe certificado (RN-007)
+            'issues_certificate' => ['nullable', 'boolean'],
             'language' => ['required', Rule::in(Course::LANGUAGES)],
         ]);
     }

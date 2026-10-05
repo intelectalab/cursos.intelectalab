@@ -1,5 +1,5 @@
 import React from 'react';
-import { Field, INPUT_CLASS } from '../../../shared/ui';
+import { CHECKBOX_CLASS, Field, INPUT_CLASS } from '../../../shared/ui';
 import { LANGUAGE_LABEL, LEVEL_LABEL, type CourseInput, type CourseLevel, type CourseOptions } from '../api';
 
 // Campos del curso, compartidos por el alta y la pestaña Información
@@ -96,6 +96,19 @@ export const CourseFields: React.FC<{
           </select>
         </Field>
       </div>
+      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          className={`${CHECKBOX_CLASS} mt-0.5`}
+          disabled={disabled}
+          checked={value.issues_certificate}
+          onChange={(event) => set('issues_certificate', event.target.checked)}
+        />
+        <span>
+          <span className="block text-[13px] font-medium text-slate-800">Este curso entrega certificado</span>
+          <span className="block text-xs text-slate-500">Se emite solo cuando el alumno completa el curso al 100 %, con código y QR de verificación.</span>
+        </span>
+      </label>
       {withDescription && (
         <Field label="Descripción (opcional)" hint="Qué aprenderá el alumno, a quién va dirigido y qué necesita saber antes.">
           <textarea {...text('description')} rows={8} maxLength={20000} />

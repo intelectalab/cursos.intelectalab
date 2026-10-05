@@ -16,6 +16,8 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-05 | S4 — Matrículas y portal del alumno | [2026-10-05-s4-matriculas-y-portal.md](2026-10-05-s4-matriculas-y-portal.md) |
 | 2026-10-05 | Escalas de notas guardadas | [2026-10-05-escala-de-notas-libre.md](2026-10-05-escala-de-notas-libre.md) |
 | 2026-10-05 | S5 — Venta a personas (B2C) | [2026-10-05-s5-venta-b2c.md](2026-10-05-s5-venta-b2c.md) |
+| 2026-10-05 | S7 — Certificados y reportes · Entrega 1: certificados | [2026-10-05-s7-entrega-1-certificados.md](2026-10-05-s7-entrega-1-certificados.md) |
+| 2026-10-05 | S7 — Certificados y reportes · Entrega 2: reportes | [2026-10-05-s7-entrega-2-reportes.md](2026-10-05-s7-entrega-2-reportes.md) |
 
 Documentos relacionados:
 
@@ -27,3 +29,4 @@ Documentos relacionados:
 ## Qué sigue
 
 1. S6 — Pagos: pasarela, Yape y comprobantes. Depende de que jefatura defina el proveedor (decisión 8 de [pendientes](../pendientes.md)).
+2. Si esa decisión no llega: S8 — Empresas y CRM (B2B).

@@ -44,7 +44,7 @@ Se agregará en el sprint S8. Será el contacto de una empresa cliente (uno o va
 
 ### Administrador
 
-Acceso total a todos los módulos de su academia (60 permisos). No alcanza las operaciones de plataforma.
+Acceso total a todos los módulos de su academia (62 permisos). No alcanza las operaciones de plataforma.
 
 ### Alumno
 
@@ -159,7 +159,9 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 
 | Permiso | Descripción | Administrador | Alumno | Profesor | Soporte | Ventas/CRM | B2B autorizado |
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `certificates.read` | Consultar los certificados emitidos | ✔ |  |  |  |  |  |
 | `certificates.issue` | Emitir certificados | ✔ |  |  |  |  |  |
+| `certificates.revoke` | Anular certificados | ✔ |  |  |  |  |  |
 | `certificates.self` | Consultar los certificados propios | ✔ | ✔ |  |  |  |  |
 
 ### Ventas

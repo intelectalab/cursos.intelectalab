@@ -9,6 +9,8 @@ import {
   Users,
   CreditCard,
   Receipt,
+  Award,
+  Medal,
   BarChart3,
   Settings,
   UserCog,
@@ -24,6 +26,9 @@ import { AvailableCoursesPage } from '../features/enrollments/pages/AvailableCou
 import { EnrollmentsPage } from '../features/enrollments/pages/EnrollmentsPage';
 import { MyOrdersPage } from '../features/sales/pages/MyOrdersPages';
 import { OrdersPage } from '../features/sales/pages/OrdersPage';
+import { MyCertificatesPage } from '../features/certificates/pages/MyCertificatesPage';
+import { CertificatesPage } from '../features/certificates/pages/CertificatesPage';
+import { ReportsPage } from '../features/reports/pages/ReportsPage';
 import { UsersPage } from '../features/identity/pages/UsersPage';
 import { RolesPage } from '../features/identity/pages/RolesPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
@@ -97,6 +102,17 @@ export const APP_MODULES: ModuleItem[] = [
     component: MyOrdersPage,
   },
   {
+    id: 'my-certificates',
+    name: 'Mis certificados',
+    description: 'Los certificados de tus cursos completados',
+    href: '/my-certificates',
+    icon: Medal,
+    tone: 'warning',
+    group: 'general',
+    permission: 'certificates.self',
+    component: MyCertificatesPage,
+  },
+  {
     id: 'courses',
     name: 'Cursos',
     description: 'Cursos, contenido y publicación',
@@ -162,22 +178,26 @@ export const APP_MODULES: ModuleItem[] = [
     component: OrdersPage,
   },
   {
+    id: 'certificates',
+    name: 'Certificados',
+    description: 'Certificados emitidos y su plantilla',
+    href: '/certificates',
+    icon: Award,
+    tone: 'warning',
+    group: 'operation',
+    permission: ['certificates.read', 'certificates.issue'],
+    component: CertificatesPage,
+  },
+  {
     id: 'reports',
     name: 'Reportes',
-    description: 'Indicadores y exportaciones',
+    description: 'Ventas, matrículas y avance de los alumnos',
     href: '/reports',
     icon: BarChart3,
     tone: 'warning',
     group: 'operation',
     permission: 'reports.read',
-    component: () => (
-      <ComingSoon
-        title="Reportes"
-        description="Indicadores de ventas, académicos y de operación."
-        icon={BarChart3}
-        features={['Ventas por periodo', 'Avance académico', 'Soporte', 'Exportaciones']}
-      />
-    ),
+    component: ReportsPage,
   },
   {
     id: 'users',

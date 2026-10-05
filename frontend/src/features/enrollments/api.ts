@@ -163,6 +163,7 @@ export interface AvailableCourse {
   // null = no está en venta (solo matrícula manual); "0.00" = gratuito
   price: string | null;
   currency: string;
+  issues_certificate: boolean;
 }
 
 export interface AvailableCourseDetail extends AvailableCourse {

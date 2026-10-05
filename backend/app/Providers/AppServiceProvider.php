@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Modules\Academic\Application\ActivityContent;
+use App\Modules\Certificates\Application\IssueCertificateOnCompletion;
 use App\Modules\Courses\Application\CourseContentExtension;
+use App\Modules\Enrollments\Domain\Events\EnrollmentCompleted;
 use App\Modules\Sales\Application\Payments\ManualPaymentGateway;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Shared\Tenancy\TenantContext;
@@ -43,6 +45,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ConnectionEstablished::class, function (ConnectionEstablished $event) use ($context) {
             $context->syncConnection($event->connection);
         });
+
+        // Reacciones entre módulos: quien emite el evento no conoce a quien lo escucha
+        Event::listen(EnrollmentCompleted::class, IssueCertificateOnCompletion::class);
 
         // Cada módulo de dominio versiona sus propias migraciones
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')));

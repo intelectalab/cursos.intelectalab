@@ -38,6 +38,7 @@ class CatalogPresenter
             // null = no está en venta (solo matrícula manual); 0 = gratuito
             'price' => $course->price,
             'currency' => $currency,
+            'issues_certificate' => $course->issues_certificate,
         ];
     }
 

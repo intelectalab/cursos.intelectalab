@@ -89,7 +89,9 @@ class PermissionCatalog
             'certificates' => [
                 'name' => 'Certificados',
                 'permissions' => [
+                    'certificates.read' => 'Consultar los certificados emitidos',
                     'certificates.issue' => 'Emitir certificados',
+                    'certificates.revoke' => 'Anular certificados',
                     'certificates.self' => 'Consultar los certificados propios',
                 ],
             ],

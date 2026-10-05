@@ -3,6 +3,7 @@
 namespace App\Modules\Enrollments\Application;
 
 use App\Modules\Courses\Domain\Models\CourseVersion;
+use App\Modules\Enrollments\Domain\Events\EnrollmentCompleted;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Domain\Models\EnrollmentProgress;
 use Illuminate\Support\Collection;
@@ -72,6 +73,8 @@ class ProgressService
     {
         if ($summary['percent'] === 100 && $enrollment->completed_at === null && $enrollment->isActive()) {
             $enrollment->update(['completed_at' => now()]);
+
+            EnrollmentCompleted::dispatch($enrollment);
         }
 
         return $summary;

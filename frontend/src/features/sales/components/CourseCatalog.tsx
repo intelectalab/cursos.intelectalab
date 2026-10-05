@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Clock, FileStack, FileText, GraduationCap, Link2, ListChecks, Paperclip, Video, type LucideIcon } from 'lucide-react';
+import { Award, BookOpen, Clock, FileStack, FileText, GraduationCap, Link2, ListChecks, Paperclip, Video, type LucideIcon } from 'lucide-react';
 import { ACTIVITY_ICON } from '../../academic/icons';
 import type { ActivityType } from '../../academic/api';
 import { LANGUAGE_LABEL, LEVEL_LABEL, type ResourceType } from '../../courses/api';
@@ -40,6 +40,11 @@ export const CourseFacts: React.FC<{ course: AvailableCourse }> = ({ course }) =
     {course.level && (
       <span className="inline-flex items-center gap-1.5">
         <GraduationCap className="w-3.5 h-3.5" /> {LEVEL_LABEL[course.level]}
+      </span>
+    )}
+    {course.issues_certificate && (
+      <span className="inline-flex items-center gap-1.5">
+        <Award className="w-3.5 h-3.5" /> Con certificado
       </span>
     )}
   </div>

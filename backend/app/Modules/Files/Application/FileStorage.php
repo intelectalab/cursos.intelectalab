@@ -98,6 +98,14 @@ class FileStorage
         );
     }
 
+    /**
+     * Contenido del archivo, para quien necesita incrustarlo (p. ej. en un PDF).
+     */
+    public function contents(File $file): ?string
+    {
+        return $this->disk($file)->get($file->path);
+    }
+
     public function exists(File $file): bool
     {
         return $this->disk($file)->exists($file->path);
