@@ -35,6 +35,8 @@ class TenantSettingsService
         'payment_instructions' => null,
         // null = valor por defecto de la plataforma
         'order_expiration_hours' => null,
+        // Días hábiles para responder una hoja del Libro de Reclamaciones; null = valor por defecto
+        'claim_response_days' => null,
     ];
 
     /** Horas que una orden pendiente espera su pago */
@@ -43,6 +45,13 @@ class TenantSettingsService
     public const ORDER_EXPIRATION_MIN = 1;
 
     public const ORDER_EXPIRATION_MAX = 720;
+
+    /** Días hábiles para responder un reclamo o queja (PD-013: configurable por organización) */
+    public const CLAIM_RESPONSE_DAYS = 15;
+
+    public const CLAIM_RESPONSE_MIN = 1;
+
+    public const CLAIM_RESPONSE_MAX = 60;
 
     public function __construct(private readonly AuditLogger $audit) {}
 
@@ -56,6 +65,7 @@ class TenantSettingsService
         $settings = array_merge(self::DEFAULTS, array_intersect_key($stored, self::DEFAULTS));
         $settings['session_minutes'] ??= config('identity.session_lifetime_minutes');
         $settings['order_expiration_hours'] ??= self::ORDER_EXPIRATION_HOURS;
+        $settings['claim_response_days'] ??= self::CLAIM_RESPONSE_DAYS;
 
         return [
             'name' => $tenant->name,
@@ -87,6 +97,11 @@ class TenantSettingsService
     public function orderExpirationHours(): int
     {
         return (int) ($this->stored()['order_expiration_hours'] ?? self::ORDER_EXPIRATION_HOURS);
+    }
+
+    public function claimResponseDays(): int
+    {
+        return (int) ($this->stored()['claim_response_days'] ?? self::CLAIM_RESPONSE_DAYS);
     }
 
     /**

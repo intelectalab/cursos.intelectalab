@@ -10,7 +10,7 @@ import {
   Phone,
   Plus,
   Settings as SettingsIcon,
-  ShieldCheck,
+  ShieldCheck, BookOpenCheck,
   ShoppingCart,
   Trash2,
   type LucideIcon,
@@ -49,6 +49,7 @@ interface Settings {
   session_minutes: number;
   payment_instructions: string | null;
   order_expiration_hours: number;
+  claim_response_days: number;
   grade_scale: number;
   logo_url: string | null;
 }
@@ -623,6 +624,31 @@ export const SettingsPage: React.FC = () => {
                 />
               </Field>
             </div>
+          </div>
+        </Section>
+
+        <Section
+          icon={BookOpenCheck}
+          tone="info"
+          title="Libro de Reclamaciones"
+          text="Formulario público donde cualquier consumidor registra un reclamo o una queja. Usa la razón social, el RUC y la dirección de arriba."
+        >
+          <div className="max-w-xs">
+            <Field label="Plazo para responder (días hábiles)" hint="Entre 1 y 60. Se le informa al consumidor en su constancia. No cuenta sábados ni domingos.">
+              <input
+                className={INPUT_CLASS}
+                type="number"
+                required
+                min={1}
+                max={60}
+                disabled={!editable}
+                value={form.claim_response_days}
+                onChange={(event) => {
+                  setForm({ ...form, claim_response_days: Number(event.target.value) });
+                  setStatus('idle');
+                }}
+              />
+            </Field>
           </div>
         </Section>
 

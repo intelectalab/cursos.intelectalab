@@ -16,6 +16,9 @@ import { CheckoutPage } from '../features/sales/pages/CheckoutPage';
 import { MyOrderPage } from '../features/sales/pages/MyOrdersPages';
 import { VerifyPage } from '../features/certificates/pages/VerifyPage';
 import { CorporateAccountPage } from '../features/company/pages/CorporateAccountPage';
+import { ClaimFormPage, ClaimLookupPage } from '../features/claims/pages/PublicClaimPages';
+import { PageEditorPage } from '../features/cms/pages/PageEditorPage';
+import { PublicPage } from '../features/cms/pages/PublicPage';
 import { APP_MODULES } from '../config/modules';
 
 // Dominio central de la plataforma: alta de organizaciones
@@ -44,6 +47,11 @@ function TenantRoutes() {
         {/* Verificación pública de certificados: a esta dirección lleva el QR */}
         <Route path="/verify" element={<VerifyPage />} />
         <Route path="/verify/:code" element={<VerifyPage />} />
+        {/* Libro de Reclamaciones: lo llena cualquier consumidor, sin cuenta */}
+        <Route path="/reclamaciones" element={<ClaimFormPage />} />
+        <Route path="/reclamaciones/seguimiento" element={<ClaimLookupPage />} />
+        {/* Páginas publicadas de la academia */}
+        <Route path="/p/:slug" element={<PublicPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -89,6 +97,14 @@ function TenantRoutes() {
               element={
                 <PermissionGate permission={['corporate_accounts.read', 'licenses.read']}>
                   <CorporateAccountPage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/pages/:pageId"
+              element={
+                <PermissionGate permission={['cms.read', 'cms.update', 'cms.publish']}>
+                  <PageEditorPage />
                 </PermissionGate>
               }
             />

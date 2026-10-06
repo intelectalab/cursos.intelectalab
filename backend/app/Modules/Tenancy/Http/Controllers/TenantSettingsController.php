@@ -68,6 +68,11 @@ class TenantSettingsController extends Controller
                 'min:'.TenantSettingsService::ORDER_EXPIRATION_MIN,
                 'max:'.TenantSettingsService::ORDER_EXPIRATION_MAX,
             ],
+            'claim_response_days' => [
+                'nullable', 'integer',
+                'min:'.TenantSettingsService::CLAIM_RESPONSE_MIN,
+                'max:'.TenantSettingsService::CLAIM_RESPONSE_MAX,
+            ],
             'session_minutes' => [
                 'required', 'integer',
                 'min:'.config('identity.session_lifetime_min'),

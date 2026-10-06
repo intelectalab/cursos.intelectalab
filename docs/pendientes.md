@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-05, al cerrar S8 (empresas y CRM).
+Última actualización: 2026-10-05, al cerrar S10 (operación: soporte, reclamaciones y páginas).
 
 ## Dónde estamos
 
-**Sprint actual: S8 — Empresas y CRM (B2B), terminado.** Igual que S7, se adelantó a S6, que espera la decisión 8.
+**Sprint actual: S10 — Operación, terminado.** Igual que S7 y S8, se adelantó a S6, que espera la decisión 8, y a S9, que espera la decisión 9.
 
-**Siguiente paso:** S6 Pagos, si ya está la decisión 8 (pasarela, Yape, facturación y quién cobra). Si no, S10 Operación (soporte, páginas y Libro de Reclamaciones) o S11 Promociones y paquetes; S9 SCORM espera la decisión 9. De S6 se puede adelantar sin proveedor: el registro de transacciones con una pasarela simulada, que el comprador adjunte su comprobante y los datos de facturación.
+**Siguiente paso:** S6 Pagos, si ya está la decisión 8 (pasarela, Yape, facturación y quién cobra). Si no, S11 Promociones y paquetes, que necesita definir cómo se acumulan las promociones; S9 SCORM espera la decisión 9. De S6 se puede adelantar sin proveedor: el registro de transacciones con una pasarela simulada, que el comprador adjunte su comprobante y los datos de facturación.
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -30,17 +30,20 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S8 · entrega 2 | Cotizaciones corporativas con versiones; al aceptarse nace la venta | Hecho |
 | S8 · entrega 3 | Licencias, asignación a trabajadores y portal del Responsable de empresa | Hecho |
 | S9 | SCORM | Pendiente (ver decisión 9) |
-| S10 | Operación | Pendiente |
+| S10 · entrega 1 | Soporte: tickets con mensajes, adjuntos y bandeja del personal | Hecho |
+| S10 · entrega 2 | Libro de Reclamaciones: formulario público, código, seguimiento y respuesta | Hecho |
+| S10 · entrega 3 | Páginas (CMS): borrador, vista previa, publicación con versiones | Hecho |
 | S11 | Promociones | Pendiente |
 | S12–S13 | Endurecimiento y pruebas de aceptación | Pendiente |
 
-- **Avance del plan:** 8 de 14 sprints completos (S0 a S5, S7 y S8). S6 está en espera.
-- **Calidad:** 190 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
+- **Avance del plan:** 9 de 14 sprints completos (S0 a S5, S7, S8 y S10). S6 y S9 están en espera de decisiones.
+- **Calidad:** 208 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
 - **Certificados:** el curso que lo indique entrega un certificado en PDF, con código y QR, a quien lo completa; cualquiera lo verifica en una página pública; el personal puede emitir a mano y anular.
 - **Reportes:** tablero con ingresos, órdenes, matrículas, alumnos activos, cursos completados y certificados de un periodo, comparados con el periodo anterior; cursos más vendidos y finalización por curso.
 - **Venta a empresas:** el equipo comercial registra prospectos, lleva cada oportunidad por el embudo y arma la cotización; cuando la empresa la acepta (en línea o por otro medio) nace la venta. Confirmado el pago, la empresa recibe sus licencias y su responsable las asigna a sus trabajadores, que quedan matriculados; desde su portal ve el avance y los certificados.
+- **Operación:** quien usa la academia pide ayuda desde su cuenta y el personal la atiende en una bandeja de soporte; cualquier consumidor registra un reclamo o queja en el Libro de Reclamaciones público y consulta su respuesta con un código; y la academia publica sus páginas de texto (términos, privacidad, preguntas frecuentes).
 - **Qué no se puede hacer todavía:** pagar en línea ni emitir comprobantes.
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
@@ -60,6 +63,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 | 10 | Vigencia de la matrícula | Resuelto: cada curso define sus "días de acceso" (vacío = no vence) y el personal ajusta la vigencia de cada matrícula. Falta que cada academia decida qué valor pone a sus cursos. | Nada |
 | 11 | Curso archivado | Resuelto: quienes ya estaban matriculados conservan el acceso; solo se bloquean las matrículas nuevas. | Nada |
 | 8 | Pasarela de pagos y facturación | Proveedor de pagos, Yape y comprobantes electrónicos. **Ya urge:** es lo siguiente. Mientras tanto la venta funciona con pago por fuera y confirmación manual. También falta definir la política de reembolsos. Para la venta a empresas se suma: si se factura con RUC e IGV, y si habrá crédito o pagos parciales. | S6 Pagos |
+| 12 | Libro de Reclamaciones | Que jefatura o quien lleve lo legal confirme el formato de la hoja y el plazo de respuesta. Se armó con el formato habitual del INDECOPI y un plazo configurable (15 días hábiles por defecto), sin revisión legal. También: si hace falta descontar feriados. | Salida a producción |
 | 9 | SCORM | Si la academia ya tiene cursos en SCORM o clientes que los pidan, y en qué versiones. Si no hay ninguno, S9 se puede posponer. | S9 SCORM |
 
 ## 2. Limpieza del repositorio
@@ -173,7 +177,33 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 **De las pruebas automáticas**
 
-- Una prueba de matrículas de S4 (`EnrollmentValidityTest`) falló una vez en una corrida completa y pasó en todas las repeticiones. Hay que encontrar por qué antes de confiarle el CI.
+- Resuelto en S10: la prueba de matrículas que falló una vez en S8 buscaba "ana" entre alumnos con nombres al azar, y un nombre como "Mariana" se colaba. Ahora usa un nombre fijo. No volvió a fallar, pero conviene revisar si otras pruebas buscan por texto entre datos al azar.
+- La auditoría de dependencias del frontend (`npm audit`) marca dos avisos altos en `brace-expansion` y `source-map-js`. Vienen de las herramientas de compilación y revisión (eslint, postcss, tailwind), no del código que llega al navegador. No se actualizaron.
+
+**De soporte (S10, entrega 1)**
+
+- Avisar por correo de cada respuesta (depende de la decisión 3) y mostrar en el menú cuántos tickets esperan.
+- Tiempos de respuesta comprometidos y alertas por demora (falta definirlos).
+- Que el personal abra un ticket a nombre de un usuario; respuestas predefinidas; encuesta de satisfacción.
+- Que el responsable de empresa vea las consultas de sus trabajadores.
+- Reportes de soporte.
+
+**Del Libro de Reclamaciones (S10, entrega 2)**
+
+- Confirmación legal del formato y del plazo (decisión 12).
+- Enviar por correo la constancia y el aviso de la respuesta (depende de la decisión 3).
+- Calendario de feriados para el plazo; alertas cuando una hoja está por vencer.
+- Captcha en el formulario; adjuntar pruebas; constancia en PDF propio.
+- Reporte exportable de las hojas.
+
+**De páginas (S10, entrega 3)**
+
+- Ver una versión anterior y volver a ella.
+- Biblioteca de imágenes; tablas y videos en el contenido; descripción para buscadores.
+- Editar la portada y el menú del sitio público.
+- Retirar de Configuración los campos antiguos "Términos" y "Política de privacidad".
+- Cargar el editor solo cuando se abre, para no agrandar la descarga inicial de todos.
+- Revisar en teléfono las pantallas de soporte, reclamaciones y páginas.
 
 **De rendir actividades (S3, entrega 3)**
 
@@ -187,4 +217,5 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 1. Limpieza del repositorio (sección 2).
 2. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging.
-3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6; si demora, seguir con S10 Operación o S11 Promociones y paquetes.
+3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6; si demora, seguir con S11 Promociones y paquetes.
+4. Hacer revisar el Libro de Reclamaciones por quien lleve lo legal (decisión 12) antes de abrir el sistema al público.

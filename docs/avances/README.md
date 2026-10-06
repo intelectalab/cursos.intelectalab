@@ -21,6 +21,9 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-05 | S8 — Empresas y CRM · Entrega 1: prospectos, empresas y oportunidades | [2026-10-05-s8-entrega-1-crm.md](2026-10-05-s8-entrega-1-crm.md) |
 | 2026-10-05 | S8 — Empresas y CRM · Entrega 2: cotizaciones | [2026-10-05-s8-entrega-2-cotizaciones.md](2026-10-05-s8-entrega-2-cotizaciones.md) |
 | 2026-10-05 | S8 — Empresas y CRM · Entrega 3: licencias y portal de empresa | [2026-10-05-s8-entrega-3-licencias-y-portal.md](2026-10-05-s8-entrega-3-licencias-y-portal.md) |
+| 2026-10-05 | S10 — Operación · Entrega 1: soporte | [2026-10-05-s10-entrega-1-soporte.md](2026-10-05-s10-entrega-1-soporte.md) |
+| 2026-10-05 | S10 — Operación · Entrega 2: Libro de Reclamaciones | [2026-10-05-s10-entrega-2-reclamaciones.md](2026-10-05-s10-entrega-2-reclamaciones.md) |
+| 2026-10-05 | S10 — Operación · Entrega 3: páginas (CMS) | [2026-10-05-s10-entrega-3-paginas.md](2026-10-05-s10-entrega-3-paginas.md) |
 
 Documentos relacionados:
 
@@ -32,4 +35,4 @@ Documentos relacionados:
 ## Qué sigue
 
 1. S6 — Pagos: pasarela, Yape y comprobantes. Depende de que jefatura defina el proveedor (decisión 8 de [pendientes](../pendientes.md)).
-2. Si esa decisión no llega: S10 — Operación (soporte, páginas y reclamaciones) o S11 — Promociones y paquetes. S9 — SCORM espera la decisión 9.
+2. Si esa decisión no llega: S11 — Promociones y paquetes. S9 — SCORM espera la decisión 9.

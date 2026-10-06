@@ -45,6 +45,18 @@ return [
             'limit' => 'image',
             'extensions' => ['png', 'jpg', 'jpeg'],
         ],
+        // Adjunto de un mensaje de soporte: capturas y documentos
+        'ticket_attachment' => [
+            'visibility' => 'private',
+            'limit' => 'document',
+            'extensions' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'webp', 'zip'],
+        ],
+        // Imágenes insertadas en las páginas de la organización
+        'page_media' => [
+            'visibility' => 'public',
+            'limit' => 'image',
+            'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
+        ],
         'course_material' => [
             'visibility' => 'private',
             'limit' => 'document',

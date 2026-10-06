@@ -35,7 +35,9 @@ class FileStorage
 
         return [
             'required',
+            // El contenido debe ser de un tipo permitido y el nombre no puede anunciar otro
             FileRule::types($config['extensions'])->max(config("files.limits.{$config['limit']}")),
+            'extensions:'.implode(',', $config['extensions']),
         ];
     }
 

@@ -63,6 +63,8 @@ class RoleCatalog
                 'description' => 'Atención y seguimiento de tickets',
                 'permissions' => [
                     'tickets.*', 'users.support.read', 'orders.support.read', 'enrollments.support.read',
+                    // Ve los reclamos para dar contexto a quien consulta; responderlos es del Administrador
+                    'claims.read',
                 ],
             ],
             self::SALES => [
@@ -78,7 +80,7 @@ class RoleCatalog
             self::COMPANY => [
                 'name' => 'Responsable de empresa',
                 'description' => 'Portal de una empresa cliente: licencias, trabajadores, avance y cotizaciones',
-                'permissions' => ['company.portal'],
+                'permissions' => ['company.portal', 'tickets.self', 'tickets.create'],
             ],
         ];
     }

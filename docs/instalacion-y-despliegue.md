@@ -4,7 +4,7 @@ Guía de respaldo para instalar el sistema en un servidor. Se actualiza cada vez
 
 > **Estado:** todavía no se ha hecho un despliegue real. Los pasos de instalación local están probados; los de servidor (sección 5 en adelante) describen lo que el sistema necesita, pero no se han ejecutado en un servidor. Los puntos sin resolver están en la sección 9.
 
-Última actualización: 2026-10-05 (S8 Empresas y CRM).
+Última actualización: 2026-10-05 (S10 Operación).
 
 ## 1. Componentes
 
@@ -50,6 +50,7 @@ Solo de desarrollo (no se instalan en el servidor con `--no-dev`): `laravel/boos
 | `tailwindcss`, `@tailwindcss/vite` | ^4.3.3 | Estilos |
 | `lucide-react` | ^1.45.0 | Íconos |
 | `@fontsource-variable/inter` | ^5.3.0 | Tipografía Inter, servida desde el propio sitio |
+| `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-image`, `@tiptap/pm` | ^3.31.4 | Editor de las páginas de la academia (S10) |
 | `vite`, `typescript` (desarrollo) | ^8.3.0, ~6.0.2 | Compilación |
 
 Las versiones exactas quedan fijadas en `backend/composer.lock` y `frontend/package-lock.json`; el servidor debe instalar desde esos archivos.
@@ -172,13 +173,15 @@ Frontend, desde `frontend/`:
 1. `npm ci`
 2. `npm run build` — genera `frontend/dist`, que es lo que publica el servidor web.
 
-Tarea programada (cron), necesaria para limpiar las sesiones vencidas (diario) y marcar como vencidas las órdenes sin pago (`orders:expire`, cada hora):
+Tarea programada (cron), necesaria para limpiar las sesiones vencidas (diario), marcar como vencidas las órdenes sin pago (`orders:expire`, cada hora) y cerrar los tickets resueltos hace más de una semana (`tickets:close-resolved`, diario). Es una sola línea de cron; las tres tareas salen de ella:
 
 ```
 * * * * * cd /var/www/erp/backend && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 S8 (Empresas y CRM) no agrega dependencias, variables de entorno, servicios ni tareas programadas: solo migraciones (módulos `Crm` y `B2b`; modifican además la tabla `orders`) y permisos nuevos, que se cargan con los pasos 3 y 4.
+
+S10 (Operación) agrega las migraciones de los módulos `Support`, `Claims` y `Cms`, permisos nuevos (pasos 3 y 4), la tarea diaria de tickets (mismo cron) y el editor TipTap en el frontend (se instala con `npm ci`). No agrega variables de entorno ni dependencias del backend. Las rutas públicas nuevas del sitio (`/reclamaciones`, `/reclamaciones/seguimiento` y `/p/...`) las sirve la misma aplicación web: el servidor debe seguir devolviendo `index.html` para cualquier ruta que no sea `/api`. El formulario de reclamaciones limita los envíos por dirección IP: detrás de un proxy, sin los proxies de confianza configurados (sección 9), todos los visitantes compartirían la IP del proxy y el límite los bloquearía a todos.
 
 Comprobación tras desplegar:
 

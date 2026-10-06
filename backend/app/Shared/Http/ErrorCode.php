@@ -59,6 +59,10 @@ enum ErrorCode: string
     case LicenseNotAvailable = 'LICENSE_NOT_AVAILABLE';
     case LicenseInUse = 'LICENSE_IN_USE';
 
+    case TicketClosed = 'TICKET_CLOSED';
+    case ClaimAlreadyAnswered = 'CLAIM_ALREADY_ANSWERED';
+    case PageNotPublishable = 'PAGE_NOT_PUBLISHABLE';
+
     case NoAttemptsLeft = 'NO_ATTEMPTS_LEFT';
     case AttemptClosed = 'ATTEMPT_CLOSED';
     case SubmissionGraded = 'SUBMISSION_GRADED';

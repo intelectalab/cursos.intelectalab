@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap } from 'lucide-react';
+import { BookOpenCheck, GraduationCap } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { useTenant } from '../../../shared/tenancy/TenantContext';
+import { api } from '../../../shared/api/client';
 
 const LINK_CLASS = 'inline-flex items-center justify-center h-9 px-3.5 rounded-lg text-[13px] font-semibold transition-colors';
 
@@ -10,6 +11,15 @@ const LINK_CLASS = 'inline-flex items-center justify-center h-9 px-3.5 rounded-l
 export const PublicShell: React.FC<{ hero?: React.ReactNode; children: React.ReactNode }> = ({ hero, children }) => {
   const { tenant } = useTenant();
   const { isAuthenticated } = useAuth();
+  // Páginas publicadas de la academia que se enlazan al pie
+  const [pages, setPages] = useState<{ slug: string; title: string }[]>([]);
+
+  useEffect(() => {
+    api
+      .get('/site/pages')
+      .then((response) => setPages(response.data.data))
+      .catch(() => setPages([]));
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-canvas">
@@ -52,8 +62,19 @@ export const PublicShell: React.FC<{ hero?: React.ReactNode; children: React.Rea
 
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">{children}</main>
 
-      <footer className="border-t border-slate-200/80 py-5 text-center text-xs text-slate-500">
-        © {new Date().getFullYear()} {tenant?.name}
+      <footer className="border-t border-slate-200/80 py-5 px-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-500">
+        <span>
+          © {new Date().getFullYear()} {tenant?.name}
+        </span>
+        {pages.map((page) => (
+          <Link key={page.slug} to={`/p/${page.slug}`} className="font-medium text-slate-600 hover:text-brand-700">
+            {page.title}
+          </Link>
+        ))}
+        <Link to="/reclamaciones" className="inline-flex items-center gap-1.5 font-medium text-slate-600 hover:text-brand-700">
+          <BookOpenCheck className="w-3.5 h-3.5" />
+          Libro de Reclamaciones
+        </Link>
       </footer>
     </div>
   );

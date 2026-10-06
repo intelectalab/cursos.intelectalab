@@ -86,7 +86,8 @@ class EnrollmentValidityTest extends TestCase
             ->assertCreated()->assertJsonPath('data.0.ends_at', null);
 
         // Fechas explícitas mandan sobre el valor del curso; el fin no puede ser anterior al inicio
-        $other = $this->student('beto@acme.com');
+        // Nombre fijo: uno al azar que contenga "ana" (Mariana, Santana) se colaría en la búsqueda del final
+        $other = $this->student('beto@acme.com', ['first_name' => 'Beto', 'last_name' => 'Ruiz']);
         $this->withToken($this->admin)->postJson($this->api("/courses/{$course}/enrollments"), [
             'student_ids' => [$other->id], 'starts_at' => '2026-04-01', 'ends_at' => '2026-03-01',
         ])->assertStatus(422)->assertJsonStructure(['details' => ['ends_at']]);

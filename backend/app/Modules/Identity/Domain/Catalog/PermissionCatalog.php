@@ -143,15 +143,25 @@ class PermissionCatalog
                 'name' => 'Soporte',
                 'permissions' => [
                     'tickets.*' => 'Gestión completa de tickets',
+                    'tickets.read' => 'Consultar todos los tickets de soporte',
+                    'tickets.manage' => 'Atender tickets: responder, asignar y cambiar su estado',
                     'tickets.create' => 'Crear tickets',
                     'tickets.self' => 'Consultar y responder los tickets propios',
                 ],
             ],
-            'cms' => [
-                'name' => 'CMS',
+            'claims' => [
+                'name' => 'Libro de Reclamaciones',
                 'permissions' => [
-                    'cms.update' => 'Editar páginas del CMS',
-                    'cms.publish' => 'Publicar páginas del CMS',
+                    'claims.read' => 'Consultar las hojas del Libro de Reclamaciones',
+                    'claims.manage' => 'Atender y responder reclamos y quejas',
+                ],
+            ],
+            'cms' => [
+                'name' => 'Páginas (CMS)',
+                'permissions' => [
+                    'cms.read' => 'Consultar las páginas y sus borradores',
+                    'cms.update' => 'Crear y editar páginas (borrador)',
+                    'cms.publish' => 'Publicar y retirar páginas',
                 ],
             ],
             'ai' => [

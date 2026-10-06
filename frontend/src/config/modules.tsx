@@ -8,6 +8,10 @@ import {
   Library,
   Users,
   Building2,
+  LifeBuoy,
+  Headset,
+  BookOpenCheck,
+  FileText,
   CreditCard,
   Receipt,
   Award,
@@ -31,6 +35,10 @@ import { MyCertificatesPage } from '../features/certificates/pages/MyCertificate
 import { CertificatesPage } from '../features/certificates/pages/CertificatesPage';
 import { CrmPage } from '../features/crm/pages/CrmPage';
 import { CompanyPortalPage } from '../features/company/pages/CompanyPortalPage';
+import { MyTicketsPage } from '../features/support/pages/MyTicketsPage';
+import { SupportPage } from '../features/support/pages/SupportPage';
+import { ClaimsPage } from '../features/claims/pages/ClaimsPage';
+import { PagesPage } from '../features/cms/pages/PagesPage';
 import { ReportsPage } from '../features/reports/pages/ReportsPage';
 import { UsersPage } from '../features/identity/pages/UsersPage';
 import { RolesPage } from '../features/identity/pages/RolesPage';
@@ -139,6 +147,19 @@ export const APP_MODULES: ModuleItem[] = [
     component: CompanyPortalPage,
   },
   {
+    id: 'help',
+    name: 'Ayuda',
+    description: 'Tus consultas al equipo de soporte',
+    href: '/help',
+    icon: LifeBuoy,
+    tone: 'info',
+    group: 'general',
+    permission: 'tickets.self',
+    // Es para quien pide ayuda; el personal atiende desde Soporte
+    explicit: true,
+    component: MyTicketsPage,
+  },
+  {
     id: 'courses',
     name: 'Cursos',
     description: 'Cursos, contenido y publicación',
@@ -208,6 +229,28 @@ export const APP_MODULES: ModuleItem[] = [
     component: CertificatesPage,
   },
   {
+    id: 'support',
+    name: 'Soporte',
+    description: 'Consultas de alumnos, compradores y empresas',
+    href: '/support',
+    icon: Headset,
+    tone: 'info',
+    group: 'operation',
+    permission: 'tickets.read',
+    component: SupportPage,
+  },
+  {
+    id: 'claims',
+    name: 'Reclamaciones',
+    description: 'Reclamos y quejas del Libro de Reclamaciones',
+    href: '/claims',
+    icon: BookOpenCheck,
+    tone: 'warning',
+    group: 'operation',
+    permission: 'claims.read',
+    component: ClaimsPage,
+  },
+  {
     id: 'reports',
     name: 'Reportes',
     description: 'Ventas, matrículas y avance de los alumnos',
@@ -250,6 +293,17 @@ export const APP_MODULES: ModuleItem[] = [
     group: 'admin',
     permission: 'tenant_settings.read',
     component: SettingsPage,
+  },
+  {
+    id: 'pages',
+    name: 'Páginas',
+    description: 'Páginas de texto del sitio de la academia',
+    href: '/pages',
+    icon: FileText,
+    tone: 'info',
+    group: 'admin',
+    permission: ['cms.read', 'cms.update', 'cms.publish'],
+    component: PagesPage,
   },
   {
     id: 'audit',

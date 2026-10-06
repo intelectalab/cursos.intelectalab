@@ -22,10 +22,10 @@ Cada academia recibe estos roles al crearse. Son fijos: no se editan ni se elimi
 | Administrador | `ADMIN` | Administración integral de la organización | Acceso total |
 | Alumno | `STUDENT` | Consumo de cursos, actividades y certificados | 13 |
 | Profesor | `TEACHER` | Gestión académica de los cursos asignados | 7 |
-| Soporte | `SUPPORT` | Atención y seguimiento de tickets | 4 |
+| Soporte | `SUPPORT` | Atención y seguimiento de tickets | 5 |
 | Ventas/CRM | `SALES` | Gestión comercial y CRM | 4 |
 | B2B autorizado | `B2B` | Operaciones corporativas: cuentas, licencias y cotizaciones | 3 |
-| Responsable de empresa | `COMPANY` | Portal de una empresa cliente: licencias, trabajadores, avance y cotizaciones | 1 |
+| Responsable de empresa | `COMPANY` | Portal de una empresa cliente: licencias, trabajadores, avance y cotizaciones | 3 |
 
 ### Roles propios
 
@@ -45,7 +45,7 @@ Es el contacto externo de una empresa cliente (uno o varios por empresa). Regist
 
 ### Administrador
 
-Acceso total a todos los módulos de su academia (71 permisos). No alcanza las operaciones de plataforma.
+Acceso total a todos los módulos de su academia (76 permisos). No alcanza las operaciones de plataforma.
 
 ### Alumno
 
@@ -79,6 +79,7 @@ Acceso total a todos los módulos de su academia (71 permisos). No alcanza las o
 - `users.support.read`: Consultar usuarios para atención de soporte
 - `orders.support.read`: Consultar órdenes para atención de soporte
 - `enrollments.support.read`: Consultar matrículas para atención de soporte
+- `claims.read`: Consultar las hojas del Libro de Reclamaciones
 
 ### Ventas/CRM
 
@@ -96,6 +97,8 @@ Acceso total a todos los módulos de su academia (71 permisos). No alcanza las o
 ### Responsable de empresa
 
 - `company.portal`: Acceder al portal de empresa (solo para responsables de una empresa cliente)
+- `tickets.self`: Consultar y responder los tickets propios
+- `tickets.create`: Crear tickets
 
 ## 4. Matriz de permisos por módulo
 
@@ -218,15 +221,25 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | Permiso | Descripción | Administrador | Alumno | Profesor | Soporte | Ventas/CRM | B2B autorizado | Responsable de empresa |
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | `tickets.*` | Gestión completa de tickets | ✔ |  |  | ✔ |  |  |  |
-| `tickets.create` | Crear tickets | ✔ | ✔ |  | ✔ |  |  |  |
-| `tickets.self` | Consultar y responder los tickets propios | ✔ | ✔ |  | ✔ |  |  |  |
+| `tickets.read` | Consultar todos los tickets de soporte | ✔ |  |  | ✔ |  |  |  |
+| `tickets.manage` | Atender tickets: responder, asignar y cambiar su estado | ✔ |  |  | ✔ |  |  |  |
+| `tickets.create` | Crear tickets | ✔ | ✔ |  | ✔ |  |  | ✔ |
+| `tickets.self` | Consultar y responder los tickets propios | ✔ | ✔ |  | ✔ |  |  | ✔ |
 
-### CMS
+### Libro de Reclamaciones
 
 | Permiso | Descripción | Administrador | Alumno | Profesor | Soporte | Ventas/CRM | B2B autorizado | Responsable de empresa |
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `cms.update` | Editar páginas del CMS | ✔ |  |  |  |  |  |  |
-| `cms.publish` | Publicar páginas del CMS | ✔ |  |  |  |  |  |  |
+| `claims.read` | Consultar las hojas del Libro de Reclamaciones | ✔ |  |  | ✔ |  |  |  |
+| `claims.manage` | Atender y responder reclamos y quejas | ✔ |  |  |  |  |  |  |
+
+### Páginas (CMS)
+
+| Permiso | Descripción | Administrador | Alumno | Profesor | Soporte | Ventas/CRM | B2B autorizado | Responsable de empresa |
+| --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `cms.read` | Consultar las páginas y sus borradores | ✔ |  |  |  |  |  |  |
+| `cms.update` | Crear y editar páginas (borrador) | ✔ |  |  |  |  |  |  |
+| `cms.publish` | Publicar y retirar páginas | ✔ |  |  |  |  |  |  |
 
 ### Chat IA
 

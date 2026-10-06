@@ -424,7 +424,7 @@ class LicenseTest extends TestCase
             $role = Role::query()->where('code', RoleCatalog::COMPANY)->with('permissions')->sole();
 
             $this->assertTrue($role->is_system);
-            $this->assertSame(['company.portal'], $role->permissions->pluck('code')->all());
+            $this->assertContains('company.portal', $role->permissions->pluck('code')->all());
         });
     }
 }
