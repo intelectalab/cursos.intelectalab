@@ -329,9 +329,11 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  // 'wide' para contenido con tablas o varias columnas
+  size?: 'normal' | 'wide';
 }
 
-export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children, footer }) => {
+export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children, footer, size = 'normal' }) => {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -349,7 +351,7 @@ export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children
       aria-modal="true"
       aria-label={title}
     >
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-pop flex flex-col max-h-[90dvh] animate-rise">
+      <div className={`w-full ${size === 'wide' ? 'max-w-3xl' : 'max-w-lg'} bg-white rounded-2xl shadow-pop flex flex-col max-h-[90dvh] animate-rise`}>
         <div className="flex items-start justify-between gap-4 px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/80">
           <div>
             <h2 className="text-base font-semibold text-slate-900">{title}</h2>

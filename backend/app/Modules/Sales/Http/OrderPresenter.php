@@ -8,7 +8,7 @@ use App\Modules\Sales\Domain\Models\OrderItem;
 class OrderPresenter
 {
     /**
-     * Espera customer, currency, items y payment.confirmer cargados.
+     * Espera customer, company, currency, items y payment.confirmer cargados.
      *
      * @return array<string, mixed>
      */
@@ -21,11 +21,13 @@ class OrderPresenter
             'number' => $order->number,
             // Situación de hoy: una pendiente fuera de plazo se muestra vencida
             'status' => $order->state(),
-            'customer' => [
+            // Compra personal: quién compró. Venta corporativa: la empresa.
+            'customer' => $order->customer ? [
                 'id' => $order->customer->id,
                 'name' => trim("{$order->customer->first_name} {$order->customer->last_name}"),
                 'email' => $order->customer->email,
-            ],
+            ] : null,
+            'company' => $order->company ? ['id' => $order->company->id, 'name' => $order->company->name] : null,
             'currency' => $order->currency->code,
             'subtotal_amount' => $order->subtotal_amount,
             'discount_amount' => $order->discount_amount,
@@ -34,6 +36,9 @@ class OrderPresenter
             'expires_at' => $order->expires_at?->toIso8601String(),
             'paid_at' => $order->paid_at?->toIso8601String(),
             'cancelled_at' => $order->cancelled_at?->toIso8601String(),
+            // Venta a empresa cuyas licencias se entregaron antes del pago
+            'licenses_released_at' => $order->licenses_released_at?->toIso8601String(),
+            'licenses_release_reason' => $order->licenses_release_reason,
             'items' => $order->items->map(fn (OrderItem $item) => [
                 'course_id' => $item->course_id,
                 'title' => $item->title,

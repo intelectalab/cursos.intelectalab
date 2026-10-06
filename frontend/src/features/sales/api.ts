@@ -53,7 +53,9 @@ export interface Order {
   id: string;
   number: number;
   status: OrderStatus;
-  customer: { id: string; name: string; email: string };
+  // Compra personal: quién compró. Venta a una empresa: la empresa (customer es null).
+  customer: { id: string; name: string; email: string } | null;
+  company: { id: string; name: string } | null;
   currency: string;
   subtotal_amount: string;
   discount_amount: string;
@@ -62,6 +64,9 @@ export interface Order {
   expires_at: string | null;
   paid_at: string | null;
   cancelled_at: string | null;
+  // Venta a empresa cuyas licencias se entregaron antes del pago
+  licenses_released_at: string | null;
+  licenses_release_reason: string | null;
   items: OrderItem[];
   payment: OrderPayment | null;
 }
@@ -93,6 +98,12 @@ export function priceLabel(price: string | null, currency: string): string | nul
 // Contenedor de una tarjeta del catálogo (enlace o botón)
 export const COURSE_CARD_CLASS =
   'group flex flex-col text-left bg-white border border-slate-200/80 rounded-2xl shadow-card overflow-hidden hover:shadow-raised hover:-translate-y-0.5 transition-all cursor-pointer';
+
+// A quién se le vendió: la persona o la empresa
+export const orderBuyer = (order: Order) => ({
+  name: order.customer?.name ?? order.company?.name ?? '—',
+  detail: order.customer?.email ?? 'Venta a empresa',
+});
 
 export const orderCode = (number: number) => `N.º ${String(number).padStart(5, '0')}`;
 
@@ -127,6 +138,9 @@ export const salesApi = {
   },
   async confirmPayment(order: string, input: ConfirmPaymentInput) {
     return (await api.post(`/orders/${order}/confirm-payment`, input)).data.data as Order;
+  },
+  async releaseLicenses(order: string, reason: string) {
+    return (await api.post(`/orders/${order}/release-licenses`, { reason })).data.data as Order;
   },
   async cancelOrder(order: string) {
     return (await api.post(`/orders/${order}/cancel`)).data.data as Order;

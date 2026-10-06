@@ -7,6 +7,7 @@ import {
   Compass,
   Library,
   Users,
+  Building2,
   CreditCard,
   Receipt,
   Award,
@@ -28,12 +29,13 @@ import { MyOrdersPage } from '../features/sales/pages/MyOrdersPages';
 import { OrdersPage } from '../features/sales/pages/OrdersPage';
 import { MyCertificatesPage } from '../features/certificates/pages/MyCertificatesPage';
 import { CertificatesPage } from '../features/certificates/pages/CertificatesPage';
+import { CrmPage } from '../features/crm/pages/CrmPage';
+import { CompanyPortalPage } from '../features/company/pages/CompanyPortalPage';
 import { ReportsPage } from '../features/reports/pages/ReportsPage';
 import { UsersPage } from '../features/identity/pages/UsersPage';
 import { RolesPage } from '../features/identity/pages/RolesPage';
 import { SettingsPage } from '../features/settings/pages/SettingsPage';
 import { AuditPage } from '../features/audit/pages/AuditPage';
-import { ComingSoon } from '../shared/ui/ComingSoon';
 import type { Tone } from '../shared/ui';
 
 export type ModuleGroup = 'general' | 'operation' | 'admin';
@@ -53,7 +55,18 @@ export interface ModuleItem {
   tone: Tone;
   group: ModuleGroup;
   permission?: string | string[];
+  // Solo para quien tiene el permiso tal cual: el acceso total del administrador no lo muestra
+  explicit?: boolean;
   component: React.ComponentType;
+}
+
+// Módulos que le corresponden a un usuario según sus permisos
+export function visibleModules(permissions: string[], can: (permission: string | string[]) => boolean): ModuleItem[] {
+  return APP_MODULES.filter((module) => {
+    if (!module.permission) return true;
+    if (module.explicit) return [module.permission].flat().some((code) => permissions.includes(code));
+    return can(module.permission);
+  });
 }
 
 export const APP_MODULES: ModuleItem[] = [
@@ -113,6 +126,19 @@ export const APP_MODULES: ModuleItem[] = [
     component: MyCertificatesPage,
   },
   {
+    id: 'company',
+    name: 'Mi empresa',
+    description: 'Licencias, trabajadores y compras de tu empresa',
+    href: '/company',
+    icon: Building2,
+    tone: 'brand',
+    group: 'general',
+    permission: 'company.portal',
+    // El portal es de una empresa cliente: al personal de la academia no le sirve
+    explicit: true,
+    component: CompanyPortalPage,
+  },
+  {
     id: 'courses',
     name: 'Cursos',
     description: 'Cursos, contenido y publicación',
@@ -150,20 +176,13 @@ export const APP_MODULES: ModuleItem[] = [
   {
     id: 'crm',
     name: 'CRM y clientes',
-    description: 'Empresas, contactos y oportunidades',
+    description: 'Empresas, oportunidades y cotizaciones',
     href: '/crm',
     icon: Users,
     tone: 'info',
     group: 'operation',
-    permission: 'crm.read',
-    component: () => (
-      <ComingSoon
-        title="CRM y clientes"
-        description="Empresas, contactos, oportunidades y cotizaciones."
-        icon={Users}
-        features={['Leads y contactos', 'Oportunidades', 'Cotizaciones', 'Licencias corporativas']}
-      />
-    ),
+    permission: ['crm.read', 'quotations.read', 'corporate_accounts.read'],
+    component: CrmPage,
   },
   {
     id: 'billing',

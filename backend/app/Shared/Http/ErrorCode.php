@@ -51,6 +51,14 @@ enum ErrorCode: string
     case CertificateNotEligible = 'CERTIFICATE_NOT_ELIGIBLE';
     case CertificateRevoked = 'CERTIFICATE_REVOKED';
 
+    case LeadNotOpen = 'LEAD_NOT_OPEN';
+    case QuotationInvalidState = 'QUOTATION_INVALID_STATE';
+    case QuotationIncomplete = 'QUOTATION_INCOMPLETE';
+    case QuotationExpired = 'QUOTATION_EXPIRED';
+    case OrderNotCorporate = 'ORDER_NOT_CORPORATE';
+    case LicenseNotAvailable = 'LICENSE_NOT_AVAILABLE';
+    case LicenseInUse = 'LICENSE_IN_USE';
+
     case NoAttemptsLeft = 'NO_ATTEMPTS_LEFT';
     case AttemptClosed = 'ATTEMPT_CLOSED';
     case SubmissionGraded = 'SUBMISSION_GRADED';

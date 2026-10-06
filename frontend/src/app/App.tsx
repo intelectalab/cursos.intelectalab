@@ -15,6 +15,7 @@ import { PublicCatalogPage, PublicCoursePage } from '../features/sales/pages/Cat
 import { CheckoutPage } from '../features/sales/pages/CheckoutPage';
 import { MyOrderPage } from '../features/sales/pages/MyOrdersPages';
 import { VerifyPage } from '../features/certificates/pages/VerifyPage';
+import { CorporateAccountPage } from '../features/company/pages/CorporateAccountPage';
 import { APP_MODULES } from '../config/modules';
 
 // Dominio central de la plataforma: alta de organizaciones
@@ -80,6 +81,14 @@ function TenantRoutes() {
               element={
                 <PermissionGate permission={['courses.read', 'courses.assigned.read']}>
                   <CourseEditorPage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/crm/accounts/:companyId"
+              element={
+                <PermissionGate permission={['corporate_accounts.read', 'licenses.read']}>
+                  <CorporateAccountPage />
                 </PermissionGate>
               }
             />

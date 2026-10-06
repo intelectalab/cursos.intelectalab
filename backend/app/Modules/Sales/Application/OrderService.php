@@ -8,6 +8,8 @@ use App\Modules\Enrollments\Application\EnrollmentService;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
+use App\Modules\Sales\Domain\Events\OrderCancelled;
+use App\Modules\Sales\Domain\Events\OrderPaid;
 use App\Modules\Sales\Domain\Models\Currency;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderItem;
@@ -103,6 +105,42 @@ class OrderService
     }
 
     /**
+     * Crea la orden de una venta corporativa (FP-04): la compra una empresa,
+     * con los cursos, cantidades y precios ya pactados en su cotización
+     * (RN-011). No vence sola: la empresa paga según lo acordado.
+     *
+     * @param  list<array{course_id: string, title: string, unit_price: string, quantity: int, total_amount: string}>  $items
+     */
+    public function placeForCompany(string $companyId, string $currencyId, array $items): Order
+    {
+        return DB::transaction(function () use ($companyId, $currencyId, $items) {
+            $this->lockOrderNumbers();
+
+            $total = self::money((string) array_sum(array_map(fn (array $item) => (float) $item['total_amount'], $items)));
+
+            $order = Order::create([
+                'number' => (int) Order::query()->max('number') + 1,
+                'company_id' => $companyId,
+                'currency_id' => $currencyId,
+                'subtotal_amount' => $total,
+                'discount_amount' => 0,
+                'total_amount' => $total,
+                'status' => Order::STATUS_PENDING,
+            ]);
+
+            $order->items()->createMany($items);
+
+            $this->audit->record('orders.created', $order, null, [
+                'number' => $order->number,
+                'company' => $order->company->name,
+                'total' => $order->total_amount,
+            ]);
+
+            return $order;
+        });
+    }
+
+    /**
      * Aplica el pago de una orden pendiente: la deja pagada y matricula al
      * comprador. Es el punto de entrada de cualquier pasarela. Idempotente
      * (RN-009): una orden que ya no está pendiente no recibe otro pago.
@@ -159,6 +197,8 @@ class OrderService
                 'status' => Order::STATUS_CANCELLED,
                 'number' => $order->number,
             ]);
+
+            OrderCancelled::dispatch($order);
 
             return $order;
         });
@@ -248,12 +288,18 @@ class OrderService
     /**
      * Orden pagada → matrícula (US-SAL-001). Si el comprador ya fue
      * matriculado a mano entretanto, la orden queda ligada a esa matrícula.
+     * En una venta corporativa no hay a quién matricular: sus licencias las
+     * entrega quien escucha OrderPaid.
      */
     private function settle(Order $order, User $actor): void
     {
         $order->update(['status' => Order::STATUS_PAID, 'paid_at' => now()]);
 
         $order->items()->with('course')->get()->each(function (OrderItem $item) use ($order, $actor) {
+            if ($order->customer_id === null) {
+                return;
+            }
+
             $enrollment = $this->enrollments
                 ->enroll($item->course, [$order->customer_id], $actor, source: Enrollment::SOURCE_PURCHASE, requirePublished: false)
                 ->first()
@@ -271,6 +317,8 @@ class OrderService
             'number' => $order->number,
             'total' => $order->total_amount,
         ]);
+
+        OrderPaid::dispatch($order, $actor);
     }
 
     /**

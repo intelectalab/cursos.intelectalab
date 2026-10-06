@@ -16,7 +16,13 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
         <li key={item.course_id} className="flex items-start justify-between gap-4 px-3.5 py-3 text-[13px]">
           <div className="min-w-0">
             <p className="font-semibold text-slate-900">{item.title}</p>
-            <p className="text-xs text-slate-500">{item.enrolled ? 'Matrícula activada' : 'Curso'}</p>
+            <p className="text-xs text-slate-500">
+              {item.quantity > 1
+                ? `${item.quantity} licencias × ${formatMoney(item.unit_price, order.currency)}`
+                : item.enrolled
+                  ? 'Matrícula activada'
+                  : 'Curso'}
+            </p>
           </div>
           <span className="font-medium text-slate-900 tnum whitespace-nowrap">{formatMoney(item.total_amount, order.currency)}</span>
         </li>

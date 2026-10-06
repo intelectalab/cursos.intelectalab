@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Building2, Globe, KeyRound, ShieldCheck, Sparkles, UserCog } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
-import { APP_MODULES } from '../../../config/modules';
+import { visibleModules } from '../../../config/modules';
 import { api } from '../../../shared/api/client';
 import { Badge, Card, CardHeader, IconChip, StatCard } from '../../../shared/ui';
 import { StudentHome } from '../../enrollments/components/StudentHome';
@@ -46,9 +46,7 @@ export const Dashboard: React.FC = () => {
   const fullAccess = permissions.includes('*');
   // Quien solo cursa (no administra) ve su avance en lugar de las cifras de la organización
   const isStudent = hasPermission('enrollments.self.read') && !hasPermission('users.read') && !hasPermission('courses.read');
-  const shortcuts = APP_MODULES.filter(
-    (module) => module.id !== 'dashboard' && (!module.permission || hasPermission(module.permission)),
-  );
+  const shortcuts = visibleModules(permissions, hasPermission).filter((module) => module.id !== 'dashboard');
   const today = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (

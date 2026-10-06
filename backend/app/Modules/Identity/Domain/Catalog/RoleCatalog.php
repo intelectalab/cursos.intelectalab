@@ -20,6 +20,9 @@ class RoleCatalog
 
     public const B2B = 'B2B';
 
+    /** Contacto externo de una empresa cliente; solo ve lo de su empresa */
+    public const COMPANY = 'COMPANY';
+
     /**
      * @return array<string, array{name: string, description: string, permissions: list<string>}>
      */
@@ -71,6 +74,11 @@ class RoleCatalog
                 'name' => 'B2B autorizado',
                 'description' => 'Operaciones corporativas: cuentas, licencias y cotizaciones',
                 'permissions' => ['corporate_accounts.*', 'licenses.*', 'quotations.*'],
+            ],
+            self::COMPANY => [
+                'name' => 'Responsable de empresa',
+                'description' => 'Portal de una empresa cliente: licencias, trabajadores, avance y cotizaciones',
+                'permissions' => ['company.portal'],
             ],
         ];
     }

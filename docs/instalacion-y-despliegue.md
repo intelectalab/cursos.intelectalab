@@ -4,7 +4,7 @@ Guía de respaldo para instalar el sistema en un servidor. Se actualiza cada vez
 
 > **Estado:** todavía no se ha hecho un despliegue real. Los pasos de instalación local están probados; los de servidor (sección 5 en adelante) describen lo que el sistema necesita, pero no se han ejecutado en un servidor. Los puntos sin resolver están en la sección 9.
 
-Última actualización: 2026-10-05 (S4 Matrículas).
+Última actualización: 2026-10-05 (S8 Empresas y CRM).
 
 ## 1. Componentes
 
@@ -162,7 +162,7 @@ Backend, desde `backend/`:
 1. `composer install --no-dev --optimize-autoloader`
 2. Crear `.env` con los valores de la sección 7.
 3. `php artisan migrate --force`
-4. `php artisan access:sync` — carga el catálogo de permisos y actualiza los roles base de todas las academias. Ejecutarlo en cada despliegue.
+4. `php artisan access:sync` — carga el catálogo de permisos, actualiza los roles base de todas las academias y crea en las que ya existían los roles base nuevos (desde S8, "Responsable de empresa"). Ejecutarlo en cada despliegue, después de las migraciones.
 5. Solo la primera vez: `php artisan platform:create-admin correo@dominio` — crea el administrador de plataforma (pide la contraseña por consola, mínimo 12 caracteres).
 6. `php artisan config:cache` y `php artisan route:cache`
 7. Dar permiso de escritura al usuario del servidor web sobre `storage/` y `bootstrap/cache/`.
@@ -177,6 +177,8 @@ Tarea programada (cron), necesaria para limpiar las sesiones vencidas (diario) y
 ```
 * * * * * cd /var/www/erp/backend && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+S8 (Empresas y CRM) no agrega dependencias, variables de entorno, servicios ni tareas programadas: solo migraciones (módulos `Crm` y `B2b`; modifican además la tabla `orders`) y permisos nuevos, que se cargan con los pasos 3 y 4.
 
 Comprobación tras desplegar:
 

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Sales\Domain\Models;
 
+use App\Modules\Crm\Domain\Models\Company;
 use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +30,7 @@ class Order extends Model
         'tenant_id',
         'number',
         'customer_id',
+        'company_id',
         'currency_id',
         'subtotal_amount',
         'discount_amount',
@@ -38,6 +40,9 @@ class Order extends Model
         'paid_at',
         'cancelled_at',
         'cancelled_by',
+        'licenses_released_at',
+        'licenses_released_by',
+        'licenses_release_reason',
     ];
 
     protected function casts(): array
@@ -50,6 +55,7 @@ class Order extends Model
             'expires_at' => 'datetime',
             'paid_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'licenses_released_at' => 'datetime',
         ];
     }
 
@@ -91,6 +97,14 @@ class Order extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    /**
+     * Empresa compradora en una venta corporativa; null en una compra personal.
+     */
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function currency(): BelongsTo

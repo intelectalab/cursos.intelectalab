@@ -3,11 +3,15 @@
 namespace App\Providers;
 
 use App\Modules\Academic\Application\ActivityContent;
+use App\Modules\B2b\Application\CancelLicensesOnOrderCancelled;
+use App\Modules\B2b\Application\IssueLicensesOnOrderPaid;
 use App\Modules\Certificates\Application\IssueCertificateOnCompletion;
 use App\Modules\Courses\Application\CourseContentExtension;
 use App\Modules\Enrollments\Domain\Events\EnrollmentCompleted;
 use App\Modules\Sales\Application\Payments\ManualPaymentGateway;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
+use App\Modules\Sales\Domain\Events\OrderCancelled;
+use App\Modules\Sales\Domain\Events\OrderPaid;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Support\Facades\Event;
@@ -48,6 +52,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Reacciones entre módulos: quien emite el evento no conoce a quien lo escucha
         Event::listen(EnrollmentCompleted::class, IssueCertificateOnCompletion::class);
+        Event::listen(OrderPaid::class, IssueLicensesOnOrderPaid::class);
+        Event::listen(OrderCancelled::class, CancelLicensesOnOrderCancelled::class);
 
         // Cada módulo de dominio versiona sus propias migraciones
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')));

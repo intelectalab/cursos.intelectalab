@@ -28,6 +28,7 @@ import {
   formatMoney,
   ORDER_STATUS_LABEL,
   ORDER_STATUSES,
+  orderBuyer,
   orderCode,
   PAYMENT_METHOD_LABEL,
   PAYMENT_METHODS,
@@ -42,10 +43,13 @@ const OrderModal: React.FC<{
   order: Order;
   canConfirm: boolean;
   canCancel: boolean;
+  // Puede entregar las licencias de una venta a empresa antes del pago
+  canDefer: boolean;
   onClose: () => void;
   onChanged: (order: Order) => void;
-}> = ({ order, canConfirm, canCancel, onClose, onChanged }) => {
-  const [mode, setMode] = useState<'view' | 'pay' | 'cancel'>('view');
+}> = ({ order, canConfirm, canCancel, canDefer, onClose, onChanged }) => {
+  const [mode, setMode] = useState<'view' | 'pay' | 'cancel' | 'release'>('view');
+  const [releaseReason, setReleaseReason] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('TRANSFER');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -83,6 +87,13 @@ const OrderModal: React.FC<{
           Confirmar pago
         </Button>
       </>
+    ) : mode === 'release' ? (
+      <>
+        <Button onClick={() => setMode('view')}>Volver</Button>
+        <Button variant="primary" type="submit" form="release-licenses-form" processing={processing}>
+          Entregar licencias
+        </Button>
+      </>
     ) : mode === 'cancel' ? (
       <>
         <Button onClick={() => setMode('view')}>Volver</Button>
@@ -98,6 +109,7 @@ const OrderModal: React.FC<{
             Cancelar orden
           </Button>
         )}
+        {pending && canDefer && order.company && !order.licenses_released_at && <Button onClick={() => setMode('release')}>Entregar licencias sin pago</Button>}
         {pending && canConfirm && (
           <Button variant="primary" icon={<BadgeCheck className="w-4 h-4" />} onClick={() => setMode('pay')}>
             Confirmar pago
@@ -113,10 +125,10 @@ const OrderModal: React.FC<{
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Avatar name={order.customer.name} />
+            <Avatar name={orderBuyer(order).name} />
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-slate-900 truncate">{order.customer.name}</p>
-              <p className="text-xs text-slate-500 truncate">{order.customer.email}</p>
+              <p className="text-[13px] font-semibold text-slate-900 truncate">{orderBuyer(order).name}</p>
+              <p className="text-xs text-slate-500 truncate">{orderBuyer(order).detail}</p>
             </div>
           </div>
           <OrderStatusBadge status={order.status} />
@@ -127,14 +139,38 @@ const OrderModal: React.FC<{
             <OrderSummary order={order} />
             {pending && order.expires_at && <p className="text-xs text-slate-500">Espera su pago hasta el {formatDateTime(order.expires_at)}.</p>}
             {order.status === 'CANCELLED' && <p className="text-xs text-slate-500">Cancelada el {formatDateTime(order.cancelled_at)}.</p>}
+            {order.licenses_released_at && (
+              <Alert tone="info">
+                Las licencias se entregaron el {formatDateTime(order.licenses_released_at)}, antes del pago. Motivo: {order.licenses_release_reason}
+              </Alert>
+            )}
           </>
+        )}
+
+        {mode === 'release' && (
+          <form
+            id="release-licenses-form"
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(() => salesApi.releaseLicenses(order.id, releaseReason.trim()), 'No se pudieron entregar las licencias.');
+            }}
+          >
+            <Alert tone="info">
+              {order.company?.name} recibirá sus licencias ahora y podrá asignarlas, aunque la orden siga pendiente de pago. Úsalo solo con empresas que pagan a crédito: queda registrado quién lo
+              autorizó.
+            </Alert>
+            <Field label="Motivo" hint="Ejemplo: orden de compra 4471, paga a 30 días.">
+              <textarea className={INPUT_CLASS} rows={3} required minLength={5} maxLength={500} autoFocus value={releaseReason} onChange={(event) => setReleaseReason(event.target.value)} />
+            </Field>
+          </form>
         )}
 
         {mode === 'pay' && (
           <form id="confirm-payment-form" onSubmit={confirmPayment} className="space-y-4">
             <Alert tone="info">
-              Confirma solo si ya verificaste que recibiste <strong>{formatMoney(order.total_amount, order.currency)}</strong>. Al confirmar, el comprador
-              queda matriculado y la orden ya no se puede cancelar.
+              Confirma solo si ya verificaste que recibiste <strong>{formatMoney(order.total_amount, order.currency)}</strong>. Al confirmar,{' '}
+              {order.company ? 'la empresa recibe sus licencias' : 'el comprador queda matriculado'} y la orden ya no se puede cancelar.
             </Alert>
             <Field label="Medio de pago">
               <select className={INPUT_CLASS} value={method} onChange={(event) => setMethod(event.target.value as PaymentMethod)}>
@@ -210,7 +246,7 @@ export const OrdersPage: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               className={`${INPUT_CLASS} pl-9`}
-              placeholder="Buscar por comprador, curso o n.º de orden"
+              placeholder="Buscar por comprador, empresa, curso o n.º de orden"
               aria-label="Buscar orden"
               value={search}
               onChange={(event) => filter(() => setSearch(event.target.value))}
@@ -276,8 +312,8 @@ export const OrdersPage: React.FC = () => {
                     <p className="text-xs text-slate-500 tnum">{formatDateTime(order.created_at)}</p>
                   </Td>
                   <Td>
-                    <p className="font-semibold text-slate-900 whitespace-nowrap">{order.customer.name}</p>
-                    <p className="text-xs text-slate-500">{order.customer.email}</p>
+                    <p className="font-semibold text-slate-900 whitespace-nowrap">{orderBuyer(order).name}</p>
+                    <p className="text-xs text-slate-500">{orderBuyer(order).detail}</p>
                   </Td>
                   <Td className="min-w-[180px] text-slate-700">{order.items.map((item) => item.title).join(', ')}</Td>
                   <Td>
@@ -302,6 +338,7 @@ export const OrdersPage: React.FC = () => {
           order={open}
           canConfirm={hasPermission('payments.confirm')}
           canCancel={hasPermission('orders.cancel')}
+          canDefer={hasPermission('payments.defer')}
           onClose={() => setOpen(null)}
           onChanged={(order) => {
             setOpen(order);

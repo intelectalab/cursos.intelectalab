@@ -35,6 +35,9 @@ class Enrollment extends Model
     /** La creó el pago de una orden de compra */
     public const SOURCE_PURCHASE = 'PURCHASE';
 
+    /** La creó la asignación de una licencia corporativa */
+    public const SOURCE_LICENSE = 'LICENSE';
+
     protected $fillable = [
         'tenant_id',
         'course_id',

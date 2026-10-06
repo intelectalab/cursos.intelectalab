@@ -23,7 +23,7 @@ use Illuminate\Validation\Rule;
  */
 class OrderController extends Controller
 {
-    private const RELATIONS = ['customer', 'currency', 'items', 'payment.confirmer'];
+    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer'];
 
     public function __construct(
         private readonly OrderService $orders,
@@ -92,6 +92,7 @@ class OrderController extends Controller
                         ->whereRaw('lower(email) like ?', [$like])
                         ->orWhereRaw('lower(first_name) like ?', [$like])
                         ->orWhereRaw('lower(last_name) like ?', [$like]))
+                    ->orWhereHas('company', fn (Builder $company) => $company->whereRaw('lower(name) like ?', [$like]))
                     ->orWhereHas('items', fn (Builder $items) => $items->whereRaw('lower(title) like ?', [$like])));
             })
             ->orderByDesc('number')

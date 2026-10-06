@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-05, al cerrar S7 (certificados y reportes).
+Última actualización: 2026-10-05, al cerrar S8 (empresas y CRM).
 
 ## Dónde estamos
 
-**Sprint actual: S7 — Certificados y reportes, terminado.** Se adelantó a S6, que espera la decisión 8.
+**Sprint actual: S8 — Empresas y CRM (B2B), terminado.** Igual que S7, se adelantó a S6, que espera la decisión 8.
 
-**Siguiente paso:** S6 Pagos, si ya está la decisión 8 (pasarela, Yape, facturación y quién cobra). Si no, S8 Empresas y CRM, que no depende de ella. De S6 se puede adelantar sin proveedor: el registro de transacciones con una pasarela simulada, que el comprador adjunte su comprobante y los datos de facturación.
+**Siguiente paso:** S6 Pagos, si ya está la decisión 8 (pasarela, Yape, facturación y quién cobra). Si no, S10 Operación (soporte, páginas y Libro de Reclamaciones) o S11 Promociones y paquetes; S9 SCORM espera la decisión 9. De S6 se puede adelantar sin proveedor: el registro de transacciones con una pasarela simulada, que el comprador adjunte su comprobante y los datos de facturación.
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -26,18 +26,21 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S6 | Pagos | **Siguiente**, en espera de la decisión 8 |
 | S7 · entrega 1 | Certificados: emisión automática, PDF con QR, verificación pública, anulación | Hecho |
 | S7 · entrega 2 | Reportes: tablero de indicadores con periodo y comparación | Hecho |
-| S8 | Empresas y CRM (B2B) | Pendiente |
+| S8 · entrega 1 | CRM: prospectos, empresas con sus contactos y embudo de oportunidades | Hecho |
+| S8 · entrega 2 | Cotizaciones corporativas con versiones; al aceptarse nace la venta | Hecho |
+| S8 · entrega 3 | Licencias, asignación a trabajadores y portal del Responsable de empresa | Hecho |
 | S9 | SCORM | Pendiente (ver decisión 9) |
 | S10 | Operación | Pendiente |
 | S11 | Promociones | Pendiente |
 | S12–S13 | Endurecimiento y pruebas de aceptación | Pendiente |
 
-- **Avance del plan:** 7 de 14 sprints completos (S0 a S5 y S7). S6 está en espera.
-- **Calidad:** 165 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
+- **Avance del plan:** 8 de 14 sprints completos (S0 a S5, S7 y S8). S6 está en espera.
+- **Calidad:** 190 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
 - **Certificados:** el curso que lo indique entrega un certificado en PDF, con código y QR, a quien lo completa; cualquiera lo verifica en una página pública; el personal puede emitir a mano y anular.
 - **Reportes:** tablero con ingresos, órdenes, matrículas, alumnos activos, cursos completados y certificados de un periodo, comparados con el periodo anterior; cursos más vendidos y finalización por curso.
+- **Venta a empresas:** el equipo comercial registra prospectos, lleva cada oportunidad por el embudo y arma la cotización; cuando la empresa la acepta (en línea o por otro medio) nace la venta. Confirmado el pago, la empresa recibe sus licencias y su responsable las asigna a sus trabajadores, que quedan matriculados; desde su portal ve el avance y los certificados.
 - **Qué no se puede hacer todavía:** pagar en línea ni emitir comprobantes.
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
@@ -56,7 +59,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 | 7 | Cuentas de prueba | Quiénes probarán en staging y con qué cuentas y datos. | Pruebas en staging |
 | 10 | Vigencia de la matrícula | Resuelto: cada curso define sus "días de acceso" (vacío = no vence) y el personal ajusta la vigencia de cada matrícula. Falta que cada academia decida qué valor pone a sus cursos. | Nada |
 | 11 | Curso archivado | Resuelto: quienes ya estaban matriculados conservan el acceso; solo se bloquean las matrículas nuevas. | Nada |
-| 8 | Pasarela de pagos y facturación | Proveedor de pagos, Yape y comprobantes electrónicos. **Ya urge:** es lo siguiente. Mientras tanto la venta funciona con pago por fuera y confirmación manual. También falta definir la política de reembolsos. | S6 Pagos |
+| 8 | Pasarela de pagos y facturación | Proveedor de pagos, Yape y comprobantes electrónicos. **Ya urge:** es lo siguiente. Mientras tanto la venta funciona con pago por fuera y confirmación manual. También falta definir la política de reembolsos. Para la venta a empresas se suma: si se factura con RUC e IGV, y si habrá crédito o pagos parciales. | S6 Pagos |
 | 9 | SCORM | Si la academia ya tiene cursos en SCORM o clientes que los pidan, y en qué versiones. Si no hay ninguno, S9 se puede posponer. | S9 SCORM |
 
 ## 2. Limpieza del repositorio
@@ -143,6 +146,35 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Mostrar las cifras principales en el inicio del administrador.
 - Probar con volumen real y en teléfono.
 
+**De CRM (S8, entrega 1)**
+
+- Arrastrar las oportunidades entre etapas y poder configurar las etapas por academia.
+- Recordatorios o tareas con fecha (hoy el seguimiento es un historial de lo ya ocurrido).
+- Formulario público para que un prospecto se registre desde la web; importar prospectos desde un archivo.
+- Eliminar o fusionar empresas duplicadas; buscador en los selectores de empresa (hoy cargan las primeras 100).
+- Cifras del CRM y de la venta a empresas en Reportes.
+
+**De cotizaciones (S8, entrega 2)**
+
+- PDF de la cotización y envío por correo (depende de la decisión 3). Hoy "marcar como enviada" solo registra que el vendedor ya la hizo llegar.
+- Impuestos, descuento global y segunda moneda (depende de la decisión 8).
+- Cotizar paquetes de cursos (S11).
+- Anular un borrador; filtro en Ventas y pagos para separar ventas a personas y a empresas.
+
+**De licencias y portal de empresa (S8, entrega 3)**
+
+- Registrar trabajadores en bloque desde un archivo.
+- Avisar por correo al trabajador que tiene un curso asignado y enviarle su acceso (depende de la decisión 3).
+- Que el responsable descargue los certificados de sus trabajadores.
+- Quitar a una persona de la empresa o cambiar quién es responsable desde la pantalla.
+- Renovar o extender licencias vencidas; límite de crédito por empresa para la entrega sin pago.
+- Comprobantes y facturas en el portal de la empresa (S6; depende de la decisión 8).
+- Revisar en teléfono las pantallas del CRM, las cotizaciones y el portal de empresa.
+
+**De las pruebas automáticas**
+
+- Una prueba de matrículas de S4 (`EnrollmentValidityTest`) falló una vez en una corrida completa y pasó en todas las repeticiones. Hay que encontrar por qué antes de confiarle el CI.
+
 **De rendir actividades (S3, entrega 3)**
 
 - Recuperar las respuestas ya marcadas al retomar un intento abierto.
@@ -155,4 +187,4 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 1. Limpieza del repositorio (sección 2).
 2. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging.
-3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6; si demora, seguir con S8 Empresas y CRM.
+3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6; si demora, seguir con S10 Operación o S11 Promociones y paquetes.

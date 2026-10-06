@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
 import { useTenant } from '../../shared/tenancy/TenantContext';
-import { APP_MODULES, MODULE_GROUPS, type ModuleGroup, type ModuleItem } from '../../config/modules';
+import { MODULE_GROUPS, visibleModules, type ModuleGroup } from '../../config/modules';
 import { can } from '../../shared/auth/permissions';
 import { Avatar } from '../../shared/ui';
 import { X } from 'lucide-react';
@@ -83,9 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
     if (!user) return [];
 
     // Sin permiso definido: visible para cualquier usuario autenticado (ej. Inicio)
-    const authorized = APP_MODULES.filter(
-      (module: ModuleItem) => !module.permission || can(permissions, module.permission),
-    );
+    const authorized = visibleModules(permissions, (permission) => can(permissions, permission));
 
     return (Object.keys(MODULE_GROUPS) as ModuleGroup[])
       .map((group) => ({
