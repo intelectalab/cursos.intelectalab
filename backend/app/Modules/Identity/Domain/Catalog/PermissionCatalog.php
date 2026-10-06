@@ -103,6 +103,10 @@ class PermissionCatalog
                     'orders.cancel' => 'Cancelar órdenes pendientes',
                     'orders.support.read' => 'Consultar órdenes para atención de soporte',
                     'checkout.validate' => 'Validar cupones en el checkout',
+                    'promotions.read' => 'Consultar promociones, cupones y sus usos',
+                    'promotions.manage' => 'Crear y editar promociones y cupones',
+                    'packages.read' => 'Consultar los paquetes de cursos',
+                    'packages.manage' => 'Crear y editar paquetes de cursos',
                 ],
             ],
             'finance' => [

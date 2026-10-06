@@ -12,6 +12,7 @@ import {
   Headset,
   BookOpenCheck,
   FileText,
+  Tags,
   CreditCard,
   Receipt,
   Award,
@@ -39,6 +40,7 @@ import { MyTicketsPage } from '../features/support/pages/MyTicketsPage';
 import { SupportPage } from '../features/support/pages/SupportPage';
 import { ClaimsPage } from '../features/claims/pages/ClaimsPage';
 import { PagesPage } from '../features/cms/pages/PagesPage';
+import { PromotionsPage } from '../features/promotions/pages/PromotionsPage';
 import { ReportsPage } from '../features/reports/pages/ReportsPage';
 import { UsersPage } from '../features/identity/pages/UsersPage';
 import { RolesPage } from '../features/identity/pages/RolesPage';
@@ -216,6 +218,17 @@ export const APP_MODULES: ModuleItem[] = [
     // Soporte las consulta en solo lectura
     permission: ['orders.read', 'orders.support.read'],
     component: OrdersPage,
+  },
+  {
+    id: 'promotions',
+    name: 'Promociones',
+    description: 'Cupones de descuento y paquetes de cursos',
+    href: '/promotions',
+    icon: Tags,
+    tone: 'violet',
+    group: 'operation',
+    permission: ['promotions.read', 'packages.read'],
+    component: PromotionsPage,
   },
   {
     id: 'certificates',

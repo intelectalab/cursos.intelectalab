@@ -4,7 +4,8 @@ import { ArrowLeft, Compass, ShieldCheck, ShoppingCart } from 'lucide-react';
 import { apiError, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, Card, EmptyState, ErrorState, LoadingState, PageHeader } from '../../../shared/ui';
 import { enrollmentsApi, type AvailableCourseDetail } from '../../enrollments/api';
-import { formatMoney, salesApi } from '../api';
+import { formatMoney, salesApi, type CouponCheck } from '../api';
+import { CouponBox } from '../components/CouponBox';
 import { CourseCover, CourseFacts } from '../components/CourseCatalog';
 
 // Checkout (FP-02): resumen de la compra y confirmación. El precio que vale es el del servidor.
@@ -17,6 +18,7 @@ export const CheckoutPage: React.FC = () => {
   const [attempt, setAttempt] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [notice, setNotice] = useState<{ tone: 'danger' | 'info'; text: string } | null>(null);
+  const [coupon, setCoupon] = useState<CouponCheck | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -44,7 +46,7 @@ export const CheckoutPage: React.FC = () => {
     setNotice(null);
 
     try {
-      const order = await salesApi.placeOrder(course.id, course.price);
+      const order = await salesApi.placeOrder(course.id, coupon?.total_amount ?? course.price, coupon?.code);
       navigate(`/my-orders/${order.id}`, { replace: true });
     } catch (err) {
       const data = apiError(err);
@@ -54,9 +56,14 @@ export const CheckoutPage: React.FC = () => {
         return;
       }
 
-      if (data?.code === 'PRICE_CHANGED' && typeof data.details?.total === 'string') {
-        setCourse({ ...course, price: data.details.total });
-        setNotice({ tone: 'info', text: 'El precio de este curso cambió mientras lo veías. Revisa el nuevo total y confirma otra vez.' });
+      if (data?.code === 'PRICE_CHANGED' && typeof data.details?.subtotal === 'string') {
+        // Cambió el precio o el descuento: se vuelve al precio vigente y el cupón se aplica de nuevo
+        setCourse({ ...course, price: data.details.subtotal });
+        setCoupon(null);
+        setNotice({ tone: 'info', text: 'El precio cambió mientras lo veías. Revisa el nuevo total (si tenías un cupón, aplícalo otra vez) y confirma.' });
+      } else if (data?.code === 'COUPON_INVALID') {
+        setCoupon(null);
+        setNotice({ tone: 'danger', text: `${data.message} Puedes continuar sin el cupón.` });
       } else {
         setNotice({ tone: 'danger', text: apiErrorMessage(err, 'No se pudo generar la orden. Inténtalo nuevamente.') });
       }
@@ -64,7 +71,8 @@ export const CheckoutPage: React.FC = () => {
     }
   };
 
-  const free = Number(course?.price) === 0;
+  const total = coupon?.total_amount ?? course?.price ?? '0';
+  const free = Number(total) === 0;
 
   return (
     <div className="max-w-3xl">
@@ -127,11 +135,19 @@ export const CheckoutPage: React.FC = () => {
                 <dt className="text-slate-600">Curso</dt>
                 <dd className="font-medium text-slate-900 tnum">{formatMoney(course.price, course.currency)}</dd>
               </div>
+              {coupon && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate-600">Descuento (cupón {coupon.code})</dt>
+                  <dd className="font-medium text-emerald-700 tnum">− {formatMoney(coupon.discount_amount, course.currency)}</dd>
+                </div>
+              )}
               <div className="flex justify-between gap-4 pt-3 border-t border-slate-200/80 text-base">
                 <dt className="font-semibold text-slate-900">Total</dt>
-                <dd className="font-bold text-slate-900 tnum">{free ? 'Gratis' : formatMoney(course.price, course.currency)}</dd>
+                <dd className="font-bold text-slate-900 tnum">{free ? 'Gratis' : formatMoney(total, course.currency)}</dd>
               </div>
             </dl>
+
+            {Number(course.price) > 0 && <CouponBox product={{ course_id: course.id }} applied={coupon} onChange={setCoupon} />}
 
             <p className="flex items-start gap-2 text-xs text-slate-500">
               <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600" />

@@ -47,6 +47,7 @@ enum ErrorCode: string
     case AlreadyEnrolled = 'ALREADY_ENROLLED';
     case OrderAlreadyPending = 'ORDER_ALREADY_PENDING';
     case OrderNotPending = 'ORDER_NOT_PENDING';
+    case CouponInvalid = 'COUPON_INVALID';
 
     case CertificateNotEligible = 'CERTIFICATE_NOT_ELIGIBLE';
     case CertificateRevoked = 'CERTIFICATE_REVOKED';

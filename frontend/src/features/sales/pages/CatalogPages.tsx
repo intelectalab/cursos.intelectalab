@@ -7,7 +7,8 @@ import { apiError, apiErrorMessage } from '../../../shared/api/client';
 import { withNext } from '../../../shared/auth/next';
 import { Button, Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import type { AvailableCourse, AvailableCourseDetail } from '../../enrollments/api';
-import { COURSE_CARD_CLASS, salesApi } from '../api';
+import { COURSE_CARD_CLASS, salesApi, type CatalogPackage } from '../api';
+import { PackageCard } from './PackagePages';
 import { CourseCardBody, CourseCover, CourseFacts, CourseOverview, CoursePrice } from '../components/CourseCatalog';
 import { PublicShell } from '../components/PublicShell';
 
@@ -15,17 +16,19 @@ import { PublicShell } from '../components/PublicShell';
 export const PublicCatalogPage: React.FC = () => {
   const { tenant } = useTenant();
   const [courses, setCourses] = useState<AvailableCourse[]>([]);
+  const [packages, setPackages] = useState<CatalogPackage[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    salesApi
-      .catalog()
-      .then((result) => {
+    // Si los paquetes fallan, el catálogo de cursos se muestra igual
+    Promise.all([salesApi.catalog(), salesApi.catalogPackages().catch(() => [] as CatalogPackage[])])
+      .then(([result, bundles]) => {
         if (!active) return;
         setCourses(result);
+        setPackages(bundles);
         setState('ready');
       })
       .catch((err) => {
@@ -66,6 +69,18 @@ export const PublicCatalogPage: React.FC = () => {
         <Card>
           <EmptyState icon={Compass} title="Aún no hay cursos en venta" text="Vuelve pronto: la academia está preparando su catálogo." />
         </Card>
+      )}
+      {state === 'ready' && packages.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Paquetes</h2>
+          <p className="text-[13px] text-slate-500 mb-4">Varios cursos juntos a mejor precio.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {packages.map((item) => (
+              <PackageCard key={item.id} item={item} />
+            ))}
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight mt-8">Cursos</h2>
+        </section>
       )}
       {state === 'ready' && courses.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">

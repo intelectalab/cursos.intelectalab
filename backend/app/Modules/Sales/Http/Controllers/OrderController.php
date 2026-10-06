@@ -7,6 +7,7 @@ use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Sales\Application\OrderService;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Sales\Http\OrderPresenter;
 use App\Shared\Http\ApiResponse;
@@ -36,16 +37,20 @@ class OrderController extends Controller
     public function store(Request $request, TenantContext $context): JsonResponse
     {
         $data = $request->validate([
-            'course_id' => ['required', 'uuid', Rule::exists('courses', 'id')->where('tenant_id', $context->tenantId())],
+            // Se compra un curso o un paquete
+            'course_id' => ['required_without:package_id', 'nullable', 'uuid', Rule::exists('courses', 'id')->where('tenant_id', $context->tenantId())],
+            'package_id' => ['required_without:course_id', 'nullable', 'uuid', 'prohibits:course_id', Rule::exists('packages', 'id')->where('tenant_id', $context->tenantId())],
             // Total que el comprador vio en pantalla; el servidor lo contrasta con el precio vigente (RN-008)
             'expected_total' => ['nullable', 'numeric', 'min:0'],
+            'coupon_code' => ['nullable', 'string', 'max:40'],
         ]);
 
-        $order = $this->orders->place(
-            $request->user(),
-            Course::query()->with('currentVersion')->findOrFail($data['course_id']),
-            isset($data['expected_total']) ? (string) $data['expected_total'] : null,
-        );
+        $expectedTotal = isset($data['expected_total']) ? (string) $data['expected_total'] : null;
+        $coupon = $data['coupon_code'] ?? null;
+
+        $order = isset($data['package_id'])
+            ? $this->orders->placePackage($request->user(), Package::query()->findOrFail($data['package_id']), $expectedTotal, $coupon)
+            : $this->orders->place($request->user(), Course::query()->with('currentVersion')->findOrFail($data['course_id']), $expectedTotal, $coupon);
 
         return $this->respondToCustomer($order, 201);
     }

@@ -23,7 +23,7 @@ Cada academia recibe estos roles al crearse. Son fijos: no se editan ni se elimi
 | Alumno | `STUDENT` | Consumo de cursos, actividades y certificados | 13 |
 | Profesor | `TEACHER` | Gestión académica de los cursos asignados | 7 |
 | Soporte | `SUPPORT` | Atención y seguimiento de tickets | 5 |
-| Ventas/CRM | `SALES` | Gestión comercial y CRM | 4 |
+| Ventas/CRM | `SALES` | Gestión comercial y CRM | 6 |
 | B2B autorizado | `B2B` | Operaciones corporativas: cuentas, licencias y cotizaciones | 3 |
 | Responsable de empresa | `COMPANY` | Portal de una empresa cliente: licencias, trabajadores, avance y cotizaciones | 3 |
 
@@ -45,7 +45,7 @@ Es el contacto externo de una empresa cliente (uno o varios por empresa). Regist
 
 ### Administrador
 
-Acceso total a todos los módulos de su academia (76 permisos). No alcanza las operaciones de plataforma.
+Acceso total a todos los módulos de su academia (80 permisos). No alcanza las operaciones de plataforma.
 
 ### Alumno
 
@@ -87,6 +87,8 @@ Acceso total a todos los módulos de su academia (76 permisos). No alcanza las o
 - `quotations.*`: Gestión completa de cotizaciones
 - `orders.read`: Consultar órdenes
 - `orders.create`: Crear órdenes
+- `promotions.read`: Consultar promociones, cupones y sus usos
+- `packages.read`: Consultar los paquetes de cursos
 
 ### B2B autorizado
 
@@ -181,6 +183,10 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | `orders.cancel` | Cancelar órdenes pendientes | ✔ |  |  |  |  |  |  |
 | `orders.support.read` | Consultar órdenes para atención de soporte | ✔ |  |  | ✔ |  |  |  |
 | `checkout.validate` | Validar cupones en el checkout | ✔ | ✔ |  |  |  |  |  |
+| `promotions.read` | Consultar promociones, cupones y sus usos | ✔ |  |  |  | ✔ |  |  |
+| `promotions.manage` | Crear y editar promociones y cupones | ✔ |  |  |  |  |  |  |
+| `packages.read` | Consultar los paquetes de cursos | ✔ |  |  |  | ✔ |  |  |
+| `packages.manage` | Crear y editar paquetes de cursos | ✔ |  |  |  |  |  |  |
 
 ### Pagos y finanzas
 

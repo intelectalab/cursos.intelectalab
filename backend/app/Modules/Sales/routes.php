@@ -1,9 +1,30 @@
 <?php
 
 use App\Modules\Sales\Http\Controllers\OrderController;
+use App\Modules\Sales\Http\Controllers\PackageController;
 use Illuminate\Support\Facades\Route;
 
+// Catálogo público: paquetes en venta, sin iniciar sesión
+Route::middleware(['tenant', 'throttle:120,1'])->group(function () {
+    Route::get('/catalog/packages', [PackageController::class, 'catalog']);
+    Route::get('/catalog/packages/{package}', [PackageController::class, 'catalogShow'])->whereUuid('package');
+});
+
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () {
+    // Paquetes: gestión del personal
+    Route::middleware('permission:packages.read')->group(function () {
+        Route::get('/packages', [PackageController::class, 'index']);
+        Route::get('/packages/{package}', [PackageController::class, 'show'])->whereUuid('package');
+    });
+    Route::middleware('permission:packages.manage')->group(function () {
+        Route::post('/packages', [PackageController::class, 'store']);
+        Route::put('/packages/{package}', [PackageController::class, 'update'])->whereUuid('package');
+    });
+
+    // Lo que ve el comprador antes de confirmar un paquete
+    Route::get('/checkout/packages/{package}', [PackageController::class, 'checkout'])
+        ->whereUuid('package')->middleware('permission:orders.create');
+
     // Comprador: crea la orden (Maestro §7.2) y consulta o cancela las suyas
     Route::middleware('permission:orders.create')->group(function () {
         Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:20,1');

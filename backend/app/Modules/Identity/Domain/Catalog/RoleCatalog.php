@@ -70,7 +70,8 @@ class RoleCatalog
             self::SALES => [
                 'name' => 'Ventas/CRM',
                 'description' => 'Gestión comercial y CRM',
-                'permissions' => ['crm.*', 'quotations.*', 'orders.read', 'orders.create'],
+                // Además del Maestro §8.1: ve promociones y paquetes para poder ofrecerlos
+                'permissions' => ['crm.*', 'quotations.*', 'orders.read', 'orders.create', 'promotions.read', 'packages.read'],
             ],
             self::B2B => [
                 'name' => 'B2B autorizado',

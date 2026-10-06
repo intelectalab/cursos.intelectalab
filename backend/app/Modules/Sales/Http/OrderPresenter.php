@@ -31,6 +31,10 @@ class OrderPresenter
             'currency' => $order->currency->code,
             'subtotal_amount' => $order->subtotal_amount,
             'discount_amount' => $order->discount_amount,
+            // Cupón aplicado, si lo hubo
+            'coupon_code' => $order->coupon_code,
+            // La orden es de un paquete: sus ítems son los cursos que incluye
+            'package' => $order->package_id ? ['id' => $order->package_id, 'title' => $order->package_title] : null,
             'total_amount' => $order->total_amount,
             'created_at' => $order->created_at->toIso8601String(),
             'expires_at' => $order->expires_at?->toIso8601String(),

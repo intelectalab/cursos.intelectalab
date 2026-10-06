@@ -13,6 +13,7 @@ import { ClassroomPage } from '../features/enrollments/pages/ClassroomPage';
 import { PlatformConsole } from '../features/platform/pages/PlatformConsole';
 import { PublicCatalogPage, PublicCoursePage } from '../features/sales/pages/CatalogPages';
 import { CheckoutPage } from '../features/sales/pages/CheckoutPage';
+import { PackageCheckoutPage, PublicPackagePage } from '../features/sales/pages/PackagePages';
 import { MyOrderPage } from '../features/sales/pages/MyOrdersPages';
 import { VerifyPage } from '../features/certificates/pages/VerifyPage';
 import { CorporateAccountPage } from '../features/company/pages/CorporateAccountPage';
@@ -42,6 +43,7 @@ function TenantRoutes() {
 
         {/* Catálogo público de la academia: no requiere sesión */}
         <Route path="/catalog" element={<PublicCatalogPage />} />
+        <Route path="/catalog/packages/:packageId" element={<PublicPackagePage />} />
         <Route path="/catalog/:courseId" element={<PublicCoursePage />} />
 
         {/* Verificación pública de certificados: a esta dirección lleva el QR */}
@@ -73,6 +75,14 @@ function TenantRoutes() {
               element={
                 <PermissionGate permission="orders.create">
                   <CheckoutPage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/checkout/package/:packageId"
+              element={
+                <PermissionGate permission="orders.create">
+                  <PackageCheckoutPage />
                 </PermissionGate>
               }
             />

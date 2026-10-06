@@ -11,6 +11,11 @@ export const OrderStatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) 
 // Qué se compró, cuánto y, si ya se pagó, cómo
 export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
   <div className="space-y-4">
+    {order.package && (
+      <p className="text-[13px] text-slate-600">
+        Paquete <strong className="text-slate-900">{order.package.title}</strong>: incluye {order.items.length} cursos.
+      </p>
+    )}
     <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100">
       {order.items.map((item) => (
         <li key={item.course_id} className="flex items-start justify-between gap-4 px-3.5 py-3 text-[13px]">
@@ -32,7 +37,7 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
     <dl className="space-y-1.5 text-[13px]">
       {Number(order.discount_amount) > 0 && (
         <div className="flex justify-between gap-4">
-          <dt className="text-slate-600">Descuento</dt>
+          <dt className="text-slate-600">Descuento{order.coupon_code ? ` (cupón ${order.coupon_code})` : ''}</dt>
           <dd className="text-slate-900 tnum">− {formatMoney(order.discount_amount, order.currency)}</dd>
         </div>
       )}

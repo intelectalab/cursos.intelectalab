@@ -24,6 +24,8 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-05 | S10 — Operación · Entrega 1: soporte | [2026-10-05-s10-entrega-1-soporte.md](2026-10-05-s10-entrega-1-soporte.md) |
 | 2026-10-05 | S10 — Operación · Entrega 2: Libro de Reclamaciones | [2026-10-05-s10-entrega-2-reclamaciones.md](2026-10-05-s10-entrega-2-reclamaciones.md) |
 | 2026-10-05 | S10 — Operación · Entrega 3: páginas (CMS) | [2026-10-05-s10-entrega-3-paginas.md](2026-10-05-s10-entrega-3-paginas.md) |
+| 2026-10-05 | S11 — Promociones y paquetes · Entrega 1: promociones y cupones | [2026-10-05-s11-entrega-1-promociones-y-cupones.md](2026-10-05-s11-entrega-1-promociones-y-cupones.md) |
+| 2026-10-05 | S11 — Promociones y paquetes · Entrega 2: paquetes | [2026-10-05-s11-entrega-2-paquetes.md](2026-10-05-s11-entrega-2-paquetes.md) |
 
 Documentos relacionados:
 
@@ -35,4 +37,5 @@ Documentos relacionados:
 ## Qué sigue
 
 1. S6 — Pagos: pasarela, Yape y comprobantes. Depende de que jefatura defina el proveedor (decisión 8 de [pendientes](../pendientes.md)).
-2. Si esa decisión no llega: S11 — Promociones y paquetes. S9 — SCORM espera la decisión 9.
+2. S9 — SCORM. Depende de saber si alguna academia tiene cursos en ese formato (decisión 9).
+3. Si ninguna de las dos llega: adelantar S12 — Endurecimiento (seguridad, rendimiento, accesibilidad y la deuda anotada en pendientes), o la parte de S6 que no depende del proveedor.

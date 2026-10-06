@@ -59,6 +59,10 @@ export interface Order {
   currency: string;
   subtotal_amount: string;
   discount_amount: string;
+  // Cupón aplicado, si lo hubo
+  coupon_code: string | null;
+  // La orden es de un paquete: sus ítems son los cursos que incluye
+  package: { id: string; title: string } | null;
   total_amount: string;
   created_at: string;
   expires_at: string | null;
@@ -74,6 +78,36 @@ export interface Order {
 // Lo que ve el comprador: mientras la orden espera su pago, cómo pagarla
 export interface MyOrder extends Order {
   payment_instructions: { type: string; text: string | null; methods: PaymentMethod[] } | null;
+}
+
+// Resultado de probar un cupón: cuánto descuenta y cuánto se pagaría
+export interface CouponCheck {
+  code: string;
+  promotion: string;
+  discount_type: 'PERCENT' | 'FIXED';
+  discount_value: string;
+  currency: string;
+  subtotal_amount: string;
+  discount_amount: string;
+  total_amount: string;
+}
+
+// Paquete del catálogo: varios cursos a un precio
+export interface CatalogPackage {
+  id: string;
+  title: string;
+  summary: string | null;
+  price: string;
+  currency: string;
+  // Lo que costarían sus cursos por separado y cuánto se ahorra
+  list_price: string;
+  savings: string;
+  courses: AvailableCourse[];
+}
+
+// En el checkout: además, qué cursos del paquete ya tiene el comprador
+export interface CheckoutPackage extends CatalogPackage {
+  owned_course_ids: string[];
 }
 
 export interface ConfirmPaymentInput {
@@ -120,8 +154,24 @@ export const salesApi = {
   async catalogCourse(course: string) {
     return (await api.get(`/catalog/courses/${course}`)).data.data as AvailableCourseDetail;
   },
-  async placeOrder(courseId: string, expectedTotal: string) {
-    return (await api.post('/orders', { course_id: courseId, expected_total: expectedTotal })).data.data as MyOrder;
+  async placeOrder(courseId: string, expectedTotal: string, couponCode?: string) {
+    return (await api.post('/orders', { course_id: courseId, expected_total: expectedTotal, coupon_code: couponCode })).data.data as MyOrder;
+  },
+  async placePackageOrder(packageId: string, expectedTotal: string, couponCode?: string) {
+    return (await api.post('/orders', { package_id: packageId, expected_total: expectedTotal, coupon_code: couponCode })).data.data as MyOrder;
+  },
+  // El servidor dice si el cupón aplica y cuánto se pagaría; vuelve a calcularlo al crear la orden
+  async validateCoupon(code: string, product: { course_id: string } | { package_id: string }) {
+    return (await api.post('/checkout/validate-coupon', { code, ...product })).data.data as CouponCheck;
+  },
+  async catalogPackages() {
+    return (await api.get('/catalog/packages')).data.data as CatalogPackage[];
+  },
+  async catalogPackage(id: string) {
+    return (await api.get(`/catalog/packages/${id}`)).data.data as CatalogPackage;
+  },
+  async checkoutPackage(id: string) {
+    return (await api.get(`/checkout/packages/${id}`)).data.data as CheckoutPackage;
   },
   async myOrders() {
     return (await api.get('/me/orders')).data.data as Order[];

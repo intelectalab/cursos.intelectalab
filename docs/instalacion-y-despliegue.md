@@ -4,7 +4,7 @@ Guía de respaldo para instalar el sistema en un servidor. Se actualiza cada vez
 
 > **Estado:** todavía no se ha hecho un despliegue real. Los pasos de instalación local están probados; los de servidor (sección 5 en adelante) describen lo que el sistema necesita, pero no se han ejecutado en un servidor. Los puntos sin resolver están en la sección 9.
 
-Última actualización: 2026-10-05 (S10 Operación).
+Última actualización: 2026-10-05 (S11 Promociones y paquetes).
 
 ## 1. Componentes
 
@@ -182,6 +182,8 @@ Tarea programada (cron), necesaria para limpiar las sesiones vencidas (diario), 
 S8 (Empresas y CRM) no agrega dependencias, variables de entorno, servicios ni tareas programadas: solo migraciones (módulos `Crm` y `B2b`; modifican además la tabla `orders`) y permisos nuevos, que se cargan con los pasos 3 y 4.
 
 S10 (Operación) agrega las migraciones de los módulos `Support`, `Claims` y `Cms`, permisos nuevos (pasos 3 y 4), la tarea diaria de tickets (mismo cron) y el editor TipTap en el frontend (se instala con `npm ci`). No agrega variables de entorno ni dependencias del backend. Las rutas públicas nuevas del sitio (`/reclamaciones`, `/reclamaciones/seguimiento` y `/p/...`) las sirve la misma aplicación web: el servidor debe seguir devolviendo `index.html` para cualquier ruta que no sea `/api`. El formulario de reclamaciones limita los envíos por dirección IP: detrás de un proxy, sin los proxies de confianza configurados (sección 9), todos los visitantes compartirían la IP del proxy y el límite los bloquearía a todos.
+
+S11 (Promociones y paquetes) agrega solo migraciones (módulo `Promotions` y tablas de paquetes en `Sales`; suman columnas a `orders`) y permisos nuevos, que se cargan con los pasos 3 y 4. No agrega dependencias, variables de entorno ni tareas programadas. Las rutas nuevas del sitio (`/catalog/packages/...` y `/checkout/package/...`) las sirve la misma aplicación web.
 
 Comprobación tras desplegar:
 

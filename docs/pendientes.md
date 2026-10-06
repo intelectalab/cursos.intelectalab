@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-05, al cerrar S10 (operación: soporte, reclamaciones y páginas).
+Última actualización: 2026-10-05, al cerrar S11 (promociones y paquetes).
 
 ## Dónde estamos
 
-**Sprint actual: S10 — Operación, terminado.** Igual que S7 y S8, se adelantó a S6, que espera la decisión 8, y a S9, que espera la decisión 9.
+**Sprint actual: S11 — Promociones y paquetes, terminado.** Solo quedan por construir los dos sprints que esperan a jefatura (S6 Pagos, decisión 8; S9 SCORM, decisión 9) y los dos de cierre (S12 y S13).
 
-**Siguiente paso:** S6 Pagos, si ya está la decisión 8 (pasarela, Yape, facturación y quién cobra). Si no, S11 Promociones y paquetes, que necesita definir cómo se acumulan las promociones; S9 SCORM espera la decisión 9. De S6 se puede adelantar sin proveedor: el registro de transacciones con una pasarela simulada, que el comprador adjunte su comprobante y los datos de facturación.
+**Siguiente paso:** S6 Pagos si ya está la decisión 8, o S9 SCORM si ya está la 9. Si ninguna llega, se puede adelantar S12 Endurecimiento (seguridad, rendimiento, accesibilidad y la deuda de la sección 4), o la parte de S6 que no depende del proveedor. De S6 se puede adelantar sin proveedor: el registro de transacciones con una pasarela simulada, que el comprador adjunte su comprobante y los datos de facturación.
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -33,17 +33,19 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S10 · entrega 1 | Soporte: tickets con mensajes, adjuntos y bandeja del personal | Hecho |
 | S10 · entrega 2 | Libro de Reclamaciones: formulario público, código, seguimiento y respuesta | Hecho |
 | S10 · entrega 3 | Páginas (CMS): borrador, vista previa, publicación con versiones | Hecho |
-| S11 | Promociones | Pendiente |
+| S11 · entrega 1 | Promociones y cupones: descuento por código en el checkout, con límites y registro de usos | Hecho |
+| S11 · entrega 2 | Paquetes: varios cursos a un precio; una compra, varias matrículas | Hecho |
 | S12–S13 | Endurecimiento y pruebas de aceptación | Pendiente |
 
-- **Avance del plan:** 9 de 14 sprints completos (S0 a S5, S7, S8 y S10). S6 y S9 están en espera de decisiones.
-- **Calidad:** 208 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
+- **Avance del plan:** 10 de 14 sprints completos (S0 a S5, S7, S8, S10 y S11). S6 y S9 están en espera de decisiones; después vienen S12 y S13.
+- **Calidad:** 220 pruebas automáticas del backend pasan; la aplicación web compila sin errores.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
 - **Certificados:** el curso que lo indique entrega un certificado en PDF, con código y QR, a quien lo completa; cualquiera lo verifica en una página pública; el personal puede emitir a mano y anular.
 - **Reportes:** tablero con ingresos, órdenes, matrículas, alumnos activos, cursos completados y certificados de un periodo, comparados con el periodo anterior; cursos más vendidos y finalización por curso.
 - **Venta a empresas:** el equipo comercial registra prospectos, lleva cada oportunidad por el embudo y arma la cotización; cuando la empresa la acepta (en línea o por otro medio) nace la venta. Confirmado el pago, la empresa recibe sus licencias y su responsable las asigna a sus trabajadores, que quedan matriculados; desde su portal ve el avance y los certificados.
 - **Operación:** quien usa la academia pide ayuda desde su cuenta y el personal la atiende en una bandeja de soporte; cualquier consumidor registra un reclamo o queja en el Libro de Reclamaciones público y consulta su respuesta con un código; y la academia publica sus páginas de texto (términos, privacidad, preguntas frecuentes).
+- **Promociones:** la academia crea cupones de descuento (porcentaje o monto, con vigencia, tope de usos y compra mínima) que el comprador aplica al pagar, y arma paquetes de cursos a un precio especial. Los descuentos no se acumulan: un cupón por compra.
 - **Qué no se puede hacer todavía:** pagar en línea ni emitir comprobantes.
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
@@ -180,6 +182,23 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Resuelto en S10: la prueba de matrículas que falló una vez en S8 buscaba "ana" entre alumnos con nombres al azar, y un nombre como "Mariana" se colaba. Ahora usa un nombre fijo. No volvió a fallar, pero conviene revisar si otras pruebas buscan por texto entre datos al azar.
 - La auditoría de dependencias del frontend (`npm audit`) marca dos avisos altos en `brace-expansion` y `source-map-js`. Vienen de las herramientas de compilación y revisión (eslint, postcss, tailwind), no del código que llega al navegador. No se actualizaron.
 
+**De promociones y cupones (S11, entrega 1)**
+
+- Promociones automáticas sin código (por fecha o por curso) y, si jefatura lo pide, acumulación de descuentos con su orden y su tope.
+- Cupones de un solo uso generados en lote o ligados a una persona.
+- Cupones en las cotizaciones a empresas.
+- Vigencia en la zona horaria de la academia.
+- Descuentos y ventas por cupón en Reportes.
+
+**De paquetes (S11, entrega 2)**
+
+- Carrito con varios productos en una orden.
+- Mostrar los paquetes dentro de "Cursos disponibles" para quien ya inició sesión.
+- Portada y descripción larga del paquete.
+- Paquetes en cotizaciones y licencias para empresas.
+- Ventas por paquete en Reportes.
+- Revisar en teléfono el checkout con cupón, las fichas de paquete y la gestión de promociones.
+
 **De soporte (S10, entrega 1)**
 
 - Avisar por correo de cada respuesta (depende de la decisión 3) y mostrar en el menú cuántos tickets esperan.
@@ -217,5 +236,5 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 1. Limpieza del repositorio (sección 2).
 2. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging.
-3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6; si demora, seguir con S11 Promociones y paquetes.
+3. Definir pasarela, Yape y facturación (decisión 8) para empezar S6, y si hace falta SCORM (decisión 9) para S9. Si demoran, adelantar S12 Endurecimiento.
 4. Hacer revisar el Libro de Reclamaciones por quien lleve lo legal (decisión 12) antes de abrir el sistema al público.

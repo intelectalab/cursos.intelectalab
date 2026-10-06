@@ -7,12 +7,15 @@ use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Application\EnrollmentService;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Promotions\Application\CouponService;
+use App\Modules\Promotions\Domain\Models\Promotion;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
 use App\Modules\Sales\Domain\Models\Currency;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderItem;
+use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiException;
@@ -32,6 +35,7 @@ class OrderService
         private readonly EnrollmentService $enrollments,
         private readonly TenantSettingsService $settings,
         private readonly PaymentGateway $gateway,
+        private readonly CouponService $coupons,
         private readonly TenantContext $context,
         private readonly AuditLogger $audit,
     ) {}
@@ -41,9 +45,10 @@ class OrderService
      * (RN-008): si no coincide con el que vio el comprador, se rechaza para
      * que lo confirme. Un curso gratuito queda pagado y matriculado al instante.
      *
-     * @param  string|null  $expectedTotal  total que el comprador vio en pantalla
+     * @param  string|null  $expectedTotal  total que el comprador vio en pantalla, ya con el descuento
+     * @param  string|null  $couponCode  cupón que quiere usar
      */
-    public function place(User $customer, Course $course, ?string $expectedTotal = null): Order
+    public function place(User $customer, Course $course, ?string $expectedTotal = null, ?string $couponCode = null): Order
     {
         if (! $course->isForSale()) {
             throw new ApiException(ErrorCode::CourseNotForSale, 'Este curso no está en venta.', 409);
@@ -53,50 +58,131 @@ class OrderService
             throw new ApiException(ErrorCode::Forbidden, 'Solo una cuenta de alumno puede comprar cursos.', 403);
         }
 
-        $currency = Currency::byCode($this->settings->currency());
+        $title = $course->currentVersion->snapshot['title'] ?? $course->title;
 
-        if ($expectedTotal !== null && self::money($expectedTotal) !== self::money($course->price)) {
-            throw new ApiException(
-                ErrorCode::PriceChanged,
-                'El precio del curso cambió. Revisa el nuevo total antes de continuar.',
-                409,
-                ['total' => $course->price, 'currency' => $currency->code]
-            );
+        return $this->checkout($customer, Promotion::PRODUCT_COURSE, $course->id, $course->title, $course->price, $expectedTotal, $couponCode, [
+            ['course_id' => $course->id, 'title' => $title, 'unit_price' => $course->price, 'quantity' => 1, 'total_amount' => $course->price],
+        ]);
+    }
+
+    /**
+     * Crea la orden de un paquete (FP-03): una compra, varias matrículas. El
+     * precio del paquete se reparte entre sus cursos en proporción a su
+     * precio de lista, para que la orden sume exacto. Quien ya tiene alguno
+     * de los cursos solo queda matriculado en los que le faltan.
+     */
+    public function placePackage(User $customer, Package $package, ?string $expectedTotal = null, ?string $couponCode = null): Order
+    {
+        $package->loadMissing('courses.currentVersion');
+
+        if (! $package->isForSale()) {
+            throw new ApiException(ErrorCode::CourseNotForSale, 'Este paquete no está en venta.', 409);
         }
 
-        return DB::transaction(function () use ($customer, $course, $currency) {
+        if (! $customer->hasPermission(EnrollmentService::STUDENT_PERMISSION)) {
+            throw new ApiException(ErrorCode::Forbidden, 'Solo una cuenta de alumno puede comprar cursos.', 403);
+        }
+
+        $courses = $package->courses->values();
+        $listTotal = (float) $package->listPrice();
+        $remaining = (float) $package->price;
+        $items = [];
+
+        foreach ($courses as $index => $course) {
+            // El último curso absorbe el redondeo
+            $share = $index === $courses->count() - 1
+                ? $remaining
+                : round((float) $package->price * ($listTotal > 0 ? (float) $course->price / $listTotal : 1 / $courses->count()), 2);
+            $remaining = round($remaining - $share, 2);
+            $amount = self::money((string) $share);
+
+            $items[] = [
+                'course_id' => $course->id,
+                'title' => $course->currentVersion->snapshot['title'] ?? $course->title,
+                'unit_price' => $amount,
+                'quantity' => 1,
+                'total_amount' => $amount,
+            ];
+        }
+
+        return $this->checkout($customer, Promotion::PRODUCT_PACKAGE, $package->id, $package->title, $package->price, $expectedTotal, $couponCode, $items, [
+            'package_id' => $package->id,
+            'package_title' => $package->title,
+        ]);
+    }
+
+    /**
+     * Crea la orden de una compra personal. El precio y el descuento salen
+     * del servidor (RN-008): si el total no coincide con el que vio el
+     * comprador, se rechaza para que lo confirme. Con total 0 queda pagada y
+     * matriculada al instante.
+     *
+     * @param  string  $productType  Promotion::PRODUCT_COURSE o PRODUCT_PACKAGE
+     * @param  list<array{course_id: string, title: string, unit_price: string, quantity: int, total_amount: string}>  $items
+     * @param  array<string, mixed>  $attributes  columnas adicionales de la orden
+     */
+    private function checkout(
+        User $customer,
+        string $productType,
+        string $productId,
+        string $productName,
+        string $subtotal,
+        ?string $expectedTotal,
+        ?string $couponCode,
+        array $items,
+        array $attributes = [],
+    ): Order {
+        $currency = Currency::byCode($this->settings->currency());
+
+        return DB::transaction(function () use ($customer, $productType, $productId, $productName, $subtotal, $expectedTotal, $couponCode, $items, $attributes, $currency) {
             $this->lockOrderNumbers();
 
-            $this->assertCanBuy($customer, $course);
+            $this->assertCanBuy($customer, $productType, $productId, array_column($items, 'course_id'));
 
-            $order = Order::create([
+            // Un solo cupón por orden; el servidor decide si aplica y cuánto descuenta
+            $applied = $couponCode !== null && trim($couponCode) !== ''
+                ? $this->coupons->evaluate($couponCode, $customer, $productType, $productId, $subtotal, lock: true)
+                : null;
+
+            $discount = $applied['discount'] ?? '0.00';
+            $total = self::money((string) ((float) $subtotal - (float) $discount));
+
+            if ($expectedTotal !== null && self::money($expectedTotal) !== $total) {
+                throw new ApiException(
+                    ErrorCode::PriceChanged,
+                    'El total cambió. Revisa el nuevo importe antes de continuar.',
+                    409,
+                    ['total' => $total, 'subtotal' => self::money($subtotal), 'currency' => $currency->code]
+                );
+            }
+
+            $order = Order::create($attributes + [
                 'number' => (int) Order::query()->max('number') + 1,
                 'customer_id' => $customer->id,
                 'currency_id' => $currency->id,
-                'subtotal_amount' => $course->price,
-                'discount_amount' => 0,
-                'total_amount' => $course->price,
+                'subtotal_amount' => $subtotal,
+                'discount_amount' => $discount,
+                'total_amount' => $total,
+                'coupon_code' => $applied ? $applied['coupon']->code : null,
                 'status' => Order::STATUS_PENDING,
                 'expires_at' => now()->addHours($this->settings->orderExpirationHours()),
             ]);
 
-            $order->items()->create([
-                'course_id' => $course->id,
-                'title' => $course->currentVersion->snapshot['title'] ?? $course->title,
-                'unit_price' => $course->price,
-                'quantity' => 1,
-                'total_amount' => $course->price,
-            ]);
+            $order->items()->createMany($items);
+
+            if ($applied) {
+                $this->coupons->redeem($applied, $order, $customer);
+            }
 
             $this->audit->record('orders.created', $order, null, [
                 'number' => $order->number,
                 'customer' => $customer->email,
-                'course' => $course->title,
+                'product' => $productName,
                 'total' => $order->total_amount,
                 'currency' => $currency->code,
-            ]);
+            ] + ($applied ? ['coupon' => $applied['coupon']->code, 'discount' => $discount] : []));
 
-            if (self::money($order->total_amount) === self::money('0')) {
+            if ($total === self::money('0')) {
                 $this->settle($order, $customer);
             }
 
@@ -237,34 +323,58 @@ class OrderService
         return Order::query()
             ->where('customer_id', $customer->id)
             ->inState(Order::STATUS_PENDING)
+            // La orden de un paquete que incluye el curso no cuenta como orden de ese curso
+            ->whereNull('package_id')
             ->whereHas('items', fn ($items) => $items->where('course_id', $courseId))
+            ->first();
+    }
+
+    /**
+     * Orden pendiente y dentro de plazo del comprador para ese paquete, si existe.
+     */
+    public function pendingForPackage(User $customer, string $packageId): ?Order
+    {
+        return Order::query()
+            ->where('customer_id', $customer->id)
+            ->where('package_id', $packageId)
+            ->inState(Order::STATUS_PENDING)
             ->first();
     }
 
     /**
      * Sin compra duplicada: ni con matrícula en el curso ni con otra orden esperando pago.
      */
-    private function assertCanBuy(User $customer, Course $course): void
+    /**
+     * @param  list<string>  $courseIds  cursos que entrega la compra
+     */
+    private function assertCanBuy(User $customer, string $productType, string $productId, array $courseIds): void
     {
         // Serializa las compras simultáneas del mismo comprador
         User::query()->whereKey($customer->id)->lockForUpdate()->first();
 
         $enrolled = Enrollment::query()
-            ->where('course_id', $course->id)
+            ->whereIn('course_id', $courseIds)
             ->where('student_id', $customer->id)
             ->where('status', Enrollment::STATUS_ACTIVE)
-            ->exists();
+            ->count();
 
-        if ($enrolled) {
-            throw new ApiException(ErrorCode::AlreadyEnrolled, 'Ya tienes una matrícula en este curso.', 409);
+        // Un paquete se puede comprar aunque ya se tenga alguno de sus cursos; no si se tienen todos
+        if ($enrolled >= count($courseIds)) {
+            throw new ApiException(
+                ErrorCode::AlreadyEnrolled,
+                $productType === Promotion::PRODUCT_COURSE ? 'Ya tienes una matrícula en este curso.' : 'Ya tienes todos los cursos de este paquete.',
+                409
+            );
         }
 
-        $pending = $this->pendingFor($customer, $course->id);
+        $pending = $productType === Promotion::PRODUCT_COURSE
+            ? $this->pendingFor($customer, $productId)
+            : $this->pendingForPackage($customer, $productId);
 
         if ($pending) {
             throw new ApiException(
                 ErrorCode::OrderAlreadyPending,
-                'Ya tienes una orden pendiente de pago por este curso.',
+                'Ya tienes una orden pendiente de pago por esta compra.',
                 409,
                 ['order_id' => $pending->id]
             );
