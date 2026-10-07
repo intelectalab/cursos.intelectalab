@@ -10,6 +10,7 @@ use App\Modules\Crm\Domain\Models\Contact;
 use App\Modules\Crm\Domain\Models\Opportunity;
 use App\Modules\Crm\Http\CrmPresenter;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -38,8 +39,7 @@ class CompanyController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $companies = $this->listing()
-            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->where('status', $status))
+        $base = $this->listing()
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
 
@@ -49,12 +49,18 @@ class CompanyController extends Controller
                     ->orWhereHas('contacts', fn (Builder $contact) => $contact
                         ->whereRaw("lower(first_name || ' ' || coalesce(last_name, '')) like ?", [$like])
                         ->orWhereRaw('lower(email) like ?', [$like])));
-            })
+            });
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $counts = StateCounts::of($base, Company::STATUSES, fn (Builder $q, string $status) => $q->where('status', $status));
+
+        $companies = $base
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->where('status', $status))
             ->orderBy('name')
             ->orderBy('id')
             ->paginate($filters['per_page'] ?? 50);
 
-        return ApiResponse::paginated($companies, fn (Company $company) => CrmPresenter::company($company));
+        return ApiResponse::paginated($companies, fn (Company $company) => CrmPresenter::company($company), ['counts' => $counts]);
     }
 
     public function store(Request $request, TenantContext $context): JsonResponse

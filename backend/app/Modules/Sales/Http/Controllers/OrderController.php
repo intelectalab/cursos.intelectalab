@@ -11,6 +11,7 @@ use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Sales\Http\OrderPresenter;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -84,9 +85,8 @@ class OrderController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $orders = Order::query()
+        $base = Order::query()
             ->with(self::RELATIONS)
-            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->inState($status))
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
                 $number = ctype_digit($search) ? (int) $search : null;
@@ -99,11 +99,17 @@ class OrderController extends Controller
                         ->orWhereRaw('lower(last_name) like ?', [$like]))
                     ->orWhereHas('company', fn (Builder $company) => $company->whereRaw('lower(name) like ?', [$like]))
                     ->orWhereHas('items', fn (Builder $items) => $items->whereRaw('lower(title) like ?', [$like])));
-            })
+            });
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $counts = StateCounts::of($base, Order::STATUSES, fn (Builder $q, string $status) => $q->inState($status));
+
+        $orders = $base
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->inState($status))
             ->orderByDesc('number')
             ->paginate($filters['per_page'] ?? 50);
 
-        return ApiResponse::paginated($orders, fn (Order $order) => OrderPresenter::make($order));
+        return ApiResponse::paginated($orders, fn (Order $order) => OrderPresenter::make($order), ['counts' => $counts]);
     }
 
     /**

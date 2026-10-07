@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CalendarClock, UserMinus } from 'lucide-react';
 import { Avatar, Button, ConfirmModal, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
+import { SelectAll, SelectRow } from '../../../shared/ui/filters';
 import { describeValidity, enrollmentsApi, type Enrollment } from '../api';
 import { StateBadge, ValidityModal } from './EnrollmentDialogs';
 
@@ -10,8 +11,10 @@ export const EnrollmentTable: React.FC<{
   showCourse?: boolean;
   canUpdate: boolean;
   canCancel: boolean;
+  // Con selección, cada fila activa lleva su casilla y la cabecera, "seleccionar todo"
+  selection?: { selected: string[]; onChange: (selected: string[]) => void };
   onChanged: () => Promise<void>;
-}> = ({ rows, showCourse = false, canUpdate, canCancel, onChanged }) => {
+}> = ({ rows, showCourse = false, canUpdate, canCancel, selection, onChanged }) => {
   const [dialog, setDialog] = useState<{ kind: 'validity' | 'cancel'; enrollment: Enrollment } | null>(null);
   const actions = canUpdate || canCancel;
 
@@ -24,6 +27,11 @@ export const EnrollmentTable: React.FC<{
     <>
       <Table>
         <THead>
+          {selection && (
+            <Th className="w-10 pr-0">
+              <SelectAll ids={rows.filter((row) => row.status === 'ACTIVE').map((row) => row.id)} selected={selection.selected} onChange={selection.onChange} />
+            </Th>
+          )}
           <Th>Alumno</Th>
           {showCourse && <Th>Curso</Th>}
           <Th>Situación</Th>
@@ -33,7 +41,14 @@ export const EnrollmentTable: React.FC<{
         </THead>
         <TBody>
           {rows.map((enrollment) => (
-            <Tr key={enrollment.id}>
+            <Tr key={enrollment.id} className={selection?.selected.includes(enrollment.id) ? 'bg-brand-50/40' : ''}>
+              {selection && (
+                <Td className="w-10 pr-0">
+                  {enrollment.status === 'ACTIVE' && (
+                    <SelectRow id={enrollment.id} label={enrollment.student.name} selected={selection.selected} onChange={selection.onChange} />
+                  )}
+                </Td>
+              )}
               <Td>
                 <div className="flex items-center gap-3">
                   <Avatar name={enrollment.student.name} />

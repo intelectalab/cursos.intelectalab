@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ExternalLink, Layers, Plus } from 'lucide-react';
+import { SelectAll } from '../../../shared/ui/filters';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CHECKBOX_CLASS, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, Modal, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
 import { formatMoney } from '../../sales/api';
@@ -83,6 +84,11 @@ const PackageFormModal: React.FC<{
             {courses && courses.length + stale.length === 0 && <Alert tone="info">No hay cursos publicados con precio. Un paquete se arma con cursos que ya están en venta.</Alert>}
             {courses && courses.length + stale.length > 0 && (
               <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-56 overflow-y-auto">
+                <li className="px-3.5 py-2 bg-slate-50/80 rounded-t-xl">
+                  <SelectAll ids={courses.map((course) => course.id)} selected={selected} onChange={setSelected}>
+                    Seleccionar todos los cursos en venta ({courses.length})
+                  </SelectAll>
+                </li>
                 {stale.map((course) => (
                   <li key={course.id}>
                     <label className="flex items-center gap-3 px-3.5 py-2 cursor-pointer text-[13px] bg-amber-50/60">

@@ -42,7 +42,12 @@ class AuthController extends Controller
             ],
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ], ['email.unique' => 'Ya existe una cuenta con ese correo. Inicia sesión para continuar.']);
+            // Quien se registra por su cuenta acepta los términos y la política de privacidad
+            'accept_terms' => ['accepted'],
+        ], [
+            'email.unique' => 'Ya existe una cuenta con ese correo. Inicia sesión para continuar.',
+            'accept_terms.accepted' => 'Debes aceptar los términos y la política de privacidad para crear tu cuenta.',
+        ]);
 
         [$user, $token] = $register->handle($data);
 

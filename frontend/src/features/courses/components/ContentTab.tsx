@@ -55,7 +55,7 @@ const IconButton: React.FC<{
     disabled={disabled}
     onClick={onClick}
     className={`p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
-      tone === 'danger' ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-brand-700 hover:bg-brand-50'
+      tone === 'danger' ? 'text-slate-500 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-500 hover:text-brand-700 hover:bg-brand-50'
     }`}
   >
     <Icon className="w-4 h-4" />

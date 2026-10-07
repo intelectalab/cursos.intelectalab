@@ -21,6 +21,8 @@ class SessionPresenter
                 'slug' => $user->tenant->slug,
             ],
             'permissions' => $user->permissionCodes(),
+            // Sesión abierta por el soporte de plataforma: solo lectura
+            'support_mode' => ($access = $user->currentAccessToken()) !== null && ! $access->can('*'),
         ];
 
         return $token !== null ? ['token' => $token] + $session : $session;
@@ -43,6 +45,8 @@ class SessionPresenter
             'roles' => $user->roles->pluck('name')->values(),
             'role_ids' => $user->roles->pluck('id')->values(),
             'last_login_at' => $user->last_login_at?->toIso8601String(),
+            // Entró con una contraseña temporal: hasta cambiarla no puede usar nada más
+            'must_change_password' => (bool) $user->must_change_password,
         ];
     }
 }

@@ -34,10 +34,30 @@ export interface CertificateCandidate {
   completed_at: string;
 }
 
+export type Position = 'LEFT' | 'CENTER' | 'RIGHT';
+
+// Dónde va cada dato y con qué colores; lo dibuja el servidor al generar el PDF
+export interface CertificateDesign {
+  text_align: Position;
+  text_top: 'TOP' | 'MIDDLE' | 'LOW';
+  name_size: 'S' | 'M' | 'L';
+  primary_color: string;
+  accent_color: string;
+  text_color: string;
+  show_logo: boolean;
+  show_organization: boolean;
+  show_title: boolean;
+  signature_position: Position;
+  qr_position: Position;
+}
+
 export interface CertificateTemplate {
   signer_name: string | null;
   signer_title: string | null;
   has_signature: boolean;
+  // Con fondo propio, el certificado usa la imagen de la academia en vez del diseño del sistema
+  has_background: boolean;
+  design: CertificateDesign;
 }
 
 export interface SignatureRules {
@@ -107,6 +127,10 @@ export const certificatesApi = {
   async candidates(search?: string) {
     return (await api.get('/certificates/candidates', { params: { search: search || undefined } })).data.data as CertificateCandidate[];
   },
+  // Emite de una vez los de varias matrículas; las que no cumplen los requisitos se omiten
+  async issueMany(enrollmentIds: string[]) {
+    return (await api.post('/certificates/issue-many', { enrollment_ids: enrollmentIds })).data.data as { issued: number; skipped: number };
+  },
   async issue(enrollmentId: string) {
     return (await api.post('/certificates/issue', { enrollment_id: enrollmentId })).data.data as Certificate;
   },
@@ -115,9 +139,26 @@ export const certificatesApi = {
   },
   async template() {
     const response = await api.get('/certificates/template');
-    return { template: response.data.data as CertificateTemplate, rules: response.data.meta.signature as SignatureRules };
+    return {
+      template: response.data.data as CertificateTemplate,
+      rules: response.data.meta.signature as SignatureRules,
+      backgroundRules: response.data.meta.background as SignatureRules,
+    };
   },
-  async updateTemplate(input: { signer_name: string | null; signer_title: string | null }) {
+  async uploadBackground(file: File) {
+    const body = new FormData();
+    body.append('file', file);
+    return (await api.post('/certificates/template/background', body)).data.data as CertificateTemplate;
+  },
+  async removeBackground() {
+    return (await api.delete('/certificates/template/background')).data.data as CertificateTemplate;
+  },
+  // PDF de muestra con la plantilla guardada; se muestra desde memoria
+  async templatePreviewUrl() {
+    const response = await api.get('/certificates/template/preview', { responseType: 'blob' });
+    return URL.createObjectURL(new Blob([response.data as Blob], { type: 'application/pdf' }));
+  },
+  async updateTemplate(input: { signer_name?: string | null; signer_title?: string | null; design?: CertificateDesign }) {
     return (await api.put('/certificates/template', input)).data.data as CertificateTemplate;
   },
   async uploadSignature(file: File) {

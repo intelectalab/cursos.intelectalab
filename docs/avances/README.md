@@ -26,6 +26,13 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-05 | S10 — Operación · Entrega 3: páginas (CMS) | [2026-10-05-s10-entrega-3-paginas.md](2026-10-05-s10-entrega-3-paginas.md) |
 | 2026-10-05 | S11 — Promociones y paquetes · Entrega 1: promociones y cupones | [2026-10-05-s11-entrega-1-promociones-y-cupones.md](2026-10-05-s11-entrega-1-promociones-y-cupones.md) |
 | 2026-10-05 | S11 — Promociones y paquetes · Entrega 2: paquetes | [2026-10-05-s11-entrega-2-paquetes.md](2026-10-05-s11-entrega-2-paquetes.md) |
+| 2026-10-06 | S12 — Endurecimiento · Entrega 1: seguridad | [2026-10-06-s12-entrega-1-seguridad.md](2026-10-06-s12-entrega-1-seguridad.md) |
+| 2026-10-06 | S12 — Endurecimiento · Entrega 2: rendimiento | [2026-10-06-s12-entrega-2-rendimiento.md](2026-10-06-s12-entrega-2-rendimiento.md) |
+| 2026-10-06 | S12 — Endurecimiento · Entrega 3: accesibilidad y revisión en teléfono | [2026-10-06-s12-entrega-3-accesibilidad-y-telefono.md](2026-10-06-s12-entrega-3-accesibilidad-y-telefono.md) |
+| 2026-10-06 | S12 — Endurecimiento · Entrega 4: deuda y recorridos automáticos | [2026-10-06-s12-entrega-4-deuda-y-recorridos.md](2026-10-06-s12-entrega-4-deuda-y-recorridos.md) |
+| 2026-10-07 | Revisión de jefatura · Entrega 1: participantes, selección múltiple y tarjetas que filtran | [2026-10-07-revision-jefatura-entrega-1.md](2026-10-07-revision-jefatura-entrega-1.md) |
+| 2026-10-07 | Revisión de jefatura · Entrega 2: grupos e importaciones con plantilla | [2026-10-07-revision-jefatura-entrega-2.md](2026-10-07-revision-jefatura-entrega-2.md) |
+| 2026-10-07 | Revisión de jefatura · Entrega 3: plantilla de certificado propia y consola del super administrador | [2026-10-07-revision-jefatura-entrega-3.md](2026-10-07-revision-jefatura-entrega-3.md) |
 
 Documentos relacionados:
 
@@ -33,9 +40,11 @@ Documentos relacionados:
 - [Roles y accesos](../roles-y-permisos.md) (se genera con `php artisan access:docs`)
 - [Instalación y despliegue](../instalacion-y-despliegue.md)
 - [Pendientes](../pendientes.md)
+- [Verificación contra el backlog de historias YC](../verificacion-backlog.md)
 
 ## Qué sigue
 
-1. S6 — Pagos: pasarela, Yape y comprobantes. Depende de que jefatura defina el proveedor (decisión 8 de [pendientes](../pendientes.md)).
-2. S9 — SCORM. Depende de saber si alguna academia tiene cursos en ese formato (decisión 9).
-3. Si ninguna de las dos llega: adelantar S12 — Endurecimiento (seguridad, rendimiento, accesibilidad y la deuda anotada en pendientes), o la parte de S6 que no depende del proveedor.
+1. Revisión de jefatura: las tres entregas están hechas. Falta que jefatura las revise.
+2. Moodle y horarios por disponibilidad docente: esperan las decisiones 14 y 15 de [pendientes](../pendientes.md).
+3. S6 — Pagos (decisión 8), S9 — SCORM (decisión 9) y S13 — salida a producción (decisiones 1 a 3).
+4. Backlog de historias YC: se compara por partes en [verificación](../verificacion-backlog.md).

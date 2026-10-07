@@ -2,6 +2,7 @@
 
 namespace App\Modules\Identity\Application;
 
+use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Auth\TokenIssuer;
@@ -24,6 +25,7 @@ class AuthenticateUser
     public function __construct(
         private readonly TenantContext $context,
         private readonly TenantSettingsService $settings,
+        private readonly AuditLogger $audit,
     ) {}
 
     /**
@@ -45,11 +47,35 @@ class AuthenticateUser
             );
         }
 
+        // Bloqueo de la cuenta: cuenta los fallos seguidos sin importar desde dónde llegan
+        $lockKey = self::lockKey($this->context->tenantId(), $email);
+        $lockAttempts = (int) config('identity.login_lock_attempts');
+        $lockMinutes = (int) config('identity.login_lock_minutes');
+
+        if (RateLimiter::tooManyAttempts($lockKey, $lockAttempts)) {
+            $seconds = RateLimiter::availableIn($lockKey);
+            $minutes = (int) ceil($seconds / 60);
+
+            throw new ApiException(
+                ErrorCode::AccountLocked,
+                "La cuenta está bloqueada por demasiados intentos fallidos. Intente nuevamente en {$minutes} minutos o recupere su contraseña.",
+                429,
+                ['retry_after' => $seconds]
+            );
+        }
+
         // El scope de tenant acota la búsqueda a la organización del subdominio
         $user = User::query()->where('email', $email)->first();
 
         if (! $user || ! $user->password || ! Hash::check($password, $user->password)) {
             RateLimiter::hit($throttleKey, self::DECAY_SECONDS);
+            $failures = RateLimiter::hit($lockKey, $lockMinutes * 60);
+
+            // Sin contraseñas: solo el correo intentado
+            $this->audit->record('auth.login_failed', 'users', after: ['email' => $email], actorUserId: $user?->id, entityId: $user?->id);
+            if ($failures === $lockAttempts) {
+                $this->audit->record('auth.locked', 'users', after: ['email' => $email, 'minutes' => $lockMinutes], actorUserId: $user?->id, entityId: $user?->id);
+            }
 
             throw new ApiException(
                 ErrorCode::InvalidCredentials,
@@ -67,9 +93,19 @@ class AuthenticateUser
         }
 
         RateLimiter::clear($throttleKey);
+        RateLimiter::clear($lockKey);
 
         $user->forceFill(['last_login_at' => now()])->save();
+        $this->audit->record('auth.login', $user, actorUserId: $user->id);
 
         return [$user, TokenIssuer::issue($user, $this->settings->sessionMinutes())];
+    }
+
+    /**
+     * Clave del contador de fallos de una cuenta. Recuperar la contraseña la limpia.
+     */
+    public static function lockKey(?string $tenantId, string $email): string
+    {
+        return 'login-lock|'.$tenantId.'|'.Str::transliterate(Str::lower(trim($email)));
     }
 }

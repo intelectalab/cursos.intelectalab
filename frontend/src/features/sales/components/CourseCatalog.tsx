@@ -118,7 +118,7 @@ export const CourseOverview: React.FC<{ detail: AvailableCourseDetail }> = ({ de
                 const Icon = item.kind === 'RESOURCE' ? RESOURCE_ICON[item.type as ResourceType] : ACTIVITY_ICON[item.type as ActivityType].icon;
                 return (
                   <li key={itemIndex} className="flex items-center gap-2 text-[13px] text-slate-600">
-                    <Icon className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                    <Icon className="w-3.5 h-3.5 shrink-0 text-slate-500" />
                     <span className="truncate">{item.title}</span>
                   </li>
                 );

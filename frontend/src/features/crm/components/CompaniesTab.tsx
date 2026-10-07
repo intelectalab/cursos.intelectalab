@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Building2, Plus, Search } from 'lucide-react';
+import { Building2, Handshake, Plus, Search, Target } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -19,6 +19,7 @@ import {
   THead,
   Tr,
 } from '../../../shared/ui';
+import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filters';
 import type { PageMeta } from '../../identity/api';
 import { COMPANY_STATUS_LABEL, COMPANY_STATUS_TONE, crmApi, type Company, type Person } from '../api';
 import { CompanyFormModal, CompanyModal } from './CompanyDialogs';
@@ -58,12 +59,21 @@ export const CompaniesTab: React.FC<{ canManage: boolean; owners: Person[] }> = 
     setPage(1);
   };
 
+  const counts = meta?.counts ?? {};
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todas', value: counts.ALL ?? null, icon: Building2, tone: 'brand', help: 'Todas las empresas registradas que coinciden con la búsqueda.' },
+    { key: 'PROSPECT', label: 'Prospectos', value: counts.PROSPECT ?? null, icon: Target, tone: 'warning', help: 'Empresas con las que se está conversando y aún no han comprado.' },
+    { key: 'CUSTOMER', label: 'Clientes', value: counts.CUSTOMER ?? null, icon: Handshake, tone: 'success', help: 'Ya tienen al menos una venta. Pasan a cliente solas con su primera compra.' },
+  ];
+
   return (
     <div>
+      <FilterCards cards={cards} active={status} label="Empresas por tipo" onSelect={(key) => filter(() => setStatus(key))} />
+
       <Card>
         <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-200/80">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               className={`${INPUT_CLASS} pl-9`}
               placeholder="Buscar por empresa, RUC o contacto"
@@ -77,6 +87,7 @@ export const CompaniesTab: React.FC<{ canManage: boolean; owners: Person[] }> = 
             <option value="PROSPECT">Prospectos</option>
             <option value="CUSTOMER">Clientes</option>
           </select>
+          <HelpTip text="Prospecto: aún no compra. Cliente: ya tiene al menos una venta; el cambio es automático." label="Qué significa el tipo de empresa" />
           {canManage && (
             <Button variant="primary" className="ml-auto" icon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
               Nueva empresa

@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Tenancy\Http\Controllers\GradeScaleController;
+use App\Modules\Tenancy\Http\Controllers\HolidayController;
 use App\Modules\Tenancy\Http\Controllers\TenantController;
 use App\Modules\Tenancy\Http\Controllers\TenantSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -24,5 +25,13 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::post('/settings/grade-scales', [GradeScaleController::class, 'store']);
         Route::put('/settings/grade-scales/{scale}', [GradeScaleController::class, 'update'])->whereUuid('scale');
         Route::delete('/settings/grade-scales/{scale}', [GradeScaleController::class, 'destroy'])->whereUuid('scale');
+    });
+
+    // Feriados: no cuentan como días hábiles en los plazos (Libro de Reclamaciones)
+    Route::get('/settings/holidays', [HolidayController::class, 'index'])->middleware('permission:tenant_settings.read');
+    Route::middleware('permission:tenant_settings.update')->group(function () {
+        Route::post('/settings/holidays', [HolidayController::class, 'store']);
+        Route::post('/settings/holidays/load-national', [HolidayController::class, 'loadNational']);
+        Route::delete('/settings/holidays/{holiday}', [HolidayController::class, 'destroy'])->whereUuid('holiday');
     });
 });

@@ -3,6 +3,8 @@
 use App\Modules\Enrollments\Http\Controllers\AvailableCoursesController;
 use App\Modules\Enrollments\Http\Controllers\EnrollmentController;
 use App\Modules\Enrollments\Http\Controllers\MyCoursesController;
+use App\Modules\Enrollments\Http\Controllers\ParticipantController;
+use App\Modules\Enrollments\Http\Controllers\PeopleImportController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () {
@@ -13,6 +15,8 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     });
 
     Route::post('/enrollments', [EnrollmentController::class, 'store'])->middleware('permission:enrollments.create');
+    Route::post('/enrollments/bulk-cancel', [EnrollmentController::class, 'bulkCancel'])->middleware('permission:enrollments.cancel');
+    Route::post('/enrollments/bulk-validity', [EnrollmentController::class, 'bulkValidity'])->middleware('permission:enrollments.update');
     Route::put('/enrollments/{enrollment}', [EnrollmentController::class, 'update'])
         ->whereUuid('enrollment')->middleware('permission:enrollments.update');
     Route::delete('/enrollments/{enrollment}', [EnrollmentController::class, 'cancel'])
@@ -25,6 +29,18 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::get('/enrollment-candidates', [EnrollmentController::class, 'candidates'])->middleware('permission:enrollments.create');
         Route::post('/enrollments', [EnrollmentController::class, 'storeForCourse'])->middleware('permission:enrollments.create');
         Route::delete('/enrollments/{enrollment}', [EnrollmentController::class, 'cancelForCourse'])->middleware('permission:enrollments.cancel');
+
+        // Participantes: alumnos y docentes se agregan desde el mismo lugar, cada uno con su papel en el curso
+        Route::get('/participant-candidates', [ParticipantController::class, 'candidates'])->middleware('permission:enrollments.create,courses.update');
+        Route::post('/participants', [ParticipantController::class, 'store'])->middleware('permission:enrollments.create,courses.update');
+        Route::delete('/teachers/{user}', [ParticipantController::class, 'removeTeacher'])->whereUuid('user')->middleware('permission:courses.update');
+    });
+
+    // Importar personas desde una hoja: crea las cuentas que falten, matricula y agrupa en una pasada
+    Route::middleware('permission:users.create')->prefix('/imports/people')->group(function () {
+        Route::get('/template', [PeopleImportController::class, 'template']);
+        Route::post('/preview', [PeopleImportController::class, 'preview']);
+        Route::post('/', [PeopleImportController::class, 'store']);
     });
 
     // Alumno: sus cursos (Maestro §7.2, GET /me/courses) y el aula

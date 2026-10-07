@@ -332,7 +332,7 @@ export const CompanyModal: React.FC<{
               <ul className="space-y-1.5 text-[13px] text-slate-700">
                 {facts.map(({ icon: Icon, value }) => (
                   <li key={value} className="flex items-center gap-2">
-                    <Icon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <Icon className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                     <span className="break-all">{value}</span>
                   </li>
                 ))}

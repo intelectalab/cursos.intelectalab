@@ -163,12 +163,13 @@ export const Register: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+              <label htmlFor="register-1" className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Nombre de la Empresa u Organización
               </label>
               <div className="relative">
-                <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                <Building2 className="w-4 h-4 text-slate-500 absolute left-3.5 top-3 pointer-events-none" />
                 <input
+                  id="register-1"
                   type="text"
                   name="organization_name"
                   required
@@ -181,12 +182,13 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+              <label htmlFor="register-2" className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Dirección de tu espacio de trabajo
               </label>
               <div className="relative flex items-center">
-                <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                <Globe className="w-4 h-4 text-slate-500 absolute left-3.5 top-3 pointer-events-none" />
                 <input
+                  id="register-2"
                   type="text"
                   name="subdomain"
                   required
@@ -205,12 +207,13 @@ export const Register: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label htmlFor="register-3" className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Nombres
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                  <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3 pointer-events-none" />
                   <input
+                    id="register-3"
                     type="text"
                     name="first_name"
                     required
@@ -222,10 +225,11 @@ export const Register: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label htmlFor="register-4" className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Apellidos
                 </label>
                 <input
+                  id="register-4"
                   type="text"
                   name="last_name"
                   required
@@ -238,12 +242,13 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+              <label htmlFor="register-5" className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Correo corporativo
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3 pointer-events-none" />
                 <input
+                  id="register-5"
                   type="email"
                   name="email"
                   required
@@ -257,12 +262,13 @@ export const Register: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label htmlFor="register-6" className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Contraseña
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3 pointer-events-none" />
                   <input
+                    id="register-6"
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     required
@@ -274,8 +280,9 @@ export const Register: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-                    tabIndex={-1}
+                    className="absolute right-1 top-1 p-1.5 rounded-lg text-slate-500 hover:text-slate-700 cursor-pointer"
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    aria-pressed={showPassword}
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
@@ -283,10 +290,11 @@ export const Register: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label htmlFor="register-7" className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Confirmar
                 </label>
                 <input
+                  id="register-7"
                   type={showPassword ? 'text' : 'password'}
                   name="password_confirmation"
                   required

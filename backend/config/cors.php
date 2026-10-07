@@ -15,19 +15,23 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // Orígenes adicionales exactos, separados por coma (por ejemplo, una aplicación externa)
+    'allowed_origins' => array_values(array_filter(array_map('trim', explode(',', (string) env('CORS_ALLOWED_ORIGINS', ''))))),
 
-    'allowed_origins_patterns' => [],
+    // Por defecto solo la propia plataforma: el dominio central y los subdominios de las organizaciones
+    'allowed_origins_patterns' => [
+        '#^https?://([a-z0-9-]+\.)?'.preg_quote((string) env('TENANCY_CENTRAL_DOMAIN', 'localhost'), '#').'(:\d+)?$#i',
+    ],
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['X-Request-ID', 'Retry-After'],
 
-    'max_age' => 0,
+    'max_age' => 600,
 
     'supports_credentials' => false,
 

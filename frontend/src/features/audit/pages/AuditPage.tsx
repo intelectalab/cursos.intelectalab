@@ -200,7 +200,7 @@ export const AuditPage: React.FC = () => {
               {rows.map((row) => (
                 <React.Fragment key={row.id}>
                   <Tr className="cursor-pointer" onClick={() => setOpen(open === row.id ? null : row.id)}>
-                    <Td className="text-slate-400 pr-0">
+                    <Td className="text-slate-500 pr-0">
                       <button type="button" aria-label="Ver detalle" aria-expanded={open === row.id} className="cursor-pointer">
                         {open === row.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>

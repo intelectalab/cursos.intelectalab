@@ -9,6 +9,7 @@ use App\Modules\B2b\Http\QuotationPresenter;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -33,9 +34,8 @@ class QuotationController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $quotations = Quotation::query()
+        $base = Quotation::query()
             ->with(['company', 'currency'])
-            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->inState($status))
             ->when($filters['company_id'] ?? null, fn (Builder $q, string $company) => $q->where('company_id', $company))
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
@@ -44,11 +44,17 @@ class QuotationController extends Controller
                 $q->where(fn (Builder $match) => $match
                     ->when($number, fn (Builder $byNumber) => $byNumber->where('number', $number))
                     ->orWhereHas('company', fn (Builder $company) => $company->whereRaw('lower(name) like ?', [$like])));
-            })
+            });
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $counts = StateCounts::of($base, Quotation::STATES, fn (Builder $q, string $status) => $q->inState($status));
+
+        $quotations = $base
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->inState($status))
             ->orderByDesc('number')
             ->paginate($filters['per_page'] ?? 50);
 
-        return ApiResponse::paginated($quotations, fn (Quotation $quotation) => QuotationPresenter::summary($quotation));
+        return ApiResponse::paginated($quotations, fn (Quotation $quotation) => QuotationPresenter::summary($quotation), ['counts' => $counts]);
     }
 
     /**

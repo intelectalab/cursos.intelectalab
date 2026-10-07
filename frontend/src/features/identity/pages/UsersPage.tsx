@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pencil, Plus, Search, UserCog, Users } from 'lucide-react';
+import { FileSpreadsheet, LogOut, Pencil, Plus, Search, UserCheck, UserCog, UserX, Users, UsersRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmModal,
   CHECKBOX_CLASS,
   EmptyState,
   ErrorState,
@@ -24,6 +25,9 @@ import {
   THead,
   Tr,
 } from '../../../shared/ui';
+import { BulkBar, FilterCards, HelpTip, SelectAll, SelectRow, type FilterCard } from '../../../shared/ui/filters';
+import { ImportModal } from '../../../shared/ui/ImportModal';
+import { GroupsTab } from '../components/GroupsTab';
 import { DOCUMENT_TYPES, identityApi, type DocumentType, type PageMeta, type Role, type UserRow } from '../api';
 
 const STATUS_LABEL: Record<UserRow['status'], string> = { ACTIVE: 'Activo', INACTIVE: 'Inactivo' };
@@ -87,6 +91,28 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
       ...prev,
       roles: prev.roles.includes(id) ? prev.roles.filter((r) => r !== id) : [...prev.roles, id],
     }));
+
+  const [sessionsNotice, setSessionsNotice] = useState<string | null>(null);
+
+  const revokeSessions = async () => {
+    if (!user) return;
+    setProcessing(true);
+    setError(null);
+    setSessionsNotice(null);
+
+    try {
+      const revoked = await identityApi.revokeUserSessions(user.id);
+      setSessionsNotice(
+        revoked === 0
+          ? 'No tenía otras sesiones abiertas.'
+          : `Se ${revoked === 1 ? 'cerró 1 sesión' : `cerraron ${revoked} sesiones`}. Tendrá que volver a iniciar sesión.`,
+      );
+    } catch (err) {
+      setError(apiErrorMessage(err, 'No se pudieron cerrar las sesiones.'));
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -232,6 +258,19 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
             })}
           </div>
         </fieldset>
+
+        {user && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3 border border-slate-200 rounded-xl">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-slate-700">Sesiones abiertas</p>
+              <p className="text-xs text-slate-500">Útil si perdió un equipo o sospechas que alguien más usa su cuenta.</p>
+            </div>
+            <Button size="sm" icon={<LogOut className="w-4 h-4" />} onClick={revokeSessions} disabled={processing}>
+              Cerrar sesiones
+            </Button>
+          </div>
+        )}
+        {sessionsNotice && <Alert tone="success">{sessionsNotice}</Alert>}
       </form>
     </Modal>
   );
@@ -253,6 +292,11 @@ export const UsersPage: React.FC = () => {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [editing, setEditing] = useState<UserRow | 'new' | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulk, setBulk] = useState<UserRow['status'] | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'success' | 'info'; text: string } | null>(null);
+  const [tab, setTab] = useState<'users' | 'groups'>('users');
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -279,6 +323,31 @@ export const UsersPage: React.FC = () => {
   }, [canPickRoles]);
 
   const filtered = search !== '' || status !== '';
+  const filter = (apply: () => void) => {
+    apply();
+    setPage(1);
+    setSelected([]);
+  };
+
+  const counts = meta?.counts ?? {};
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todos', value: counts.ALL ?? null, icon: Users, tone: 'brand', help: 'Todas las personas con cuenta en la academia que coinciden con la búsqueda.' },
+    { key: 'ACTIVE', label: 'Activos', value: counts.ACTIVE ?? null, icon: UserCheck, tone: 'success', help: 'Pueden iniciar sesión y usar el sistema según sus roles.' },
+    { key: 'INACTIVE', label: 'Inactivos', value: counts.INACTIVE ?? null, icon: UserX, tone: 'neutral', help: 'Cuenta desactivada: no puede iniciar sesión. Conserva su historial y se puede reactivar.' },
+  ];
+
+  const applyBulk = async (target: UserRow['status']) => {
+    const result = await identityApi.setUsersStatus(selected, target);
+    const verb = target === 'ACTIVE' ? 'activaron' : 'desactivaron';
+    const skipped = result.skipped.map((item) => `${item.email}: ${item.reason}`).join(' ');
+    setNotice({
+      tone: result.skipped.length > 0 ? 'info' : 'success',
+      text: `Se ${verb} ${result.updated} ${result.updated === 1 ? 'cuenta' : 'cuentas'}.${skipped ? ` No cambiaron: ${skipped}` : ''}`,
+    });
+    setSelected([]);
+    setBulk(null);
+    await load();
+  };
 
   return (
     <div>
@@ -287,44 +356,97 @@ export const UsersPage: React.FC = () => {
         icon={UserCog}
         subtitle="Personas con acceso a tu organización y los roles que tienen asignados."
         action={
-          canCreate &&
-          canPickRoles && (
-            <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setEditing('new')}>
-              Nuevo usuario
-            </Button>
+          canCreate && (
+            <>
+              <Button icon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setImporting(true)}>
+                Importar
+              </Button>
+              {canPickRoles && (
+                <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setEditing('new')}>
+                  Nuevo usuario
+                </Button>
+              )}
+            </>
           )
         }
       />
 
+      <div role="tablist" aria-label="Secciones de usuarios" className="inline-flex gap-1 p-1 mb-5 rounded-xl bg-slate-100 border border-slate-200/70 max-w-full overflow-x-auto">
+        {(
+          [
+            { id: 'users', label: 'Usuarios', icon: Users },
+            { id: 'groups', label: 'Grupos', icon: UsersRound },
+          ] as const
+        ).map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`inline-flex items-center gap-2 h-9 px-3.5 rounded-lg text-[13px] font-semibold whitespace-nowrap cursor-pointer transition-all ${
+              tab === id ? 'bg-white text-brand-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'groups' && <GroupsTab canManage={canUpdate} />}
+
+      {tab === 'users' && (
+        <>
+
+      <FilterCards cards={cards} active={status} label="Usuarios por estado" onSelect={(key) => filter(() => setStatus(key))} />
+
+      {notice && (
+        <div className="mb-4">
+          <Alert tone={notice.tone}>{notice.text}</Alert>
+        </div>
+      )}
+
       <Card>
         <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-200/80">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               className={`${INPUT_CLASS} pl-9`}
               placeholder="Buscar por nombre o correo"
               aria-label="Buscar usuarios"
               value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
+              onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <select
-            className={`${INPUT_CLASS} !w-48`}
-            aria-label="Filtrar por estado"
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">Todos los estados</option>
-            <option value="ACTIVE">Activos</option>
-            <option value="INACTIVE">Inactivos</option>
-          </select>
+          <div className="flex items-center gap-1.5">
+            <select
+              className={`${INPUT_CLASS} !w-48`}
+              aria-label="Filtrar por estado"
+              value={status}
+              onChange={(event) => filter(() => setStatus(event.target.value))}
+            >
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="INACTIVE">Inactivos</option>
+            </select>
+            <HelpTip
+              text="Activo: puede iniciar sesión. Inactivo: su cuenta está desactivada y no puede entrar, pero conserva su historial."
+              label="Qué significa el estado de un usuario"
+            />
+          </div>
         </div>
+
+        {canUpdate && (
+          <BulkBar count={selected.length} noun={['usuario elegido', 'usuarios elegidos']} onClear={() => setSelected([])}>
+            <Button size="sm" icon={<UserCheck className="w-3.5 h-3.5" />} onClick={() => setBulk('ACTIVE')}>
+              Activar
+            </Button>
+            <Button size="sm" variant="danger" icon={<UserX className="w-3.5 h-3.5" />} onClick={() => setBulk('INACTIVE')}>
+              Desactivar
+            </Button>
+          </BulkBar>
+        )}
 
         {state === 'loading' && <LoadingState />}
         {state === 'error' && <ErrorState message={errorMessage} onRetry={load} />}
@@ -336,11 +458,12 @@ export const UsersPage: React.FC = () => {
             action={
               filtered && (
                 <Button
-                  onClick={() => {
-                    setSearch('');
-                    setStatus('');
-                    setPage(1);
-                  }}
+                  onClick={() =>
+                    filter(() => {
+                      setSearch('');
+                      setStatus('');
+                    })
+                  }
                 >
                   Quitar filtros
                 </Button>
@@ -352,6 +475,11 @@ export const UsersPage: React.FC = () => {
         {state === 'ready' && rows.length > 0 && (
           <Table>
             <THead>
+              {canUpdate && (
+                <Th className="w-10 pr-0">
+                  <SelectAll ids={rows.map((user) => user.id)} selected={selected} onChange={setSelected} />
+                </Th>
+              )}
               <Th>Usuario</Th>
               <Th>Roles</Th>
               <Th>Estado</Th>
@@ -360,7 +488,12 @@ export const UsersPage: React.FC = () => {
             </THead>
             <TBody>
               {rows.map((user) => (
-                <Tr key={user.id}>
+                <Tr key={user.id} className={selected.includes(user.id) ? 'bg-brand-50/40' : ''}>
+                  {canUpdate && (
+                    <Td className="w-10 pr-0">
+                      <SelectRow id={user.id} label={`${user.first_name} ${user.last_name}`} selected={selected} onChange={setSelected} />
+                    </Td>
+                  )}
                   <Td>
                     <div className="flex items-center gap-3">
                       <Avatar name={`${user.first_name} ${user.last_name}`} />
@@ -410,6 +543,35 @@ export const UsersPage: React.FC = () => {
           <Pagination page={meta.page} lastPage={meta.last_page} total={meta.total} noun="usuarios" onPage={setPage} />
         )}
       </Card>
+
+        </>
+      )}
+
+      {importing && (
+        <ImportModal
+          title="Importar personas"
+          intro="Crea las cuentas que falten y, en la misma pasada, las matricula en un curso y las suma a un grupo. Quien ya tiene cuenta solo se matricula."
+          basePath="/imports/people"
+          templateName="plantilla-personas-y-matriculas.xlsx"
+          onClose={() => setImporting(false)}
+          onImported={load}
+        />
+      )}
+
+      {bulk && (
+        <ConfirmModal
+          title={bulk === 'ACTIVE' ? 'Activar usuarios' : 'Desactivar usuarios'}
+          text={
+            bulk === 'ACTIVE'
+              ? `${selected.length === 1 ? 'La cuenta elegida podrá' : `Las ${selected.length} cuentas elegidas podrán`} volver a iniciar sesión.`
+              : `${selected.length === 1 ? 'La cuenta elegida dejará' : `Las ${selected.length} cuentas elegidas dejarán`} de poder iniciar sesión y se cerrarán sus sesiones abiertas. Tu propia cuenta y la del último administrador no se desactivan.`
+          }
+          confirmLabel={bulk === 'ACTIVE' ? 'Activar' : 'Desactivar'}
+          variant={bulk === 'ACTIVE' ? 'primary' : 'danger'}
+          onClose={() => setBulk(null)}
+          onConfirm={() => applyBulk(bulk)}
+        />
+      )}
 
       {editing && (
         <UserForm

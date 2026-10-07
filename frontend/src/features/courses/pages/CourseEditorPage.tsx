@@ -7,7 +7,6 @@ import {
   BookOpen,
   ChartNoAxesColumn,
   CheckCircle2,
-  GraduationCap,
   History,
   ImageUp,
   Info,
@@ -21,12 +20,10 @@ import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
   Alert,
-  Avatar,
   Badge,
   Button,
   Card,
   CardHeader,
-  CHECKBOX_CLASS,
   ConfirmModal,
   EmptyState,
   ErrorState,
@@ -54,16 +51,15 @@ import { CourseFields } from '../components/CourseForm';
 import { ContentTab } from '../components/ContentTab';
 import { academicApi, type Activity } from '../../academic/api';
 import { SectionActivities } from '../../academic/components/SectionActivities';
-import { StudentsTab } from '../../enrollments/components/StudentsTab';
+import { ParticipantsTab } from '../../enrollments/components/ParticipantsTab';
 import { TrackingTab } from '../../academic/components/TrackingTab';
 
-type TabId = 'content' | 'info' | 'teachers' | 'students' | 'tracking' | 'versions';
+type TabId = 'content' | 'info' | 'participants' | 'tracking' | 'versions';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'content', label: 'Contenido', icon: Layers },
   { id: 'info', label: 'Información', icon: Info },
-  { id: 'teachers', label: 'Profesores', icon: Users },
-  { id: 'students', label: 'Alumnos', icon: GraduationCap },
+  { id: 'participants', label: 'Participantes', icon: Users },
   { id: 'tracking', label: 'Seguimiento', icon: ChartNoAxesColumn },
   { id: 'versions', label: 'Versiones', icon: History },
 ];
@@ -234,95 +230,6 @@ const InfoTab: React.FC<{
         <CoverField course={course} options={options} editable={editable} onChanged={onChanged} />
       </Card>
     </div>
-  );
-};
-
-/* ───────────────────────────── Profesores ───────────────────────────── */
-
-const TeachersTab: React.FC<{
-  course: CourseDetail;
-  options: CourseOptions;
-  editable: boolean;
-  onChanged: () => Promise<void>;
-}> = ({ course, options, editable, onChanged }) => {
-  const [selected, setSelected] = useState<string[]>(() => course.teachers.map((teacher) => teacher.id));
-  const [status, setStatus] = useState<'idle' | 'processing' | 'saved'>('idle');
-  const [error, setError] = useState<string | null>(null);
-
-  // Sin permiso para asignar, solo se listan los profesores actuales
-  const candidates = editable ? (options.teachers ?? []) : course.teachers;
-
-  const toggle = (id: string) => {
-    setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
-    setStatus('idle');
-  };
-
-  const save = async () => {
-    setStatus('processing');
-    setError(null);
-    try {
-      await coursesApi.setTeachers(course.id, selected);
-      await onChanged();
-      setStatus('saved');
-    } catch (err) {
-      setError(apiErrorMessage(err, 'No se pudieron guardar los profesores.'));
-      setStatus('idle');
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader
-        title="Profesores del curso"
-        text="Un profesor ve y edita el contenido solo de los cursos donde está asignado."
-      />
-      {error && (
-        <div className="px-5 pt-4">
-          <Alert>{error}</Alert>
-        </div>
-      )}
-      {candidates.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title={editable ? 'No hay usuarios con rol de profesor' : 'Este curso no tiene profesores asignados'}
-          text={editable ? 'Crea un usuario con el rol Profesor en Usuarios y vuelve aquí para asignarlo.' : undefined}
-        />
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {candidates.map((teacher) => (
-            <li key={teacher.id}>
-              <label className={`flex items-center gap-3 px-5 py-3 ${editable ? 'cursor-pointer hover:bg-brand-50/30' : ''}`}>
-                {editable && (
-                  <input
-                    type="checkbox"
-                    className={CHECKBOX_CLASS}
-                    checked={selected.includes(teacher.id)}
-                    onChange={() => toggle(teacher.id)}
-                  />
-                )}
-                <Avatar name={teacher.name} />
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-semibold text-slate-900 truncate">{teacher.name}</span>
-                  <span className="block text-xs text-slate-500 truncate">{teacher.email}</span>
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
-      )}
-      {editable && candidates.length > 0 && (
-        <div className="flex items-center gap-3 px-5 py-4 border-t border-slate-200/80">
-          <Button variant="primary" processing={status === 'processing'} onClick={save}>
-            Guardar profesores
-          </Button>
-          {status === 'saved' && (
-            <span className="flex items-center gap-1.5 text-[13px] font-medium text-emerald-700" role="status">
-              <CheckCircle2 className="w-4 h-4" /> Guardado
-            </span>
-          )}
-        </div>
-      )}
-    </Card>
   );
 };
 
@@ -592,7 +499,7 @@ export const CourseEditorPage: React.FC = () => {
 
       {/* Pestañas */}
       <div className="flex gap-1 mb-5 border-b border-slate-200 overflow-x-auto overflow-y-hidden" role="tablist" aria-label="Secciones del curso">
-        {TABS.filter(({ id }) => (id !== 'students' || hasPermission('enrollments.read') || canReview) && (id !== 'tracking' || canReview)).map(({ id, label, icon: Icon }) => (
+        {TABS.filter(({ id }) => id !== 'tracking' || canReview).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -606,7 +513,7 @@ export const CourseEditorPage: React.FC = () => {
             <Icon className="w-4 h-4" />
             {label}
             {id === 'versions' && course.versions.length > 0 && (
-              <span className="text-xs font-medium text-slate-400 tnum">{course.versions.length}</span>
+              <span className="text-xs font-medium text-slate-500 tnum">{course.versions.length}</span>
             )}
           </button>
         ))}
@@ -632,8 +539,7 @@ export const CourseEditorPage: React.FC = () => {
         />
       )}
       {tab === 'info' && <InfoTab course={course} options={options} editable={canUpdate && !archived} onChanged={reload} />}
-      {tab === 'teachers' && <TeachersTab course={course} options={options} editable={canUpdate} onChanged={reload} />}
-      {tab === 'students' && <StudentsTab course={course} />}
+      {tab === 'participants' && <ParticipantsTab course={course} canManageTeachers={canUpdate} onChanged={reload} />}
       {tab === 'tracking' && <TrackingTab courseId={course.id} />}
       {tab === 'versions' && <VersionsTab course={course} />}
 

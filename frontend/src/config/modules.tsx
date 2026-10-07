@@ -24,29 +24,32 @@ import {
   ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
-import { Dashboard } from '../features/dashboard/pages/Dashboard';
-import { CoursesPage } from '../features/courses/pages/CoursesPage';
-import { QuestionBanksPage } from '../features/academic/pages/QuestionBanksPage';
-import { MyCoursesPage } from '../features/enrollments/pages/MyCoursesPage';
-import { AvailableCoursesPage } from '../features/enrollments/pages/AvailableCoursesPage';
-import { EnrollmentsPage } from '../features/enrollments/pages/EnrollmentsPage';
-import { MyOrdersPage } from '../features/sales/pages/MyOrdersPages';
-import { OrdersPage } from '../features/sales/pages/OrdersPage';
-import { MyCertificatesPage } from '../features/certificates/pages/MyCertificatesPage';
-import { CertificatesPage } from '../features/certificates/pages/CertificatesPage';
-import { CrmPage } from '../features/crm/pages/CrmPage';
-import { CompanyPortalPage } from '../features/company/pages/CompanyPortalPage';
-import { MyTicketsPage } from '../features/support/pages/MyTicketsPage';
-import { SupportPage } from '../features/support/pages/SupportPage';
-import { ClaimsPage } from '../features/claims/pages/ClaimsPage';
-import { PagesPage } from '../features/cms/pages/PagesPage';
-import { PromotionsPage } from '../features/promotions/pages/PromotionsPage';
-import { ReportsPage } from '../features/reports/pages/ReportsPage';
-import { UsersPage } from '../features/identity/pages/UsersPage';
-import { RolesPage } from '../features/identity/pages/RolesPage';
-import { SettingsPage } from '../features/settings/pages/SettingsPage';
-import { AuditPage } from '../features/audit/pages/AuditPage';
 import type { Tone } from '../shared/ui';
+import { lazyPage } from '../app/lazyPage';
+
+// Cada módulo se descarga cuando se abre
+const Dashboard = lazyPage(() => import('../features/dashboard/pages/Dashboard'), 'Dashboard');
+const CoursesPage = lazyPage(() => import('../features/courses/pages/CoursesPage'), 'CoursesPage');
+const QuestionBanksPage = lazyPage(() => import('../features/academic/pages/QuestionBanksPage'), 'QuestionBanksPage');
+const MyCoursesPage = lazyPage(() => import('../features/enrollments/pages/MyCoursesPage'), 'MyCoursesPage');
+const AvailableCoursesPage = lazyPage(() => import('../features/enrollments/pages/AvailableCoursesPage'), 'AvailableCoursesPage');
+const EnrollmentsPage = lazyPage(() => import('../features/enrollments/pages/EnrollmentsPage'), 'EnrollmentsPage');
+const MyOrdersPage = lazyPage(() => import('../features/sales/pages/MyOrdersPages'), 'MyOrdersPage');
+const OrdersPage = lazyPage(() => import('../features/sales/pages/OrdersPage'), 'OrdersPage');
+const MyCertificatesPage = lazyPage(() => import('../features/certificates/pages/MyCertificatesPage'), 'MyCertificatesPage');
+const CertificatesPage = lazyPage(() => import('../features/certificates/pages/CertificatesPage'), 'CertificatesPage');
+const CrmPage = lazyPage(() => import('../features/crm/pages/CrmPage'), 'CrmPage');
+const CompanyPortalPage = lazyPage(() => import('../features/company/pages/CompanyPortalPage'), 'CompanyPortalPage');
+const MyTicketsPage = lazyPage(() => import('../features/support/pages/MyTicketsPage'), 'MyTicketsPage');
+const SupportPage = lazyPage(() => import('../features/support/pages/SupportPage'), 'SupportPage');
+const ClaimsPage = lazyPage(() => import('../features/claims/pages/ClaimsPage'), 'ClaimsPage');
+const PagesPage = lazyPage(() => import('../features/cms/pages/PagesPage'), 'PagesPage');
+const PromotionsPage = lazyPage(() => import('../features/promotions/pages/PromotionsPage'), 'PromotionsPage');
+const ReportsPage = lazyPage(() => import('../features/reports/pages/ReportsPage'), 'ReportsPage');
+const UsersPage = lazyPage(() => import('../features/identity/pages/UsersPage'), 'UsersPage');
+const RolesPage = lazyPage(() => import('../features/identity/pages/RolesPage'), 'RolesPage');
+const SettingsPage = lazyPage(() => import('../features/settings/pages/SettingsPage'), 'SettingsPage');
+const AuditPage = lazyPage(() => import('../features/audit/pages/AuditPage'), 'AuditPage');
 
 export type ModuleGroup = 'general' | 'operation' | 'admin';
 

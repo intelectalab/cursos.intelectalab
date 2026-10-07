@@ -10,6 +10,7 @@ use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
+use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -34,11 +35,8 @@ class LeadController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $leads = Lead::query()
+        $base = Lead::query()
             ->with(self::RELATIONS)
-            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $status === 'OPEN'
-                ? $q->whereIn('status', Lead::OPEN_STATUSES)
-                : $q->where('status', $status))
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
 
@@ -46,12 +44,20 @@ class LeadController extends Controller
                     ->whereRaw("lower(first_name || ' ' || coalesce(last_name, '')) like ?", [$like])
                     ->orWhereRaw('lower(company_name) like ?', [$like])
                     ->orWhereRaw('lower(email) like ?', [$like]));
-            })
+            });
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $counts = StateCounts::of($base, Lead::STATUSES, fn (Builder $q, string $status) => $q->where('status', $status));
+
+        $leads = $base
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $status === 'OPEN'
+                ? $q->whereIn('status', Lead::OPEN_STATUSES)
+                : $q->where('status', $status))
             ->orderByDesc('created_at')
             ->orderBy('id')
             ->paginate($filters['per_page'] ?? 50);
 
-        return ApiResponse::paginated($leads, fn (Lead $lead) => CrmPresenter::lead($lead));
+        return ApiResponse::paginated($leads, fn (Lead $lead) => CrmPresenter::lead($lead), ['counts' => $counts]);
     }
 
     /**

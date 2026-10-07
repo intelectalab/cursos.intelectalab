@@ -23,6 +23,20 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Proxies de confianza
+    |--------------------------------------------------------------------------
+    |
+    | Direcciones (separadas por coma) del balanceador o proxy que recibe el
+    | HTTPS y reenvía la petición, o "*" si el servidor solo es alcanzable a
+    | través de él. Sin esto, la aplicación ve todas las peticiones como HTTP
+    | y con la dirección del proxy en lugar de la del visitante.
+    |
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
     'reserved_slugs' => ['www', 'api', 'app', 'admin', 'static', 'cdn', 'mail', 'status', 'soporte', 'support'],
 
 ];

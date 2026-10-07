@@ -20,7 +20,7 @@ const IconButton: React.FC<{ label: string; icon: LucideIcon; onClick: () => voi
     disabled={disabled}
     onClick={onClick}
     className={`p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
-      danger ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-400 hover:text-brand-700 hover:bg-brand-50'
+      danger ? 'text-slate-500 hover:text-rose-600 hover:bg-rose-50' : 'text-slate-500 hover:text-brand-700 hover:bg-brand-50'
     }`}
   >
     <Icon className="w-4 h-4" />
@@ -96,7 +96,7 @@ export const SectionActivities: React.FC<{
 
   return (
     <div className="border-t border-slate-200/80 bg-slate-50/40">
-      <p className="px-4 sm:px-5 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Actividades</p>
+      <p className="px-4 sm:px-5 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Actividades</p>
 
       {error && (
         <p className="px-5 pt-2 text-xs font-medium text-rose-700" role="alert">

@@ -8,6 +8,7 @@ use App\Modules\Identity\Application\UserService;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Identity\Http\SessionPresenter;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -53,9 +54,8 @@ class UserController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $users = User::query()
+        $base = User::query()
             ->with('roles')
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $like = '%'.mb_strtolower($search).'%';
 
@@ -63,12 +63,18 @@ class UserController extends Controller
                     ->whereRaw('lower(email) like ?', [$like])
                     ->orWhereRaw('lower(first_name) like ?', [$like])
                     ->orWhereRaw('lower(last_name) like ?', [$like]));
-            })
+            });
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $counts = StateCounts::of($base, [User::STATUS_ACTIVE, User::STATUS_INACTIVE], fn ($query, string $status) => $query->where('status', $status));
+
+        $users = $base
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->paginate($filters['per_page'] ?? 25);
 
-        return ApiResponse::paginated($users, fn (User $user) => SessionPresenter::user($user));
+        return ApiResponse::paginated($users, fn (User $user) => SessionPresenter::user($user), ['counts' => $counts]);
     }
 
     public function store(Request $request, UserService $users, TenantContext $context): JsonResponse
@@ -125,5 +131,27 @@ class UserController extends Controller
         $user = $roles->assignToUser($request->user(), $user, $data['roles']);
 
         return ApiResponse::success(SessionPresenter::user($user->load('roles')));
+    }
+
+    /**
+     * Activar o desactivar varias cuentas de una vez.
+     */
+    public function bulkStatus(Request $request, UserService $users, TenantContext $context): JsonResponse
+    {
+        $data = $request->validate([
+            'user_ids' => ['required', 'array', 'min:1', 'max:200'],
+            'user_ids.*' => ['uuid', 'distinct', Rule::exists('users', 'id')->where('tenant_id', $context->tenantId())],
+            'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE])],
+        ]);
+
+        return ApiResponse::success($users->setStatusOfMany($request->user(), $data['user_ids'], $data['status']));
+    }
+
+    /**
+     * Cierra las sesiones abiertas de una persona (equipo perdido, sospecha de acceso ajeno).
+     */
+    public function revokeSessions(Request $request, User $user, UserService $users): JsonResponse
+    {
+        return ApiResponse::success(['revoked' => $users->revokeSessions($request->user(), $user)]);
     }
 }

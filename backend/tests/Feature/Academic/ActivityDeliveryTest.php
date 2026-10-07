@@ -238,6 +238,35 @@ class ActivityDeliveryTest extends TestCase
             ->assertJsonPath("data.{$this->quiz}.attempts_left", 1);
     }
 
+    public function test_answers_marked_so_far_are_recovered_when_the_attempt_is_resumed(): void
+    {
+        [$attempt, $ids] = $this->startAttempt();
+        $draft = $this->api("/me/attempts/{$attempt}/draft");
+
+        // Recién abierto no trae nada marcado
+        $this->withToken($this->token)->getJson($this->api("/me/attempts/{$attempt}"))->assertOk()->assertJsonPath('data.answers', []);
+
+        // Se guarda lo marcado; una pregunta que no es de este intento se descarta
+        $this->withToken($this->token)->putJson($draft, ['answers' => [$ids['TRUE_FALSE'] => true, 'pregunta-ajena' => 'x']])->assertOk();
+
+        // Al volver a abrir el cuestionario, el intento trae lo marcado y sigue sin nota
+        $this->withToken($this->token)->postJson($this->me("/activities/{$this->quiz}/attempts"))
+            ->assertCreated()
+            ->assertJsonPath('data.id', $attempt)
+            ->assertJsonPath('data.status', 'IN_PROGRESS')
+            ->assertExactJsonStructure(['data' => ['id', 'number', 'status', 'started_at', 'expires_at', 'server_time', 'answers' => [$ids['TRUE_FALSE']], 'questions']])
+            ->assertJsonPath("data.answers.{$ids['TRUE_FALSE']}", true);
+
+        // Otra persona no puede escribir en el intento
+        $other = $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'otro@acme.com']);
+        $this->enroll($other);
+        $this->withToken($this->login('acme', 'otro@acme.com'))->putJson($draft, ['answers' => []])->assertNotFound();
+
+        // Enviado el intento, ya no admite guardados
+        $this->withToken($this->token)->postJson($this->api("/me/attempts/{$attempt}/submit"), ['answers' => [$ids['TRUE_FALSE'] => true]])->assertOk();
+        $this->withToken($this->token)->putJson($draft, ['answers' => []])->assertStatus(409)->assertJsonPath('code', 'ATTEMPT_CLOSED');
+    }
+
     public function test_attempts_belong_to_their_student(): void
     {
         [$attempt] = $this->startAttempt();

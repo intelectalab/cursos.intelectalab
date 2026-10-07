@@ -2,6 +2,7 @@
 
 use App\Modules\Crm\Http\Controllers\CompanyController;
 use App\Modules\Crm\Http\Controllers\LeadController;
+use App\Modules\Crm\Http\Controllers\LeadImportController;
 use App\Modules\Crm\Http\Controllers\OpportunityController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,10 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->prefix('crm')->gro
 
     Route::middleware('permission:crm.manage')->group(function () {
         Route::post('/leads', [LeadController::class, 'store']);
+        // Importar prospectos desde una hoja
+        Route::get('/leads/import/template', [LeadImportController::class, 'template']);
+        Route::post('/leads/import/preview', [LeadImportController::class, 'preview']);
+        Route::post('/leads/import', [LeadImportController::class, 'store']);
         Route::put('/leads/{lead}', [LeadController::class, 'update'])->whereUuid('lead');
         Route::post('/leads/{lead}/convert', [LeadController::class, 'convert'])->whereUuid('lead');
         Route::post('/leads/{lead}/discard', [LeadController::class, 'discard'])->whereUuid('lead');

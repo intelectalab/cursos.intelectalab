@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Building2, ExternalLink, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { api, apiErrorMessage, UNAUTHORIZED_EVENT } from '../../../shared/api/client';
 import {
   clearPlatformSession,
@@ -7,38 +7,10 @@ import {
   savePlatformSession,
   type PlatformSession,
 } from '../../../shared/auth/sessionStorage';
-import { tenantUrl } from '../../../shared/tenancy/hosts';
-import { useTenant } from '../../../shared/tenancy/TenantContext';
-import {
-  Alert,
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  ErrorState,
-  Field,
-  INPUT_CLASS,
-  LoadingState,
-  PageHeader,
-  StatCard,
-  Table,
-  TBody,
-  Td,
-  Th,
-  THead,
-  Tr,
-} from '../../../shared/ui';
+import { Alert, Avatar, Button, Field, INPUT_CLASS } from '../../../shared/ui';
 import { AuthShell, BrandMark } from '../../../shared/ui/AuthShell';
+import { TenantsPanel } from '../components/TenantsPanel';
 
-interface TenantRow {
-  id: string;
-  name: string;
-  slug: string;
-  status: 'ACTIVE' | 'SUSPENDED';
-  users_count: number;
-  created_at: string | null;
-}
 
 
 const PlatformLogin: React.FC<{ onLogin: (session: PlatformSession) => void }> = ({ onLogin }) => {
@@ -87,168 +59,6 @@ const PlatformLogin: React.FC<{ onLogin: (session: PlatformSession) => void }> =
         </Button>
       </form>
     </AuthShell>
-  );
-};
-
-const fetchTenants = async () => (await api.get('/platform/tenants', { params: { per_page: 100 } })).data.data as TenantRow[];
-
-const Tenants: React.FC = () => {
-  const { centralDomain } = useTenant();
-  const [rows, setRows] = useState<TenantRow[]>([]);
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [loadError, setLoadError] = useState('');
-  const [processing, setProcessing] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    fetchTenants()
-      .then((data) => {
-        if (!active) return;
-        setRows(data);
-        setState('ready');
-      })
-      .catch((err) => {
-        if (!active) return;
-        setLoadError(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
-        setState('error');
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [attempt]);
-
-  const setStatus = async (tenant: TenantRow, status: TenantRow['status']) => {
-    const suspending = status === 'SUSPENDED';
-    if (
-      suspending &&
-      !window.confirm(`¿Suspender "${tenant.name}"? Sus usuarios no podrán entrar hasta que la reactives.`)
-    ) {
-      return;
-    }
-
-    setProcessing(tenant.id);
-    setError(null);
-
-    try {
-      const response = await api.patch(`/platform/tenants/${tenant.id}/status`, { status });
-      setRows((prev) => prev.map((row) => (row.id === tenant.id ? response.data.data : row)));
-    } catch (err) {
-      setError(apiErrorMessage(err, 'No se pudo cambiar el estado de la organización.'));
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  return (
-    <>
-      <PageHeader icon={Building2} title="Organizaciones" subtitle="Academias registradas en la plataforma." />
-      {error && (
-        <div className="mb-4">
-          <Alert>{error}</Alert>
-        </div>
-      )}
-
-      {state === 'ready' && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-          <StatCard label="Organizaciones" value={rows.length} icon={Building2} tone="brand" />
-          <StatCard
-            label="Activas"
-            value={rows.filter((row) => row.status === 'ACTIVE').length}
-            icon={Building2}
-            tone="success"
-          />
-          <StatCard
-            label="Suspendidas"
-            value={rows.filter((row) => row.status === 'SUSPENDED').length}
-            icon={Building2}
-            tone="warning"
-          />
-        </div>
-      )}
-
-      <Card>
-        {state === 'loading' && <LoadingState />}
-        {state === 'error' && (
-          <ErrorState
-            message={loadError}
-            onRetry={() => {
-              setState('loading');
-              setAttempt((n) => n + 1);
-            }}
-          />
-        )}
-        {state === 'ready' && rows.length === 0 && <EmptyState title="Aún no hay organizaciones" />}
-
-        {state === 'ready' && rows.length > 0 && (
-          <Table>
-            <THead>
-              <Th>Organización</Th>
-              <Th>Usuarios</Th>
-              <Th>Estado</Th>
-              <Th>Alta</Th>
-              <Th />
-            </THead>
-            <TBody>
-              {rows.map((tenant) => (
-                <Tr key={tenant.id}>
-                  <Td>
-                    <div className="flex items-center gap-3">
-                      <Avatar name={tenant.name} />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-900 truncate">{tenant.name}</p>
-                        <a
-                          href={tenantUrl(tenant.slug, centralDomain, '/login')}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800"
-                        >
-                          {tenant.slug}.{centralDomain}
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    </div>
-                  </Td>
-                  <Td className="text-slate-600 tnum">{tenant.users_count}</Td>
-                  <Td>
-                    <Badge tone={tenant.status === 'ACTIVE' ? 'success' : 'warning'} dot>
-                      {tenant.status === 'ACTIVE' ? 'Activa' : 'Suspendida'}
-                    </Badge>
-                  </Td>
-                  <Td className="text-slate-500 whitespace-nowrap tnum">
-                    {tenant.created_at ? new Date(tenant.created_at).toLocaleDateString('es-PE') : '—'}
-                  </Td>
-                  <Td className="text-right">
-                    {tenant.status === 'ACTIVE' ? (
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => setStatus(tenant, 'SUSPENDED')}
-                        processing={processing === tenant.id}
-                        disabled={processing !== null}
-                      >
-                        Suspender
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => setStatus(tenant, 'ACTIVE')}
-                        processing={processing === tenant.id}
-                        disabled={processing !== null}
-                      >
-                        Reactivar
-                      </Button>
-                    )}
-                  </Td>
-                </Tr>
-              ))}
-            </TBody>
-          </Table>
-        )}
-      </Card>
-    </>
   );
 };
 
@@ -312,7 +122,7 @@ export const PlatformConsole: React.FC = () => {
         </div>
       </header>
       <main className="max-w-6xl mx-auto p-6 sm:p-8 animate-rise">
-        <Tenants />
+        <TenantsPanel />
       </main>
     </div>
   );

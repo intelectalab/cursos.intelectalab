@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Building2,
   CheckCircle2,
@@ -33,6 +34,7 @@ import {
   PageHeader,
   type Tone,
 } from '../../../shared/ui';
+import { HolidaysSection } from '../components/HolidaysSection';
 
 interface Settings {
   name: string;
@@ -44,8 +46,6 @@ interface Settings {
   contact_email: string | null;
   contact_phone: string | null;
   contact_address: string | null;
-  terms: string | null;
-  privacy_policy: string | null;
   session_minutes: number;
   payment_instructions: string | null;
   order_expiration_hours: number;
@@ -561,7 +561,7 @@ export const SettingsPage: React.FC = () => {
                     )}
                   </div>
                   {scale.built_in ? (
-                    <span className="text-xs text-slate-400">Del sistema</span>
+                    <span className="text-xs text-slate-500">Del sistema</span>
                   ) : (
                     editable && (
                       <div className="flex items-center gap-2">
@@ -683,17 +683,20 @@ export const SettingsPage: React.FC = () => {
           </div>
         </Section>
 
-        <Section icon={FileText} tone="violet" title="Textos legales" text="Contenido que aceptan los usuarios al registrarse y comprar.">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Field label="Términos y condiciones">
-              <textarea {...text('terms')} rows={8} />
-            </Field>
-            <Field label="Política de privacidad">
-              <textarea {...text('privacy_policy')} rows={8} />
-            </Field>
-          </div>
+        <Section icon={FileText} tone="violet" title="Textos legales" text="Términos, privacidad y otros textos que ven tus alumnos y clientes.">
+          <p className="text-[13px] text-slate-600">
+            Los textos legales se escriben y publican en{' '}
+            <Link to="/pages" className="font-semibold text-brand-700 underline hover:text-brand-900">
+              Páginas
+            </Link>
+            . Las que marques para el pie del sitio se enlazan en el catálogo y en el registro, donde quien crea su cuenta debe aceptarlas.
+          </p>
         </Section>
       </form>
+
+      <div className="mt-5">
+        <HolidaysSection editable={editable} />
+      </div>
 
       {scaleDialog?.kind === 'edit' && (
         <GradeScaleModal scale={scaleDialog.scale} limits={maxScoreLimits} onClose={() => setScaleDialog(null)} onSaved={applyScales} />

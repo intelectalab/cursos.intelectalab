@@ -13,8 +13,13 @@ use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
 use App\Shared\Tenancy\TenantContext;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -50,6 +55,16 @@ class AppServiceProvider extends ServiceProvider
             $context->syncConnection($event->connection);
         });
 
+        // Fuera de producción, cargar una relación fila por fila es un error: así las
+        // pruebas detectan las consultas repetidas (N+1) antes de que lleguen al servidor
+        Model::preventLazyLoading(! $this->app->isProduction());
+
+        $this->configureTrustedProxies();
+
+        // Tope general de la API: por usuario con sesión o, sin ella, por dirección
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute((int) config('identity.api_rate_limit'))
+            ->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
+
         // Reacciones entre módulos: quien emite el evento no conoce a quien lo escucha
         Event::listen(EnrollmentCompleted::class, IssueCertificateOnCompletion::class);
         Event::listen(OrderPaid::class, IssueLicensesOnOrderPaid::class);
@@ -57,5 +72,18 @@ class AppServiceProvider extends ServiceProvider
 
         // Cada módulo de dominio versiona sus propias migraciones
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')));
+    }
+
+    /**
+     * Detrás de un balanceador, el HTTPS y la dirección del visitante llegan en
+     * cabeceras que solo se aceptan de los proxies declarados (TRUSTED_PROXIES).
+     */
+    public function configureTrustedProxies(): void
+    {
+        $proxies = trim((string) config('tenancy.trusted_proxies'));
+
+        if ($proxies !== '') {
+            TrustProxies::at($proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)));
+        }
     }
 }

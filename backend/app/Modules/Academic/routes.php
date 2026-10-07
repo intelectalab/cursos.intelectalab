@@ -2,6 +2,7 @@
 
 use App\Modules\Academic\Http\Controllers\ActivityController;
 use App\Modules\Academic\Http\Controllers\QuestionBankController;
+use App\Modules\Academic\Http\Controllers\QuestionImportController;
 use App\Modules\Academic\Http\Controllers\ReviewController;
 use App\Modules\Academic\Http\Controllers\StudentActivityController;
 use App\Modules\Academic\Http\Controllers\StudentOverviewController;
@@ -19,6 +20,10 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::put('/question-banks/{bank}', [QuestionBankController::class, 'update'])->whereUuid('bank');
         Route::delete('/question-banks/{bank}', [QuestionBankController::class, 'destroy'])->whereUuid('bank');
         Route::post('/question-banks/{bank}/questions', [QuestionBankController::class, 'storeQuestion'])->whereUuid('bank');
+        // Importar preguntas al banco desde una hoja
+        Route::get('/question-banks/{bank}/import/template', [QuestionImportController::class, 'template'])->whereUuid('bank');
+        Route::post('/question-banks/{bank}/import/preview', [QuestionImportController::class, 'preview'])->whereUuid('bank');
+        Route::post('/question-banks/{bank}/import', [QuestionImportController::class, 'store'])->whereUuid('bank');
         Route::put('/questions/{question}', [QuestionBankController::class, 'updateQuestion'])->whereUuid('question');
         Route::delete('/questions/{question}', [QuestionBankController::class, 'destroyQuestion'])->whereUuid('question');
     });
@@ -65,6 +70,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     // …y rendirlas (Maestro §7.2: activity.attempt)
     Route::middleware('permission:activities.attempt')->whereUuid(['course', 'activity', 'attempt'])->group(function () {
         Route::post('/me/courses/{course}/activities/{activity}/attempts', [StudentActivityController::class, 'startAttempt']);
+        Route::put('/me/attempts/{attempt}/draft', [StudentActivityController::class, 'saveAttemptDraft']);
         Route::post('/me/attempts/{attempt}/submit', [StudentActivityController::class, 'submitAttempt']);
         Route::post('/me/courses/{course}/activities/{activity}/submission', [StudentActivityController::class, 'submitTask']);
         Route::post('/me/courses/{course}/activities/{activity}/survey', [StudentActivityController::class, 'answerSurvey']);

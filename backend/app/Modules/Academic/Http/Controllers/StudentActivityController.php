@@ -80,6 +80,19 @@ class StudentActivityController extends Controller
     }
 
     /**
+     * Guardado automático de lo que lleva marcado en un intento en curso.
+     */
+    public function saveAttemptDraft(Request $request, string $attempt): JsonResponse
+    {
+        $data = $request->validate(['answers' => ['present', 'array', 'max:300']]);
+        [$record] = $this->attempt($request, $attempt);
+
+        $this->quizzes->saveDraft($record, $data['answers']);
+
+        return ApiResponse::success(null);
+    }
+
+    /**
      * Un intento propio: en curso (para retomarlo) o su resultado.
      */
     public function showAttempt(Request $request, string $attempt): JsonResponse

@@ -62,6 +62,35 @@ class ProgressService
     }
 
     /**
+     * Avance de matrículas de cursos distintos con una sola consulta. Cada
+     * matrícula debe traer cargado su curso con la versión publicada; las de
+     * cursos sin publicar quedan fuera.
+     *
+     * @param  Collection<int, Enrollment>  $enrollments
+     * @return array<string, array{percent: int, completed: int, total: int, resource_ids: list<string>, activity_ids: list<string>}>
+     */
+    public function summariesAcrossCourses(Collection $enrollments): array
+    {
+        $enrollments = $enrollments->filter(fn (Enrollment $enrollment) => $enrollment->course->currentVersion !== null);
+        $rows = EnrollmentProgress::query()
+            ->whereIn('enrollment_id', $enrollments->pluck('id'))
+            ->get(['enrollment_id', 'item_type', 'item_id'])
+            ->groupBy('enrollment_id');
+        $itemsByVersion = [];
+
+        return $enrollments
+            ->mapWithKeys(function (Enrollment $enrollment) use (&$itemsByVersion, $rows) {
+                $version = $enrollment->course->currentVersion;
+                $itemsByVersion[$version->id] ??= $this->items($version);
+
+                return [
+                    $enrollment->id => $this->markIfCompleted($enrollment, $this->summarize($itemsByVersion[$version->id], $rows->get($enrollment->id, collect()))),
+                ];
+            })
+            ->all();
+    }
+
+    /**
      * El curso queda completado la primera vez que su avance llega al 100 %;
      * contenido publicado después no le quita esa condición. Se comprueba cada
      * vez que se calcula el avance, así también alcanza a matrículas antiguas.

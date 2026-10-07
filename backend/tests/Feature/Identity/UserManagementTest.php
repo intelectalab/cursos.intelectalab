@@ -95,6 +95,34 @@ class UserManagementTest extends TestCase
             ->assertJsonPath('code', 'ACCOUNT_INACTIVE');
     }
 
+    public function test_administrator_closes_the_open_sessions_of_another_user(): void
+    {
+        $tenant = $this->provisionTenant('acme', 'admin@acme.com');
+        $user = $this->createUser($tenant, RoleCatalog::STUDENT);
+        $adminToken = $this->login('acme', 'admin@acme.com');
+        $firstSession = $this->login('acme', $user->email);
+        $secondSession = $this->login('acme', $user->email);
+
+        // Un alumno no puede cerrar sesiones ajenas
+        $this->withToken($firstSession)->deleteJson($this->tenantUrl('acme', "/users/{$user->id}/sessions"))->assertForbidden();
+
+        $this->withToken($adminToken)->deleteJson($this->tenantUrl('acme', "/users/{$user->id}/sessions"))
+            ->assertOk()
+            ->assertJsonPath('data.revoked', 2);
+
+        $this->withToken($firstSession)->getJson($this->tenantUrl('acme', '/auth/me'))->assertUnauthorized();
+        $this->withToken($secondSession)->getJson($this->tenantUrl('acme', '/auth/me'))->assertUnauthorized();
+
+        // La cuenta sigue activa: puede volver a entrar
+        $this->login('acme', $user->email);
+        // Y quien cierra las suyas conserva la que está usando
+        $adminId = $this->withToken($adminToken)->getJson($this->tenantUrl('acme', '/auth/me'))->json('data.user.id');
+        $this->withToken($adminToken)->deleteJson($this->tenantUrl('acme', "/users/{$adminId}/sessions"))
+            ->assertOk()
+            ->assertJsonPath('data.revoked', 0);
+        $this->withToken($adminToken)->getJson($this->tenantUrl('acme', '/auth/me'))->assertOk();
+    }
+
     public function test_last_administrator_cannot_be_deactivated(): void
     {
         $this->provisionTenant('acme', 'admin@acme.com');

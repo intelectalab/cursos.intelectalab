@@ -12,6 +12,7 @@ use App\Shared\Http\ErrorCode;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 /**
@@ -76,10 +77,11 @@ class PasswordService
         DB::transaction(function () use ($reset, $password) {
             $user = $reset->user;
 
-            $user->update(['password' => $password]);
+            $user->update(['password' => $password, 'must_change_password' => false]);
             $reset->update(['used_at' => now()]);
             // Quien recupera el acceso cierra todas las sesiones abiertas
             $user->tokens()->delete();
+            RateLimiter::clear(AuthenticateUser::lockKey($user->tenant_id, $user->email));
 
             $this->audit->record('auth.password_reset', $user, actorUserId: $user->id);
         });
@@ -100,7 +102,7 @@ class PasswordService
         }
 
         DB::transaction(function () use ($user, $newPassword) {
-            $user->update(['password' => $newPassword]);
+            $user->update(['password' => $newPassword, 'must_change_password' => false]);
             $user->tokens()->whereKeyNot($user->currentAccessToken()->getKey())->delete();
 
             $this->audit->record('auth.password_changed', $user);

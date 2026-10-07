@@ -55,3 +55,32 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
   }
   return data.message || fallback;
 }
+
+// Claves de las operaciones cuyo resultado no se llegó a conocer (se cortó la conexión)
+const unresolvedKeys = new Map<string, string>();
+
+function newKey(): string {
+  // randomUUID solo existe en contextos seguros (HTTPS o localhost)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+}
+
+/**
+ * POST que no repite su efecto: si la respuesta no llega y la persona reintenta,
+ * la misma operación viaja con la misma clave y el servidor devuelve lo ya hecho.
+ */
+export async function postIdempotent(url: string, body: unknown) {
+  const signature = `${url}|${JSON.stringify(body ?? null)}`;
+  const key = unresolvedKeys.get(signature) ?? newKey();
+  unresolvedKeys.set(signature, key);
+
+  try {
+    const response = await api.post(url, body, { headers: { 'Idempotency-Key': key } });
+    unresolvedKeys.delete(signature);
+    return response;
+  } catch (error) {
+    // Con respuesta del servidor el resultado se conoce: el siguiente intento es una operación nueva
+    if (axios.isAxiosError(error) && error.response) unresolvedKeys.delete(signature);
+    throw error;
+  }
+}

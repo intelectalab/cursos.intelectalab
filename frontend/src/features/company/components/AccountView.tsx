@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Award, CheckCircle2, KeyRound, Receipt, ShieldCheck, Undo2, UserPlus, Users } from 'lucide-react';
+import { SelectAll } from '../../../shared/ui/filters';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
   Alert,
@@ -96,6 +97,11 @@ const AssignModal: React.FC<{
           <p className="text-[13px] text-slate-500">No hay trabajadores sin este curso. Registra primero a quienes lo llevarán.</p>
         ) : (
           <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-72 overflow-y-auto">
+            <li className="px-3.5 py-2 bg-slate-50/80 rounded-t-xl">
+              <SelectAll ids={shown.map((member) => member.id)} selected={selected} onChange={setSelected}>
+                Seleccionar todos ({shown.length})
+              </SelectAll>
+            </li>
             {shown.map((member) => (
               <li key={member.id}>
                 <label className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer hover:bg-brand-50/40">

@@ -29,4 +29,32 @@ return [
 
     'password_reset_minutes' => (int) env('AUTH_PASSWORD_RESET_MINUTES', 60),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Bloqueo por intentos fallidos
+    |--------------------------------------------------------------------------
+    |
+    | Tras esta cantidad de fallos seguidos, la cuenta no admite inicios de
+    | sesión durante los minutos indicados. Un acceso correcto o recuperar la
+    | contraseña reinician la cuenta.
+    |
+    */
+
+    'login_lock_attempts' => (int) env('AUTH_LOGIN_LOCK_ATTEMPTS', 10),
+
+    'login_lock_minutes' => (int) env('AUTH_LOGIN_LOCK_MINUTES', 15),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tope general de peticiones
+    |--------------------------------------------------------------------------
+    |
+    | Peticiones por minuto que admite la API de un mismo usuario o, sin
+    | sesión, de una misma dirección. Las rutas públicas y de acceso tienen
+    | además su propio tope, más bajo.
+    |
+    */
+
+    'api_rate_limit' => (int) env('API_RATE_LIMIT', 300),
+
 ];

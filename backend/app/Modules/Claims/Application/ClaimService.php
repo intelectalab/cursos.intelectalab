@@ -5,6 +5,7 @@ namespace App\Modules\Claims\Application;
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Claims\Domain\Models\Claim;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\BusinessCalendar;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Http\ApiException;
@@ -23,6 +24,7 @@ class ClaimService
         private readonly TenantSettingsService $settings,
         private readonly TenantContext $context,
         private readonly AuditLogger $audit,
+        private readonly BusinessCalendar $calendar,
     ) {}
 
     /**
@@ -68,8 +70,8 @@ class ClaimService
                 'currency' => isset($data['amount']) ? $this->settings->currency() : null,
                 'status' => Claim::STATUS_RECEIVED,
                 'provider' => $this->provider($tenant),
-                // Días hábiles: no cuentan sábados ni domingos (los feriados no se descuentan)
-                'due_at' => $today->copy()->addWeekdays($this->settings->claimResponseDays())->toDateString(),
+                // Días hábiles: no cuentan sábados, domingos ni los feriados que la organización registró
+                'due_at' => $this->calendar->addBusinessDays($today, $this->settings->claimResponseDays())->toDateString(),
                 'ip_address' => $ip,
                 'user_agent' => $userAgent ? mb_substr($userAgent, 0, 500) : null,
             ]);

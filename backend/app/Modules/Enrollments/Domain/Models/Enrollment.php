@@ -30,6 +30,13 @@ class Enrollment extends Model
         self::STATUS_ACTIVE, self::STATE_UPCOMING, self::STATE_EXPIRED, self::STATE_COMPLETED, self::STATUS_CANCELLED,
     ];
 
+    /** Solo como filtro: activas cuyo acceso termina dentro de EXPIRING_DAYS días */
+    public const FILTER_EXPIRING = 'EXPIRING';
+
+    public const EXPIRING_DAYS = 7;
+
+    public const FILTERS = [...self::STATES, self::FILTER_EXPIRING];
+
     public const SOURCE_MANUAL = 'MANUAL';
 
     /** La creó el pago de una orden de compra */
@@ -114,6 +121,8 @@ class Enrollment extends Model
 
         match ($state) {
             self::STATUS_CANCELLED => $query->where('status', self::STATUS_CANCELLED),
+            self::FILTER_EXPIRING => $query->where('status', self::STATUS_ACTIVE)->where($started)
+                ->whereBetween('ends_at', [$now, $now->copy()->addDays(self::EXPIRING_DAYS)]),
             self::STATE_EXPIRED => $query->where('status', self::STATUS_ACTIVE)->where('ends_at', '<', $now),
             self::STATE_UPCOMING => $query->where('status', self::STATUS_ACTIVE)->where('starts_at', '>', $now)->where($notEnded),
             self::STATE_COMPLETED => $query->where('status', self::STATUS_ACTIVE)->whereNotNull('completed_at')->where($started)->where($notEnded),

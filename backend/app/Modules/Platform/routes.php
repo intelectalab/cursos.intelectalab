@@ -13,6 +13,8 @@ Route::prefix('platform')->middleware('central')->group(function () {
         Route::post('/auth/logout', [PlatformAuthController::class, 'logout']);
 
         Route::get('/tenants', [PlatformTenantController::class, 'index']);
+        Route::post('/tenants', [PlatformTenantController::class, 'store']);
+        Route::post('/tenants/{tenant}/support-session', [PlatformTenantController::class, 'supportSession']);
         Route::patch('/tenants/{tenant}/status', [PlatformTenantController::class, 'updateStatus']);
     });
 });

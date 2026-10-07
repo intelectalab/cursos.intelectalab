@@ -14,12 +14,14 @@ use App\Modules\Files\Application\FileStorage;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
+use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -29,6 +31,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class CertificateController extends Controller
 {
     public const SIGNATURE_PURPOSE = 'certificate_signature';
+
+    public const BACKGROUND_PURPOSE = 'certificate_background';
 
     public function __construct(
         private readonly CertificateService $certificates,
@@ -45,9 +49,8 @@ class CertificateController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $certificates = Certificate::query()
+        $base = Certificate::query()
             ->with(['student', 'issuer'])
-            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->where('status', $status))
             ->when($filters['course_id'] ?? null, fn (Builder $q, string $course) => $q->where('course_id', $course))
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
@@ -59,12 +62,18 @@ class CertificateController extends Controller
                     ->orWhereRaw('lower(verification_code) like ?', [$like])
                     ->when($code, fn (Builder $byCode) => $byCode->orWhere('verification_code', $code))
                     ->orWhereHas('student', fn (Builder $student) => $student->whereRaw('lower(email) like ?', [$like])));
-            })
+            });
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $counts = StateCounts::of($base, Certificate::STATUSES, fn (Builder $q, string $status) => $q->where('status', $status));
+
+        $certificates = $base
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->where('status', $status))
             ->orderByDesc('issued_at')
             ->orderBy('id')
             ->paginate($filters['per_page'] ?? 50);
 
-        return ApiResponse::paginated($certificates, fn (Certificate $certificate) => CertificatePresenter::make($certificate));
+        return ApiResponse::paginated($certificates, fn (Certificate $certificate) => CertificatePresenter::make($certificate), ['counts' => $counts]);
     }
 
     /**
@@ -102,6 +111,23 @@ class CertificateController extends Controller
     }
 
     /**
+     * Emite de una vez los certificados de varias matrículas que ya cumplen los
+     * requisitos. Las que no los cumplen (o ya lo tienen) se omiten.
+     */
+    public function issueMany(Request $request, TenantContext $context): JsonResponse
+    {
+        $data = $request->validate([
+            'enrollment_ids' => ['required', 'array', 'min:1', 'max:200'],
+            'enrollment_ids.*' => ['uuid', 'distinct', Rule::exists('enrollments', 'id')->where('tenant_id', $context->tenantId())],
+        ]);
+
+        $pending = $this->certificates->candidates()->whereIn('id', $data['enrollment_ids'])->get();
+        $pending->each(fn (Enrollment $enrollment) => $this->certificates->issue($enrollment, $request->user()));
+
+        return ApiResponse::success(['issued' => $pending->count(), 'skipped' => count($data['enrollment_ids']) - $pending->count()], null, 201);
+    }
+
+    /**
      * Emisión manual (Maestro §7.2). Sin requisitos cumplidos se rechaza (TC-CERT-001).
      */
     public function issue(Request $request, TenantContext $context): JsonResponse
@@ -136,22 +162,52 @@ class CertificateController extends Controller
                 'max_kb' => config('files.limits.image'),
                 'extensions' => config('files.purposes.'.self::SIGNATURE_PURPOSE.'.extensions'),
             ],
+            'background' => [
+                'max_kb' => config('files.limits.image'),
+                'extensions' => config('files.purposes.'.self::BACKGROUND_PURPOSE.'.extensions'),
+            ],
+            'options' => [
+                'positions' => CertificateTemplate::POSITIONS,
+                'heights' => CertificateTemplate::HEIGHTS,
+                'sizes' => CertificateTemplate::SIZES,
+            ],
         ]);
     }
 
     public function updateTemplate(Request $request): JsonResponse
     {
+        $color = ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'];
         $data = $request->validate([
             'signer_name' => ['nullable', 'string', 'max:150'],
             'signer_title' => ['nullable', 'string', 'max:150'],
-        ]);
+            // Diseño: lo que no se envía conserva su valor
+            'design' => ['sometimes', 'array'],
+            'design.text_align' => ['sometimes', Rule::in(CertificateTemplate::POSITIONS)],
+            'design.text_top' => ['sometimes', Rule::in(CertificateTemplate::HEIGHTS)],
+            'design.name_size' => ['sometimes', Rule::in(CertificateTemplate::SIZES)],
+            'design.primary_color' => $color,
+            'design.accent_color' => $color,
+            'design.text_color' => $color,
+            'design.show_logo' => ['sometimes', 'boolean'],
+            'design.show_organization' => ['sometimes', 'boolean'],
+            'design.show_title' => ['sometimes', 'boolean'],
+            'design.signature_position' => ['sometimes', Rule::in(CertificateTemplate::POSITIONS)],
+            'design.qr_position' => ['sometimes', Rule::in(CertificateTemplate::POSITIONS)],
+        ], ['design.*.regex' => 'El color debe tener el formato #RRGGBB.']);
 
         $template = $this->certificates->template();
-        $before = $template->only(['signer_name', 'signer_title']);
-        $template->fill($data)->save();
+        $before = $template->only(['signer_name', 'signer_title']) + ['design' => $template->resolvedDesign()];
+        $design = ($data['design'] ?? []) + $template->resolvedDesign();
+
+        // La firma y el código con su QR no caben en el mismo tercio de la hoja
+        if ($design['signature_position'] === $design['qr_position']) {
+            throw ValidationException::withMessages(['design.qr_position' => 'La firma y el código QR no pueden ir en la misma posición.']);
+        }
+
+        $template->fill(['design' => $design] + $data)->save();
 
         if ($template->wasChanged() || $template->wasRecentlyCreated) {
-            $this->audit->record('certificate_templates.updated', $template, $before, $template->only(['signer_name', 'signer_title']));
+            $this->audit->record('certificate_templates.updated', $template, $before, $template->only(['signer_name', 'signer_title']) + ['design' => $design]);
         }
 
         return ApiResponse::success($this->presentTemplate($template));
@@ -193,6 +249,74 @@ class CertificateController extends Controller
     }
 
     /**
+     * Fondo propio: la imagen que la organización diseñó, a hoja completa.
+     */
+    public function uploadBackground(Request $request): JsonResponse
+    {
+        $request->validate(['file' => $this->storage->rules(self::BACKGROUND_PURPOSE)]);
+
+        $template = $this->certificates->template();
+        $previous = $template->background;
+
+        $file = $this->storage->store($request->file('file'), self::BACKGROUND_PURPOSE);
+        $template->fill(['background_file_id' => $file->id])->save();
+        $template->unsetRelation('background');
+
+        if ($previous) {
+            $this->storage->delete($previous);
+        }
+
+        $this->audit->record('certificate_templates.background_updated', $template, null, ['background' => $file->original_name]);
+
+        return ApiResponse::success($this->presentTemplate($template));
+    }
+
+    /**
+     * Sin fondo propio, el certificado vuelve al diseño del sistema.
+     */
+    public function removeBackground(): JsonResponse
+    {
+        $template = $this->certificates->template();
+        $previous = $template->background;
+
+        if ($previous) {
+            $template->update(['background_file_id' => null]);
+            $template->unsetRelation('background');
+            $this->storage->delete($previous);
+            $this->audit->record('certificate_templates.background_removed', $template, ['background' => $previous->original_name]);
+        }
+
+        return ApiResponse::success($this->presentTemplate($template));
+    }
+
+    /**
+     * Cómo queda el certificado con la plantilla guardada, con datos de ejemplo.
+     */
+    public function previewTemplate(Request $request, CertificatePdf $pdf): Response
+    {
+        $template = $this->certificates->template();
+        $sample = new Certificate([
+            'verification_code' => 'ABCD-EFGH-JKLM',
+            'status' => Certificate::STATUS_ISSUED,
+            'issued_at' => now(),
+            'snapshot' => [
+                'student_name' => 'María Fernanda Quispe Huamán',
+                'student_document' => 'DNI 45678912',
+                'course_title' => 'Nombre del curso completado',
+                'duration_hours' => 24,
+                'organization' => $request->attributes->get('tenant')->name,
+                'signer_name' => $template->signer_name,
+                'signer_title' => $template->signer_title,
+            ],
+        ]);
+
+        return response($pdf->render($sample, $request->getSchemeAndHttpHost().'/verify/ABCD-EFGH-JKLM'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="vista-previa-certificado.pdf"',
+        ]);
+    }
+
+    /**
      * La firma es privada: solo la ve el personal que gestiona certificados.
      */
     public function signature(): StreamedResponse
@@ -230,6 +354,8 @@ class CertificateController extends Controller
             'signer_name' => $template->signer_name,
             'signer_title' => $template->signer_title,
             'has_signature' => $template->signature_file_id !== null,
+            'has_background' => $template->background_file_id !== null,
+            'design' => $template->resolvedDesign(),
         ];
     }
 }

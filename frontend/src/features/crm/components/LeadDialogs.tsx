@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, CHECKBOX_CLASS, Field, INPUT_CLASS, Modal } from '../../../shared/ui';
+import { CompanySelect } from './CompanySelect';
 import { blankToNull, crmApi, LEAD_SOURCE_LABEL, type Company, type Lead, type LeadSource, type Person } from '../api';
 
 export const LeadFormModal: React.FC<{
@@ -206,14 +207,7 @@ export const ConvertLeadModal: React.FC<{ lead: Lead; onClose: () => void; onCon
           </div>
         ) : (
           <Field label="Empresa">
-            <select className={INPUT_CLASS} required value={companyId} onChange={(event) => setCompanyId(event.target.value)}>
-              <option value="">Elige una empresa</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
+            <CompanySelect companies={companies} value={companyId} onChange={setCompanyId} />
           </Field>
         )}
 

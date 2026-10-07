@@ -45,6 +45,12 @@ return [
             'limit' => 'image',
             'extensions' => ['png', 'jpg', 'jpeg'],
         ],
+        // Fondo del certificado: el diseño propio de la organización, a hoja completa
+        'certificate_background' => [
+            'visibility' => 'private',
+            'limit' => 'image',
+            'extensions' => ['png', 'jpg', 'jpeg'],
+        ],
         // Adjunto de un mensaje de soporte: capturas y documentos
         'ticket_attachment' => [
             'visibility' => 'private',

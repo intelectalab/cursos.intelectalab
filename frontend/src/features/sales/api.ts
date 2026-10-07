@@ -1,4 +1,4 @@
-import { api } from '../../shared/api/client';
+import { api, postIdempotent } from '../../shared/api/client';
 import type { Tone } from '../../shared/ui';
 import type { PageMeta } from '../identity/api';
 import type { AvailableCourse, AvailableCourseDetail } from '../enrollments/api';
@@ -155,10 +155,10 @@ export const salesApi = {
     return (await api.get(`/catalog/courses/${course}`)).data.data as AvailableCourseDetail;
   },
   async placeOrder(courseId: string, expectedTotal: string, couponCode?: string) {
-    return (await api.post('/orders', { course_id: courseId, expected_total: expectedTotal, coupon_code: couponCode })).data.data as MyOrder;
+    return (await postIdempotent('/orders', { course_id: courseId, expected_total: expectedTotal, coupon_code: couponCode })).data.data as MyOrder;
   },
   async placePackageOrder(packageId: string, expectedTotal: string, couponCode?: string) {
-    return (await api.post('/orders', { package_id: packageId, expected_total: expectedTotal, coupon_code: couponCode })).data.data as MyOrder;
+    return (await postIdempotent('/orders', { package_id: packageId, expected_total: expectedTotal, coupon_code: couponCode })).data.data as MyOrder;
   },
   // El servidor dice si el cupón aplica y cuánto se pagaría; vuelve a calcularlo al crear la orden
   async validateCoupon(code: string, product: { course_id: string } | { package_id: string }) {
@@ -187,7 +187,7 @@ export const salesApi = {
     return { data: response.data.data as Order[], meta: response.data.meta as PageMeta };
   },
   async confirmPayment(order: string, input: ConfirmPaymentInput) {
-    return (await api.post(`/orders/${order}/confirm-payment`, input)).data.data as Order;
+    return (await postIdempotent(`/orders/${order}/confirm-payment`, input)).data.data as Order;
   },
   async releaseLicenses(order: string, reason: string) {
     return (await api.post(`/orders/${order}/release-licenses`, { reason })).data.data as Order;

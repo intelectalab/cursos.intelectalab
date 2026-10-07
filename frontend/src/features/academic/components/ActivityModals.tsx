@@ -38,7 +38,7 @@ const SurveyQuestions: React.FC<{ value: SurveyQuestion[]; onChange: (value: Sur
         {value.map((question, index) => (
           <div key={index} className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
             <div className="flex items-start gap-2">
-              <span className="w-6 h-9 shrink-0 flex items-center justify-center text-xs font-semibold text-slate-400 tnum">{index + 1}</span>
+              <span className="w-6 h-9 shrink-0 flex items-center justify-center text-xs font-semibold text-slate-500 tnum">{index + 1}</span>
               <input
                 className={INPUT_CLASS}
                 required
@@ -53,7 +53,7 @@ const SurveyQuestions: React.FC<{ value: SurveyQuestion[]; onChange: (value: Sur
                 aria-label="Quitar pregunta"
                 title="Quitar pregunta"
                 onClick={() => onChange(value.filter((_, i) => i !== index))}
-                className="p-2 shrink-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                className="p-2 shrink-0 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -103,7 +103,7 @@ const SurveyQuestions: React.FC<{ value: SurveyQuestion[]; onChange: (value: Sur
                       aria-label="Quitar opción"
                       disabled={(question.options ?? []).length <= 2}
                       onClick={() => update(index, { options: (question.options ?? []).filter((_, i) => i !== optionIndex) })}
-                      className="p-1.5 shrink-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1.5 shrink-0 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -433,7 +433,7 @@ export const QuizQuestionsModal: React.FC<{
             <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100">
               {chosen.map((item, index) => (
                 <li key={item.question_id} className="flex items-center gap-2 px-3 py-2">
-                  <span className="w-5 shrink-0 text-xs font-semibold text-slate-400 tnum">{index + 1}</span>
+                  <span className="w-5 shrink-0 text-xs font-semibold text-slate-500 tnum">{index + 1}</span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] text-slate-900 truncate">{item.statement}</p>
                     <p className="text-xs text-slate-500">{QUESTION_LABEL[item.type]}</p>
@@ -456,7 +456,7 @@ export const QuizQuestionsModal: React.FC<{
                     aria-label="Subir pregunta"
                     disabled={index === 0}
                     onClick={() => move(index, -1)}
-                    className="p-1.5 shrink-0 rounded-lg text-slate-400 hover:text-brand-700 hover:bg-brand-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 shrink-0 rounded-lg text-slate-500 hover:text-brand-700 hover:bg-brand-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ArrowUp className="w-4 h-4" />
                   </button>
@@ -465,7 +465,7 @@ export const QuizQuestionsModal: React.FC<{
                     aria-label="Bajar pregunta"
                     disabled={index === chosen.length - 1}
                     onClick={() => move(index, 1)}
-                    className="p-1.5 shrink-0 rounded-lg text-slate-400 hover:text-brand-700 hover:bg-brand-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 shrink-0 rounded-lg text-slate-500 hover:text-brand-700 hover:bg-brand-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ArrowDown className="w-4 h-4" />
                   </button>
@@ -473,7 +473,7 @@ export const QuizQuestionsModal: React.FC<{
                     type="button"
                     aria-label="Quitar del cuestionario"
                     onClick={() => setChosen(chosen.filter((_, i) => i !== index))}
-                    className="p-1.5 shrink-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                    className="p-1.5 shrink-0 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -513,7 +513,7 @@ export const QuizQuestionsModal: React.FC<{
                   ))}
                 </select>
                 <div className="relative flex-1 min-w-[140px]">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     className={`${INPUT_CLASS} pl-9`}
                     placeholder="Buscar"

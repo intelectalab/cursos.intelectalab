@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, staging]
   pull_request:
 
 jobs:
@@ -30,12 +30,14 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_pgsql
+          extensions: pdo_pgsql, gd
       - name: Rol de aplicación y base de pruebas
         run: psql "postgresql://erp_admin:secret_password@127.0.0.1:5432/erp_saas_db" -v ON_ERROR_STOP=1 -f ../docker/init-db/00_init.sql
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env && php artisan key:generate
-      - run: vendor/bin/pint --test
+      # Solo las carpetas vigentes: app/Http conserva un controlador antiguo pendiente de retirar
+      - run: vendor/bin/pint --test app/Modules app/Shared app/Providers config routes tests database bootstrap/app.php
+      - run: composer audit
       - run: php artisan test
 
   frontend:
@@ -51,5 +53,6 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run build

@@ -131,14 +131,14 @@ const QuestionInput: React.FC<{ question: AttemptQuestion; value: Answer; onChan
     <ol className="space-y-2">
       {order.map((itemId, index) => (
         <li key={itemId} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-[13px] text-slate-800">
-          <span className="w-5 shrink-0 text-xs font-semibold text-slate-400 tnum">{index + 1}</span>
+          <span className="w-5 shrink-0 text-xs font-semibold text-slate-500 tnum">{index + 1}</span>
           <span className="flex-1 min-w-0">{texts.get(itemId)}</span>
           <button
             type="button"
             aria-label="Subir"
             disabled={index === 0}
             onClick={() => move(index, -1)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-brand-700 hover:bg-brand-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-brand-700 hover:bg-brand-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ArrowUp className="w-4 h-4" />
           </button>
@@ -147,7 +147,7 @@ const QuestionInput: React.FC<{ question: AttemptQuestion; value: Answer; onChan
             aria-label="Bajar"
             disabled={index === order.length - 1}
             onClick={() => move(index, 1)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-brand-700 hover:bg-brand-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-brand-700 hover:bg-brand-50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ArrowDown className="w-4 h-4" />
           </button>
@@ -277,10 +277,16 @@ const ResultView: React.FC<{ result: AttemptResult; gradeScale: number; onBack: 
 
 function initialAnswers(attempt: OpenAttempt): Record<string, Answer> {
   // Ordenar parte del orden recibido: si el alumno no mueve nada, esa es su respuesta
-  return Object.fromEntries(
+  const blank = Object.fromEntries(
     attempt.questions.map((question) => [question.id, question.type === 'ORDERING' ? (question.config.items ?? []).map((item) => item.id) : null]),
   );
+
+  // Al retomar un intento, lo que ya había marcado
+  return { ...blank, ...attempt.answers };
 }
+
+// Espera a que deje de responder antes de guardar
+const AUTOSAVE_MS = 1200;
 
 const TakingView: React.FC<{ attempt: OpenAttempt; onFinished: (result: AttemptResult | null) => void }> = ({ attempt, onFinished }) => {
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => initialAnswers(attempt));
@@ -293,6 +299,22 @@ const TakingView: React.FC<{ attempt: OpenAttempt; onFinished: (result: AttemptR
   useEffect(() => {
     latest.current = answers;
   }, [answers]);
+
+  // Guardado automático: si cierra la pestaña o se le va la conexión, retoma donde quedó
+  const touched = useRef(false);
+  useEffect(() => {
+    if (!touched.current) {
+      touched.current = true;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      // Un fallo aquí no interrumpe al alumno: las respuestas siguen en pantalla y viajan al enviar
+      if (!sent.current) studentApi.saveAttemptDraft(attempt.id, answers).catch(() => undefined);
+    }, AUTOSAVE_MS);
+
+    return () => clearTimeout(timer);
+  }, [answers, attempt.id]);
 
   const submit = useCallback(async () => {
     if (sent.current) return;
@@ -370,7 +392,7 @@ const TakingView: React.FC<{ attempt: OpenAttempt; onFinished: (result: AttemptR
             <fieldset>
               <legend className="text-sm font-semibold text-slate-900 mb-2.5">
                 {index + 1}. {question.statement}
-                <span className="ml-2 text-xs font-medium text-slate-400">
+                <span className="ml-2 text-xs font-medium text-slate-500">
                   {question.points} {question.points === 1 ? 'pt' : 'pts'}
                 </span>
               </legend>
@@ -466,7 +488,7 @@ export const QuizPanel: React.FC<{
             state.passed ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-800'
           }`}
         >
-          {state.passed ? <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" /> : <CircleAlert className="w-6 h-6 text-slate-400 shrink-0" />}
+          {state.passed ? <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" /> : <CircleAlert className="w-6 h-6 text-slate-500 shrink-0" />}
           <p className="flex-1 min-w-0 text-[13px]">
             <span className="font-semibold">{state.passed ? 'Aprobado.' : 'Aún no aprobado.'}</span> Tu mejor nota es{' '}
             <span className="font-semibold tnum">

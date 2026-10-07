@@ -4,6 +4,7 @@ namespace App\Modules\Identity\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Identity\Domain\Models\User;
+use App\Shared\Http\ApiException;
 use Illuminate\Support\Facades\DB;
 
 class UserService
@@ -69,6 +70,57 @@ class UserService
 
             return $user;
         });
+    }
+
+    /**
+     * Activa o desactiva varias cuentas. Las que no se pueden cambiar (la propia
+     * al desactivar, el último administrador) se devuelven con su motivo.
+     *
+     * @param  list<string>  $userIds
+     * @return array{updated: int, skipped: list<array{email: string, reason: string}>}
+     */
+    public function setStatusOfMany(User $actor, array $userIds, string $status): array
+    {
+        $updated = 0;
+        $skipped = [];
+
+        foreach (User::query()->whereIn('id', $userIds)->orderBy('email')->get() as $user) {
+            if ($user->status === $status) {
+                continue;
+            }
+
+            if ($status !== User::STATUS_ACTIVE && $actor->is($user)) {
+                $skipped[] = ['email' => $user->email, 'reason' => 'No puedes desactivar tu propia cuenta.'];
+
+                continue;
+            }
+
+            try {
+                $this->update($user, ['status' => $status] + $user->only(['first_name', 'last_name', 'phone', 'doc_type', 'doc_number']));
+                $updated++;
+            } catch (ApiException $e) {
+                $skipped[] = ['email' => $user->email, 'reason' => $e->getMessage()];
+            }
+        }
+
+        return ['updated' => $updated, 'skipped' => $skipped];
+    }
+
+    /**
+     * Cierra las sesiones de una persona. Si el actor se las cierra a sí mismo,
+     * conserva la que está usando.
+     *
+     * @return int cuántas sesiones se cerraron
+     */
+    public function revokeSessions(User $actor, User $user): int
+    {
+        $revoked = $user->tokens()
+            ->when($actor->is($user), fn ($query) => $query->whereKeyNot($actor->currentAccessToken()->getKey()))
+            ->delete();
+
+        $this->audit->record('users.sessions_revoked', $user, null, ['revoked' => $revoked]);
+
+        return $revoked;
     }
 
     /**

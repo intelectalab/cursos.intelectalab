@@ -10,6 +10,8 @@ export interface User {
   first_name: string;
   last_name: string;
   roles: string[];
+  // Entró con una contraseña temporal y debe cambiarla antes de seguir
+  must_change_password?: boolean;
 }
 
 export interface AuthSession {
@@ -17,6 +19,8 @@ export interface AuthSession {
   user: User;
   tenant: Tenant;
   permissions: string[];
+  // Sesión abierta por el soporte de plataforma: solo lectura
+  support_mode?: boolean;
 }
 
 export type UIState = 

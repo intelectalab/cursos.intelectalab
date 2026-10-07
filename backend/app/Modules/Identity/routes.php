@@ -2,6 +2,7 @@
 
 use App\Modules\Identity\Http\Controllers\AccountController;
 use App\Modules\Identity\Http\Controllers\AuthController;
+use App\Modules\Identity\Http\Controllers\GroupController;
 use App\Modules\Identity\Http\Controllers\RoleController;
 use App\Modules\Identity\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -26,8 +27,23 @@ Route::middleware('tenant')->group(function () {
 
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.read');
         Route::post('/users', [UserController::class, 'store'])->middleware('permission:users.create');
+        Route::post('/users/bulk-status', [UserController::class, 'bulkStatus'])->middleware('permission:users.update');
         Route::put('/users/{user}', [UserController::class, 'update'])->middleware('permission:users.update');
         Route::put('/users/{user}/roles', [UserController::class, 'updateRoles'])->middleware('permission:users.update');
+        Route::delete('/users/{user}/sessions', [UserController::class, 'revokeSessions'])->middleware('permission:users.update');
+
+        // Grupos: listas de personas reutilizables. Los ve quien consulta usuarios o matricula; los arma quien edita usuarios
+        Route::middleware('permission:users.read,enrollments.create')->group(function () {
+            Route::get('/groups', [GroupController::class, 'index']);
+            Route::get('/groups/{group}', [GroupController::class, 'show'])->whereUuid('group');
+        });
+        Route::middleware('permission:users.update')->group(function () {
+            Route::post('/groups', [GroupController::class, 'store']);
+            Route::put('/groups/{group}', [GroupController::class, 'update'])->whereUuid('group');
+            Route::delete('/groups/{group}', [GroupController::class, 'destroy'])->whereUuid('group');
+            Route::post('/groups/{group}/members', [GroupController::class, 'addMembers'])->whereUuid('group');
+            Route::delete('/groups/{group}/members/{user}', [GroupController::class, 'removeMember'])->whereUuid(['group', 'user']);
+        });
 
         Route::get('/permissions', [RoleController::class, 'permissions'])->middleware('permission:roles.read');
         Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:roles.read');

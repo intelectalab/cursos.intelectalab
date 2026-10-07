@@ -32,7 +32,7 @@ const AttachmentChip: React.FC<{ attachment: TicketAttachment }> = ({ attachment
     >
       <Paperclip className="w-3 h-3 shrink-0" />
       <span className="truncate">{attachment.name}</span>
-      <span className="text-slate-400 shrink-0">{formatSize(attachment.size_bytes)}</span>
+      <span className="text-slate-500 shrink-0">{formatSize(attachment.size_bytes)}</span>
     </button>
   );
 };
@@ -141,7 +141,7 @@ export const ReplyBox: React.FC<{
               <button
                 type="button"
                 aria-label={`Quitar ${file.name}`}
-                className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                className="p-1 text-slate-500 hover:text-rose-600 cursor-pointer"
                 onClick={() => setFiles((current) => current.filter((_, position) => position !== index))}
               >
                 <X className="w-3 h-3" />

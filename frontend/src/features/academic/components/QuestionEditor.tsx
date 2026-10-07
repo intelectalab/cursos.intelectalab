@@ -44,7 +44,7 @@ const RowButton: React.FC<{ label: string; onClick: () => void; disabled?: boole
     title={label}
     disabled={disabled}
     onClick={onClick}
-    className="p-1.5 shrink-0 rounded-lg text-slate-400 hover:text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+    className="p-1.5 shrink-0 rounded-lg text-slate-500 hover:text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
   >
     {children}
   </button>
@@ -231,7 +231,7 @@ const ConfigEditor: React.FC<{ type: QuestionType; config: QuestionConfig; onCha
                 value={pair.left}
                 onChange={(event) => update(index, { left: event.target.value })}
               />
-              <span className="text-slate-400 shrink-0" aria-hidden="true">
+              <span className="text-slate-500 shrink-0" aria-hidden="true">
                 ↔
               </span>
               <input
@@ -271,7 +271,7 @@ const ConfigEditor: React.FC<{ type: QuestionType; config: QuestionConfig; onCha
       <div className="space-y-2">
         {items.map((item, index) => (
           <div key={index} className="flex items-center gap-2">
-            <span className="w-6 shrink-0 text-center text-xs font-semibold text-slate-400 tnum">{index + 1}</span>
+            <span className="w-6 shrink-0 text-center text-xs font-semibold text-slate-500 tnum">{index + 1}</span>
             <input
               className={INPUT_CLASS}
               required

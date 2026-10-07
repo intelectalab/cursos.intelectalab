@@ -1,26 +1,36 @@
+import { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TenantProvider, useTenant } from '../shared/tenancy/TenantContext';
 import { AuthProvider } from '../features/auth/AuthContext';
 import { ProtectedRoute, PermissionGate } from '../features/auth/ProtectedRoute';
 import { AppLayout } from '../layouts/backoffice/AppLayout';
 import { Login } from '../features/auth/pages/Login';
-import { SignUp } from '../features/auth/pages/SignUp';
-import { Register } from '../features/auth/pages/Register';
-import { ForgotPassword, ResetPassword } from '../features/auth/pages/PasswordRecovery';
-import { AccountPage } from '../features/account/pages/AccountPage';
-import { CourseEditorPage } from '../features/courses/pages/CourseEditorPage';
-import { ClassroomPage } from '../features/enrollments/pages/ClassroomPage';
-import { PlatformConsole } from '../features/platform/pages/PlatformConsole';
-import { PublicCatalogPage, PublicCoursePage } from '../features/sales/pages/CatalogPages';
-import { CheckoutPage } from '../features/sales/pages/CheckoutPage';
-import { PackageCheckoutPage, PublicPackagePage } from '../features/sales/pages/PackagePages';
-import { MyOrderPage } from '../features/sales/pages/MyOrdersPages';
-import { VerifyPage } from '../features/certificates/pages/VerifyPage';
-import { CorporateAccountPage } from '../features/company/pages/CorporateAccountPage';
-import { ClaimFormPage, ClaimLookupPage } from '../features/claims/pages/PublicClaimPages';
-import { PageEditorPage } from '../features/cms/pages/PageEditorPage';
-import { PublicPage } from '../features/cms/pages/PublicPage';
 import { APP_MODULES } from '../config/modules';
+import { LoadingState } from '../shared/ui';
+import { lazyPage } from './lazyPage';
+
+// Cada pantalla se descarga cuando se abre; solo el inicio de sesión viaja con el arranque
+const SupportAccess = lazyPage(() => import('../features/auth/pages/SupportAccess'), 'SupportAccess');
+const SignUp = lazyPage(() => import('../features/auth/pages/SignUp'), 'SignUp');
+const Register = lazyPage(() => import('../features/auth/pages/Register'), 'Register');
+const ForgotPassword = lazyPage(() => import('../features/auth/pages/PasswordRecovery'), 'ForgotPassword');
+const ResetPassword = lazyPage(() => import('../features/auth/pages/PasswordRecovery'), 'ResetPassword');
+const AccountPage = lazyPage(() => import('../features/account/pages/AccountPage'), 'AccountPage');
+const CourseEditorPage = lazyPage(() => import('../features/courses/pages/CourseEditorPage'), 'CourseEditorPage');
+const ClassroomPage = lazyPage(() => import('../features/enrollments/pages/ClassroomPage'), 'ClassroomPage');
+const PlatformConsole = lazyPage(() => import('../features/platform/pages/PlatformConsole'), 'PlatformConsole');
+const PublicCatalogPage = lazyPage(() => import('../features/sales/pages/CatalogPages'), 'PublicCatalogPage');
+const PublicCoursePage = lazyPage(() => import('../features/sales/pages/CatalogPages'), 'PublicCoursePage');
+const CheckoutPage = lazyPage(() => import('../features/sales/pages/CheckoutPage'), 'CheckoutPage');
+const PackageCheckoutPage = lazyPage(() => import('../features/sales/pages/PackagePages'), 'PackageCheckoutPage');
+const PublicPackagePage = lazyPage(() => import('../features/sales/pages/PackagePages'), 'PublicPackagePage');
+const MyOrderPage = lazyPage(() => import('../features/sales/pages/MyOrdersPages'), 'MyOrderPage');
+const VerifyPage = lazyPage(() => import('../features/certificates/pages/VerifyPage'), 'VerifyPage');
+const CorporateAccountPage = lazyPage(() => import('../features/company/pages/CorporateAccountPage'), 'CorporateAccountPage');
+const ClaimFormPage = lazyPage(() => import('../features/claims/pages/PublicClaimPages'), 'ClaimFormPage');
+const ClaimLookupPage = lazyPage(() => import('../features/claims/pages/PublicClaimPages'), 'ClaimLookupPage');
+const PageEditorPage = lazyPage(() => import('../features/cms/pages/PageEditorPage'), 'PageEditorPage');
+const PublicPage = lazyPage(() => import('../features/cms/pages/PublicPage'), 'PublicPage');
 
 // Dominio central de la plataforma: alta de organizaciones
 function CentralRoutes() {
@@ -40,6 +50,8 @@ function TenantRoutes() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        {/* Entrada del soporte de plataforma, con un acceso corto de solo lectura */}
+        <Route path="/support-access" element={<SupportAccess />} />
 
         {/* Catálogo público de la academia: no requiere sesión */}
         <Route path="/catalog" element={<PublicCatalogPage />} />
@@ -142,15 +154,48 @@ function TenantRoutes() {
   );
 }
 
+// El título de la pestaña sigue al encabezado de la pantalla: dice dónde se está
+// a quien usa lector de pantalla, y distingue las pestañas y el historial
+function DocumentTitle() {
+  const { tenant } = useTenant();
+  const site = tenant?.name ?? 'IntelectaLab';
+
+  useEffect(() => {
+    const sync = () => {
+      const heading = document.querySelector('h1')?.textContent?.trim();
+      const title = heading ? `${heading} · ${site}` : site;
+      if (document.title !== title) document.title = title;
+    };
+
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [site]);
+
+  return null;
+}
+
 function AppRoutes() {
   const { tenant } = useTenant();
-  return tenant ? <TenantRoutes /> : <CentralRoutes />;
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <LoadingState />
+        </div>
+      }
+    >
+      {tenant ? <TenantRoutes /> : <CentralRoutes />}
+    </Suspense>
+  );
 }
 
 export default function App() {
   return (
     <TenantProvider>
       <BrowserRouter>
+        <DocumentTitle />
         <AppRoutes />
       </BrowserRouter>
     </TenantProvider>

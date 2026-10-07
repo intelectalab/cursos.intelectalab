@@ -91,7 +91,7 @@ const GradeModal: React.FC<{
           )}
           {submission.file && (
             <div className="flex flex-wrap items-center gap-3">
-              <Paperclip className="w-4 h-4 text-slate-400 shrink-0" />
+              <Paperclip className="w-4 h-4 text-slate-500 shrink-0" />
               <span className="text-[13px] text-slate-800 truncate flex-1 min-w-0">
                 {submission.file.name} · {formatSize(submission.file.size_bytes)}
               </span>

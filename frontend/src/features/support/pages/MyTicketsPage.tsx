@@ -124,7 +124,7 @@ const NewTicketModal: React.FC<{ onClose: () => void; onCreated: (ticket: Ticket
                 <button
                   type="button"
                   aria-label={`Quitar ${file.name}`}
-                  className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                  className="p-1 text-slate-500 hover:text-rose-600 cursor-pointer"
                   onClick={() => setFiles((current) => current.filter((_, position) => position !== index))}
                 >
                   <X className="w-3 h-3" />

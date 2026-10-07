@@ -37,12 +37,13 @@ class RegisterStudent
                 'phone' => $data['phone'] ?? null,
                 'status' => User::STATUS_ACTIVE,
                 'last_login_at' => now(),
+                'terms_accepted_at' => now(),
             ]);
 
             $user->roles()->attach(Role::query()->where('code', RoleCatalog::STUDENT)->where('is_system', true)->valueOrFail('id'));
 
             // El actor es la propia persona que se registra
-            $this->audit->record('users.registered', $user, null, $user->only(['email', 'first_name', 'last_name']), $user->id);
+            $this->audit->record('users.registered', $user, null, $user->only(['email', 'first_name', 'last_name']) + ['terms_accepted' => true], $user->id);
 
             return $user;
         });

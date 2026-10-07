@@ -12,6 +12,14 @@ export interface StudentRef {
   email: string;
 }
 
+// Papel de una persona dentro de un curso
+export type ParticipantRole = 'STUDENT' | 'TEACHER';
+
+export interface ParticipantCandidate extends StudentRef {
+  // Roles que tiene en la academia, para reconocerla en la lista
+  roles: string[];
+}
+
 // Situación de una matrícula hoy: se deduce de su estado y de sus fechas de vigencia
 export type EnrollmentState = 'ACTIVE' | 'UPCOMING' | 'EXPIRED' | 'COMPLETED' | 'CANCELLED';
 
@@ -188,8 +196,8 @@ export function describeValidity(startsAt: string | null, endsAt: string | null)
 }
 
 export const enrollmentsApi = {
-  async list(course: string, page = 1) {
-    const response = await api.get(`/courses/${course}/enrollments`, { params: { page } });
+  async list(course: string, page = 1, state?: string) {
+    const response = await api.get(`/courses/${course}/enrollments`, { params: { page, state: state || undefined } });
     return { data: response.data.data as Enrollment[], meta: response.data.meta as PageMeta };
   },
   async candidates(course: string, search?: string) {
@@ -201,6 +209,25 @@ export const enrollmentsApi = {
   },
   async options() {
     return (await api.get('/enrollments/options')).data.data.courses as EnrollableCourse[];
+  },
+  // Usuarios activos que aún no participan en el curso, ni como alumnos ni como docentes
+  async participantCandidates(course: string, search?: string) {
+    return (await api.get(`/courses/${course}/participant-candidates`, { params: { search: search || undefined } })).data.data as ParticipantCandidate[];
+  },
+  // Personas sueltas, grupos completos o ambos. De un grupo entran sus miembros activos que aún no participan
+  async addParticipants(course: string, userIds: string[], role: ParticipantRole, validity?: Validity, groupIds: string[] = []) {
+    return (await api.post(`/courses/${course}/participants`, { user_ids: userIds, group_ids: groupIds, role, ...validity })).data.data as {
+      added: number;
+      skipped: number;
+      roles_granted: number;
+    };
+  },
+  removeTeacher: (course: string, user: string) => api.delete(`/courses/${course}/teachers/${user}`),
+  async bulkCancel(ids: string[]) {
+    return (await api.post('/enrollments/bulk-cancel', { enrollment_ids: ids })).data.data as { updated: number; skipped: number };
+  },
+  async bulkValidity(ids: string[], validity: Validity) {
+    return (await api.post('/enrollments/bulk-validity', { enrollment_ids: ids, ...validity })).data.data as { updated: number; skipped: number };
   },
   updateValidity: (enrollment: string, validity: Validity) => api.put(`/enrollments/${enrollment}`, validity),
   cancelById: (enrollment: string) => api.delete(`/enrollments/${enrollment}`),

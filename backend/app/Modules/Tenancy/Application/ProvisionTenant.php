@@ -27,9 +27,9 @@ class ProvisionTenant
      * @param  array{name: string, slug: string, legal_name?: ?string, tax_id?: ?string}  $tenantData
      * @param  array{first_name: string, last_name: string, email: string, password: string}  $adminData
      */
-    public function handle(array $tenantData, array $adminData): Tenant
+    public function handle(array $tenantData, array $adminData, bool $mustChangePassword = false): Tenant
     {
-        return DB::transaction(function () use ($tenantData, $adminData) {
+        return DB::transaction(function () use ($tenantData, $adminData, $mustChangePassword) {
             PermissionCatalog::sync();
 
             $tenant = Tenant::create([
@@ -40,7 +40,7 @@ class ProvisionTenant
                 'status' => Tenant::STATUS_ACTIVE,
             ]);
 
-            $this->context->runForTenant($tenant->id, function () use ($tenant, $adminData) {
+            $this->context->runForTenant($tenant->id, function () use ($tenant, $adminData, $mustChangePassword) {
                 $permissionIds = Permission::query()->pluck('id', 'code');
                 $adminRole = null;
 
@@ -67,6 +67,8 @@ class ProvisionTenant
                     'first_name' => $adminData['first_name'],
                     'last_name' => $adminData['last_name'],
                     'status' => User::STATUS_ACTIVE,
+                    // Si otra persona le puso la contraseña (alta desde la consola), debe cambiarla al entrar
+                    'must_change_password' => $mustChangePassword,
                 ]);
                 $admin->roles()->attach($adminRole->id);
 

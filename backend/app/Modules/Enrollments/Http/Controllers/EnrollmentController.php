@@ -12,12 +12,15 @@ use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
+use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -26,6 +29,9 @@ use Illuminate\Validation\Rule;
  */
 class EnrollmentController extends Controller
 {
+    /** @var array<string, int> conteos por situación del último listado */
+    private array $counts = [];
+
     public function __construct(
         private readonly EnrollmentService $enrollments,
         private readonly ProgressService $progress,
@@ -155,6 +161,47 @@ class EnrollmentController extends Controller
         return ApiResponse::success($this->present($this->enrollments->cancel($this->find($enrollment))));
     }
 
+    /**
+     * Cancelar varias matrículas de una vez. Las que ya no están activas se omiten.
+     */
+    public function bulkCancel(Request $request, TenantContext $context): JsonResponse
+    {
+        $records = $this->many($request, $context);
+        $active = $records->filter(fn (Enrollment $enrollment) => $enrollment->isActive());
+
+        DB::transaction(fn () => $active->each(fn (Enrollment $enrollment) => $this->enrollments->cancel($enrollment)));
+
+        return ApiResponse::success(['updated' => $active->count(), 'skipped' => $records->count() - $active->count()]);
+    }
+
+    /**
+     * Poner la misma vigencia a varias matrículas. Las canceladas se omiten.
+     */
+    public function bulkValidity(Request $request, TenantContext $context): JsonResponse
+    {
+        $data = $request->validate($this->validityRules());
+        [$startsAt, $endsAt] = $this->validity($data);
+        $records = $this->many($request, $context);
+        $active = $records->filter(fn (Enrollment $enrollment) => $enrollment->isActive());
+
+        DB::transaction(fn () => $active->each(fn (Enrollment $enrollment) => $this->enrollments->updateValidity($enrollment, $startsAt, $endsAt)));
+
+        return ApiResponse::success(['updated' => $active->count(), 'skipped' => $records->count() - $active->count()]);
+    }
+
+    /**
+     * @return Collection<int, Enrollment>
+     */
+    private function many(Request $request, TenantContext $context): Collection
+    {
+        $data = $request->validate([
+            'enrollment_ids' => ['required', 'array', 'min:1', 'max:200'],
+            'enrollment_ids.*' => ['uuid', 'distinct', Rule::exists('enrollments', 'id')->where('tenant_id', $context->tenantId())],
+        ]);
+
+        return Enrollment::query()->with('student')->whereIn('id', $data['enrollment_ids'])->get();
+    }
+
     public function cancelForCourse(Course $course, string $enrollment): JsonResponse
     {
         $record = $this->find($enrollment);
@@ -172,7 +219,7 @@ class EnrollmentController extends Controller
     private function listRules(): array
     {
         return [
-            'state' => ['nullable', Rule::in(Enrollment::STATES)],
+            'state' => ['nullable', Rule::in(Enrollment::FILTERS)],
             // Compatibilidad: el filtro anterior por estado guardado
             'status' => ['nullable', Rule::in([Enrollment::STATUS_ACTIVE, Enrollment::STATUS_CANCELLED])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -210,6 +257,9 @@ class EnrollmentController extends Controller
      */
     private function paginate(Builder $query, array $filters): LengthAwarePaginator
     {
+        // Cuántas hay en cada situación con la búsqueda actual: alimenta las tarjetas que filtran
+        $this->counts = StateCounts::of($query, Enrollment::FILTERS, fn (Builder $q, string $state) => $q->inState($state));
+
         return $query
             ->with(['student', 'course.currentVersion'])
             ->when($filters['state'] ?? null, fn (Builder $q, string $state) => $q->inState($state))
@@ -221,19 +271,15 @@ class EnrollmentController extends Controller
     }
 
     /**
-     * Agrega el avance: una consulta por curso, no por matrícula.
+     * Agrega el avance con una sola consulta para toda la página.
      */
     private function respond(LengthAwarePaginator $page): JsonResponse
     {
-        $progress = collect($page->items())
-            ->filter(fn (Enrollment $enrollment) => $enrollment->course->currentVersion !== null)
-            ->groupBy('course_id')
-            ->flatMap(fn ($group) => $this->progress->summaries($group->first()->course->currentVersion, $group))
-            ->all();
+        $progress = $this->progress->summariesAcrossCourses(collect($page->items()));
 
         return ApiResponse::paginated($page, fn (Enrollment $enrollment) => $this->present($enrollment) + [
             'progress_percent' => $progress[$enrollment->id]['percent'] ?? 0,
-        ]);
+        ], ['counts' => $this->counts, 'expiring_days' => Enrollment::EXPIRING_DAYS]);
     }
 
     private function find(string $id): Enrollment

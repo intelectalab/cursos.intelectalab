@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, CheckCircle2, Inbox, Loader2, X, type LucideIcon } from 'lucide-react';
 
@@ -61,22 +61,24 @@ interface PageHeaderProps {
   action?: React.ReactNode;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon: Icon, action }) => (
-  <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-    <div className="flex items-center gap-3.5 min-w-0">
-      {Icon && (
-        <div className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-sky-500 text-white flex items-center justify-center shadow-md shadow-brand-700/25">
-          <Icon className="w-5 h-5" />
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon: Icon, action }) => {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="flex items-center gap-3.5 min-w-0">
+        {Icon && (
+          <div className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-sky-500 text-white flex items-center justify-center shadow-md shadow-brand-700/25">
+            <Icon className="w-5 h-5" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <h1 className="text-[22px] leading-7 font-bold text-slate-900 tracking-tight">{title}</h1>
+          {subtitle && <p className="text-[13px] text-slate-500 mt-0.5">{subtitle}</p>}
         </div>
-      )}
-      <div className="min-w-0">
-        <h1 className="text-[22px] leading-7 font-bold text-slate-900 tracking-tight">{title}</h1>
-        {subtitle && <p className="text-[13px] text-slate-500 mt-0.5">{subtitle}</p>}
       </div>
+      {action && <div className="flex items-center gap-3">{action}</div>}
     </div>
-    {action && <div className="flex items-center gap-3">{action}</div>}
-  </div>
-);
+  );
+};
 
 export const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
   <div className={`bg-white border border-slate-200/80 rounded-2xl shadow-card ${className}`}>{children}</div>
@@ -333,7 +335,12 @@ interface ModalProps {
   size?: 'normal' | 'wide';
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children, footer, size = 'normal' }) => {
+  const panel = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -341,6 +348,43 @@ export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // Teclado: al abrir, el foco entra a la ventana; Tab no sale de ella; al cerrar, vuelve a donde estaba
+  useEffect(() => {
+    const node = panel.current;
+    if (!node) return;
+
+    const opener = document.activeElement as HTMLElement | null;
+    if (!node.contains(document.activeElement)) {
+      const first = node.querySelector<HTMLElement>('[data-modal-body] ' + FOCUSABLE.split(', ').join(', [data-modal-body] '));
+      (first ?? node).focus();
+    }
+
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const items = [...node.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((item) => item.offsetParent !== null);
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !node.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !node.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    node.addEventListener('keydown', trap);
+    return () => {
+      node.removeEventListener('keydown', trap);
+      opener?.focus?.();
+    };
+  }, []);
 
   // Se monta en <body>: dentro de la pantalla quedaría atrapado bajo la cabecera
   // y limitado al alto del contenido (la animación de entrada crea su propia capa)
@@ -351,7 +395,11 @@ export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children
       aria-modal="true"
       aria-label={title}
     >
-      <div className={`w-full ${size === 'wide' ? 'max-w-3xl' : 'max-w-lg'} bg-white rounded-2xl shadow-pop flex flex-col max-h-[90dvh] animate-rise`}>
+      <div
+        ref={panel}
+        tabIndex={-1}
+        className={`w-full ${size === 'wide' ? 'max-w-3xl' : 'max-w-lg'} bg-white rounded-2xl shadow-pop flex flex-col max-h-[90dvh] animate-rise focus:outline-none`}
+      >
         <div className="flex items-start justify-between gap-4 px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/80">
           <div>
             <h2 className="text-base font-semibold text-slate-900">{title}</h2>
@@ -361,12 +409,14 @@ export const Modal: React.FC<ModalProps> = ({ title, subtitle, onClose, children
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 -mr-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
+            className="p-1.5 -mr-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="px-5 sm:px-6 py-5 overflow-y-auto">{children}</div>
+        <div data-modal-body className="px-5 sm:px-6 py-5 overflow-y-auto">
+          {children}
+        </div>
         {footer && (
           <div className="px-5 sm:px-6 py-4 border-t border-slate-200/80 bg-slate-50/60 rounded-b-2xl flex justify-end gap-2.5">
             {footer}

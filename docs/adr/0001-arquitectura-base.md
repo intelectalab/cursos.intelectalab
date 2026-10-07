@@ -41,6 +41,10 @@
 3. Las operaciones sensibles registran un evento con `AuditLogger`.
 4. Los proveedores externos (pagos, Yape, fiscal, correo, IA, storage) se consumen tras una interfaz interna; las decisiones PD-001…PD-017 del Maestro no se cierran en el código.
 5. Los jobs encolados deben restablecer el contexto de tenant antes de ejecutar (pendiente de implementar con el primer job).
+6. Desde S12 las reglas 1 y 2 las comprueban las pruebas (`tests/Feature/Security/SecurityBaselineTest.php`): una ruta pública nueva o una ruta con sesión y sin permiso debe declararse en sus listas, y una tabla con `tenant_id` sin RLS hace fallar la suite.
+7. Una operación con efecto que el cliente pueda reintentar (compra, pago) lleva el middleware `idempotent`; el cliente envía `Idempotency-Key`.
+8. Los listados cargan sus relaciones de una vez: fuera de producción, la carga fila por fila lanza una excepción (`Model::preventLazyLoading`).
+9. En el frontend, cada pantalla se registra con `lazyPage()` para que se descargue al abrirla; solo el inicio de sesión viaja con el arranque.
 
 ## Desarrollo local
 

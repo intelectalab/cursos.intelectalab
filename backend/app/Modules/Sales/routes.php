@@ -27,7 +27,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
 
     // Comprador: crea la orden (Maestro §7.2) y consulta o cancela las suyas
     Route::middleware('permission:orders.create')->group(function () {
-        Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:20,1');
+        Route::post('/orders', [OrderController::class, 'store'])->middleware(['throttle:20,1', 'idempotent']);
         Route::get('/me/orders', [OrderController::class, 'mine']);
         Route::get('/me/orders/{order}', [OrderController::class, 'showMine'])->whereUuid('order');
         Route::post('/me/orders/{order}/cancel', [OrderController::class, 'cancelMine'])->whereUuid('order');
@@ -42,7 +42,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
 
     // Confirmar un pago recibido fuera del sistema. POST /orders/{id}/payments queda para la pasarela (S6).
     Route::post('/orders/{order}/confirm-payment', [OrderController::class, 'confirmPayment'])
-        ->whereUuid('order')->middleware('permission:payments.confirm');
+        ->whereUuid('order')->middleware(['permission:payments.confirm', 'idempotent']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])
         ->whereUuid('order')->middleware('permission:orders.cancel');
 });

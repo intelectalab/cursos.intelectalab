@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FolderOpen, Library, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, FolderOpen, Library, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -17,6 +17,7 @@ import {
   PageHeader,
   Pagination,
 } from '../../../shared/ui';
+import { ImportModal } from '../../../shared/ui/ImportModal';
 import type { PageMeta } from '../../identity/api';
 import { academicApi, QUESTION_LABEL, QUESTION_TYPES, type Question, type QuestionBank } from '../api';
 import { QuestionEditor } from '../components/QuestionEditor';
@@ -89,6 +90,7 @@ type Dialog =
 export const QuestionBanksPage: React.FC = () => {
   const { hasPermission } = useAuth();
   const canManage = hasPermission('question_banks.manage');
+  const [importing, setImporting] = useState(false);
 
   const [banks, setBanks] = useState<QuestionBank[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -251,6 +253,9 @@ export const QuestionBanksPage: React.FC = () => {
                     >
                       Eliminar
                     </Button>
+                    <Button size="sm" icon={<FileSpreadsheet className="w-3.5 h-3.5" />} onClick={() => setImporting(true)}>
+                      Importar
+                    </Button>
                     <Button
                       size="sm"
                       variant="primary"
@@ -265,7 +270,7 @@ export const QuestionBanksPage: React.FC = () => {
 
               <div className="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-slate-200/80">
                 <div className="relative flex-1 min-w-[180px] max-w-sm">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     className={`${INPUT_CLASS} pl-9`}
                     placeholder="Buscar en el enunciado"
@@ -337,7 +342,7 @@ export const QuestionBanksPage: React.FC = () => {
                             aria-label="Eliminar pregunta"
                             title="Eliminar pregunta"
                             onClick={() => setDialog({ kind: 'delete-question', question })}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -355,6 +360,18 @@ export const QuestionBanksPage: React.FC = () => {
         </div>
       )}
 
+      {importing && selected && (
+        <ImportModal
+          title={`Importar preguntas a «${selected.name}»`}
+          intro="Carga varias preguntas de una vez: opción única, opción múltiple, verdadero o falso, respuesta corta y numérica. Emparejar y ordenar se crean en pantalla."
+          basePath={`/question-banks/${selected.id}/import`}
+          templateName="plantilla-preguntas.xlsx"
+          onClose={() => setImporting(false)}
+          onImported={async () => {
+            await Promise.all([loadBanks(), loadQuestions()]);
+          }}
+        />
+      )}
       {dialog?.kind === 'bank' && <BankModal bank={dialog.bank} onClose={() => setDialog(null)} onSaved={closeAndReload} />}
       {dialog?.kind === 'delete-bank' && (
         <ConfirmModal

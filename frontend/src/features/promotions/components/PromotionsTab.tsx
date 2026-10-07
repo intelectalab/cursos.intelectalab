@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pencil, Plus, Tag } from 'lucide-react';
+import { SelectAll } from '../../../shared/ui/filters';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CHECKBOX_CLASS, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, Modal, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
 import { formatDay } from '../../crm/api';
@@ -20,7 +21,6 @@ const discountLabel = (promotion: Promotion, currency: string) =>
   promotion.discount_type === 'PERCENT' ? `${Number(promotion.discount_value)} %` : formatMoney(promotion.discount_value, currency);
 
 // "2026-10-05T…" → "2026-10-05" para el campo de fecha
-const dateInput = (value: string | null) => (value ? value.slice(0, 10) : '');
 
 // Alta o edición de la regla. Al crear se define también su primer cupón.
 const PromotionFormModal: React.FC<{
@@ -34,8 +34,9 @@ const PromotionFormModal: React.FC<{
   const [code, setCode] = useState('');
   const [type, setType] = useState<DiscountType>(promotion?.discount_type ?? 'PERCENT');
   const [value, setValue] = useState(promotion ? String(Number(promotion.discount_value)) : '');
-  const [startsAt, setStartsAt] = useState(dateInput(promotion?.starts_at ?? null));
-  const [endsAt, setEndsAt] = useState(dateInput(promotion?.ends_at ?? null));
+  // Días de la academia: el servidor los convierte a su zona horaria, no a la del navegador
+  const [startsAt, setStartsAt] = useState(promotion?.starts_on ?? '');
+  const [endsAt, setEndsAt] = useState(promotion?.ends_on ?? '');
   const [maxUses, setMaxUses] = useState(promotion?.max_redemptions ? String(promotion.max_redemptions) : '');
   const [once, setOnce] = useState(promotion?.once_per_customer ?? true);
   const [minPurchase, setMinPurchase] = useState(promotion?.min_purchase ? String(Number(promotion.min_purchase)) : '');
@@ -65,8 +66,8 @@ const PromotionFormModal: React.FC<{
       discount_type: type,
       discount_value: Number(value),
       // La vigencia cubre los días completos, en la hora del navegador de quien la define
-      starts_at: startsAt ? new Date(`${startsAt}T00:00:00`).toISOString() : null,
-      ends_at: endsAt ? new Date(`${endsAt}T23:59:59`).toISOString() : null,
+      starts_at: startsAt || null,
+      ends_at: endsAt || null,
       max_redemptions: maxUses === '' ? null : Number(maxUses),
       once_per_customer: once,
       min_purchase: minPurchase === '' ? null : Number(minPurchase),
@@ -85,7 +86,16 @@ const PromotionFormModal: React.FC<{
   const productList = (title: string, type_: 'COURSE' | 'PACKAGE', products: PromotionOptions['courses']) =>
     products.length > 0 && (
       <div>
-        <p className="text-xs font-semibold text-slate-500 mb-1.5">{title}</p>
+        <div className="flex items-center justify-between gap-3 mb-1.5">
+          <p className="text-xs font-semibold text-slate-500">{title}</p>
+          <SelectAll
+            ids={products.map((product) => `${type_}:${product.id}`)}
+            selected={items.map((item) => `${item.type}:${item.id}`)}
+            onChange={(keys) => setItems(keys.map((key) => ({ type: key.slice(0, key.indexOf(':')) as 'COURSE' | 'PACKAGE', id: key.slice(key.indexOf(':') + 1) })))}
+          >
+            <span className="text-xs">Seleccionar todos</span>
+          </SelectAll>
+        </div>
         <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-44 overflow-y-auto">
           {products.map((product) => (
             <li key={product.id}>
@@ -390,7 +400,7 @@ export const PromotionsTab: React.FC<{ canManage: boolean }> = ({ canManage }) =
                   <Td className="font-mono text-xs text-slate-700">{promotion.coupons.map((coupon) => coupon.code).join(', ')}</Td>
                   <Td className="whitespace-nowrap text-slate-700">
                     {promotion.starts_at || promotion.ends_at
-                      ? `${promotion.starts_at ? formatDay(promotion.starts_at) : 'Siempre'} – ${promotion.ends_at ? formatDay(promotion.ends_at) : 'sin fin'}`
+                      ? `${promotion.starts_on ? formatDay(promotion.starts_on) : 'Siempre'} – ${promotion.ends_on ? formatDay(promotion.ends_on) : 'sin fin'}`
                       : 'Sin límite'}
                   </Td>
                   <Td className="tnum text-slate-700">

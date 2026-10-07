@@ -230,6 +230,33 @@ class CouponTest extends TestCase
         $this->check('SIEMPRE', $second)->assertOk();
     }
 
+    public function test_validity_days_are_counted_in_the_timezone_of_the_organization(): void
+    {
+        // La organización está en Lima (UTC-5): su 1 de diciembre termina a las 04:59:59 UTC del día 2
+        $course = $this->course();
+
+        $this->promotion(['code' => 'DICIEMBRE', 'starts_at' => '2026-12-01', 'ends_at' => '2026-12-01'])
+            ->assertCreated()
+            ->assertJsonPath('data.starts_at', '2026-12-01T05:00:00+00:00')
+            ->assertJsonPath('data.ends_at', '2026-12-02T04:59:59+00:00')
+            ->assertJsonPath('data.starts_on', '2026-12-01')
+            ->assertJsonPath('data.ends_on', '2026-12-01');
+
+        // Cada salto supera el tiempo de inactividad: la alumna vuelve a entrar
+        $checkAt = function (string $moment) use ($course): TestResponse {
+            $this->travelTo($moment);
+
+            return $this->check('DICIEMBRE', $course, $this->login('acme', 'ana@acme.com'));
+        };
+
+        // 30 de noviembre, 23:30 en Lima: todavía no empieza
+        $checkAt('2026-12-01 04:30:00')->assertStatus(422)->assertJsonPath('code', 'COUPON_INVALID');
+        // 1 de diciembre, 22:00 en Lima (ya es día 2 en UTC): sigue vigente
+        $checkAt('2026-12-02 03:00:00')->assertOk();
+        // 2 de diciembre, 00:30 en Lima: venció
+        $checkAt('2026-12-02 05:30:00')->assertStatus(422)->assertJsonPath('code', 'COUPON_INVALID');
+    }
+
     public function test_promotions_are_validated(): void
     {
         $this->promotion(['discount_value' => 120])->assertStatus(422);

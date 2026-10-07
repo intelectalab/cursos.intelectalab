@@ -16,7 +16,7 @@ const OpportunityCard: React.FC<{ opportunity: Opportunity; currency: string; on
     <p className="text-xs text-slate-500 mt-0.5 truncate">{opportunity.company.name}</p>
     <div className="flex items-center justify-between gap-2 mt-3">
       <span className="text-[13px] font-bold text-slate-900 tnum">
-        {opportunity.estimated_amount ? formatMoney(opportunity.estimated_amount, currency) : <span className="font-normal text-slate-400">Sin monto</span>}
+        {opportunity.estimated_amount ? formatMoney(opportunity.estimated_amount, currency) : <span className="font-normal text-slate-500">Sin monto</span>}
       </span>
       {opportunity.owner && <Avatar name={opportunity.owner.name} size="sm" />}
     </div>
@@ -64,7 +64,7 @@ export const OpportunitiesTab: React.FC<{ canManage: boolean; owners: Person[] }
     <div>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             className={`${INPUT_CLASS} pl-9`}
             placeholder="Buscar por oportunidad o empresa"
@@ -129,7 +129,7 @@ export const OpportunitiesTab: React.FC<{ canManage: boolean; owners: Person[] }
                 {column.items.map((opportunity) => (
                   <OpportunityCard key={opportunity.id} opportunity={opportunity} currency={currency} onOpen={() => setOpenId(opportunity.id)} />
                 ))}
-                {column.count === 0 && <p className="text-xs text-slate-400 text-center py-5">Sin oportunidades</p>}
+                {column.count === 0 && <p className="text-xs text-slate-500 text-center py-5">Sin oportunidades</p>}
                 {column.count > column.items.length && (
                   <p className="text-[11px] text-slate-500 text-center pt-1">
                     Se muestran las {column.items.length} más recientes de {column.count}.

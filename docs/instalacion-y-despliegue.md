@@ -25,7 +25,7 @@ No hay servicios adicionales obligatorios por ahora (ni Redis, ni almacenamiento
 | Node.js / npm (solo para compilar el frontend) | 22.18.0 / 10.9.3 | Node 20 |
 | PostgreSQL | 15 | 15 |
 
-**Extensiones de PHP:** `pdo_pgsql`, `pgsql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `fileinfo`, `bcmath`, `curl`, `zip`, `gd` (dibuja el QR e incrusta el logo y la firma en el PDF de los certificados; sin ella no se generan).
+**Extensiones de PHP:** `pdo_pgsql`, `pgsql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `fileinfo`, `bcmath`, `curl`, `zip`, `xmlreader`, `xmlwriter` (estas tres, para leer y escribir Excel en las importaciones), `gd` (dibuja el QR e incrusta el logo y la firma en el PDF de los certificados; sin ella no se generan).
 
 ## 3. Dependencias
 
@@ -37,6 +37,7 @@ No hay servicios adicionales obligatorios por ahora (ni Redis, ni almacenamiento
 | `laravel/sanctum` | 4.3.3 | Sesiones por token |
 | `dompdf/dompdf` | 3.1.6 | PDF de los certificados |
 | `bacon/bacon-qr-code` | 3.1.1 | Código QR de los certificados |
+| `openspout/openspout` | ^5.12 | Leer y escribir Excel y CSV en las importaciones (plantillas de personas, preguntas y prospectos) |
 
 Solo de desarrollo (no se instalan en el servidor con `--no-dev`): `laravel/boost` 2.10.1, `laravel/pint` 1.32.1, `laravel/pail` 1.2.7, `phpunit/phpunit` 11.5.56, `mockery/mockery` 1.6.15, `nunomaduro/collision` 8.9.5, `fakerphp/faker` 1.24.1.
 
@@ -52,6 +53,7 @@ Solo de desarrollo (no se instalan en el servidor con `--no-dev`): `laravel/boos
 | `@fontsource-variable/inter` | ^5.3.0 | Tipografía Inter, servida desde el propio sitio |
 | `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-image`, `@tiptap/pm` | ^3.31.4 | Editor de las páginas de la academia (S10) |
 | `vite`, `typescript` (desarrollo) | ^8.3.0, ~6.0.2 | Compilación |
+| `@playwright/test` (desarrollo) | ^1.63.0 | Recorridos automáticos de punta a punta (S12). No se instala en el servidor |
 
 Las versiones exactas quedan fijadas en `backend/composer.lock` y `frontend/package-lock.json`; el servidor debe instalar desde esos archivos.
 
@@ -91,6 +93,14 @@ server {
     location / {
         try_files $uri /index.html;
     }
+
+    # Cabeceras de seguridad de la aplicación web. Las de la API las pone Laravel.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # img-src: logos y portadas (misma web) y miniaturas de YouTube; frame-src: los videos de los cursos
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https://i.ytimg.com; style-src 'self' 'unsafe-inline'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'" always;
 
     location ~ ^/(api|up) {
         root /var/www/erp/backend/public;
@@ -140,6 +150,11 @@ CREATE SCHEMA erp AUTHORIZATION erp_app;
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | remitente real | |
 | `AUTH_SESSION_LIFETIME` | `30` | Minutos de inactividad por defecto; cada academia puede cambiarlo en Configuración |
 | `AUTH_PASSWORD_RESET_MINUTES` | `60` | Vigencia del enlace de recuperación |
+| `AUTH_LOGIN_LOCK_ATTEMPTS` | `10` | Intentos fallidos seguidos que bloquean una cuenta (S12) |
+| `AUTH_LOGIN_LOCK_MINUTES` | `15` | Minutos que dura ese bloqueo |
+| `API_RATE_LIMIT` | `300` | Peticiones por minuto que admite la API de un mismo usuario o, sin sesión, de una misma dirección |
+| `TRUSTED_PROXIES` | dirección del balanceador, o `*` | **Obligatoria si el HTTPS termina en un proxy o balanceador.** Sin ella la aplicación cree que todo llega por HTTP y desde la dirección del proxy: los enlaces de recuperación salen con `http://`, no se envía la cabecera que obliga a HTTPS y los límites por dirección bloquean a todos a la vez. Usar `*` solo si el servidor no es alcanzable más que a través del proxy |
+| `CORS_ALLOWED_ORIGINS` | vacío | Orígenes adicionales (separados por coma) que pueden llamar a la API desde un navegador. Por defecto solo la propia plataforma: `TENANCY_CENTRAL_DOMAIN` y sus subdominios |
 
 | `FILES_DISK` | `local` | Dónde se guardan los archivos de las academias. `local` = `storage/app/private`. Para un servicio compatible con S3: `s3` más las variables `AWS_*` y el paquete `league/flysystem-aws-s3-v3` |
 | `FILES_IMAGE_MAX_KB` | `2048` | Tamaño máximo de imágenes (logo, portadas) |
@@ -154,6 +169,11 @@ El servidor debe aceptar archivos al menos tan grandes como los límites anterio
 - PHP (`php.ini`): `upload_max_filesize = 64M` y `post_max_size = 64M`. El valor por defecto de PHP es 2M.
 - Nginx: `client_max_body_size 64m;` (por defecto 1m).
 
+### Ajustes de PHP en producción
+
+- `expose_php = Off`: no anunciar la versión de PHP.
+- OPcache activado (`opcache.enable=1`): sin él, cada petición vuelve a leer y compilar el código.
+
 La carpeta `backend/storage/app/private` contiene los archivos de todas las academias. Debe conservarse entre despliegues (no reemplazarla al publicar una versión nueva) e incluirse en los respaldos junto con la base de datos.
 
 ## 8. Pasos de despliegue
@@ -165,7 +185,7 @@ Backend, desde `backend/`:
 3. `php artisan migrate --force`
 4. `php artisan access:sync` — carga el catálogo de permisos, actualiza los roles base de todas las academias y crea en las que ya existían los roles base nuevos (desde S8, "Responsable de empresa"). Ejecutarlo en cada despliegue, después de las migraciones.
 5. Solo la primera vez: `php artisan platform:create-admin correo@dominio` — crea el administrador de plataforma (pide la contraseña por consola, mínimo 12 caracteres).
-6. `php artisan config:cache` y `php artisan route:cache`
+6. `php artisan config:cache`, `php artisan route:cache` y `php artisan event:cache` (probados con este código en S12). Tras cambiar el `.env` hay que repetir `config:cache`.
 7. Dar permiso de escritura al usuario del servidor web sobre `storage/` y `bootstrap/cache/`.
 
 Frontend, desde `frontend/`:
@@ -173,7 +193,7 @@ Frontend, desde `frontend/`:
 1. `npm ci`
 2. `npm run build` — genera `frontend/dist`, que es lo que publica el servidor web.
 
-Tarea programada (cron), necesaria para limpiar las sesiones vencidas (diario), marcar como vencidas las órdenes sin pago (`orders:expire`, cada hora) y cerrar los tickets resueltos hace más de una semana (`tickets:close-resolved`, diario). Es una sola línea de cron; las tres tareas salen de ella:
+Tarea programada (cron), necesaria para limpiar las sesiones vencidas (diario), marcar como vencidas las órdenes sin pago (`orders:expire`, cada hora), cerrar los tickets resueltos hace más de una semana (`tickets:close-resolved`, diario) y borrar las claves de idempotencia vencidas (`idempotency:prune`, diario). Es una sola línea de cron; todas las tareas salen de ella:
 
 ```
 * * * * * cd /var/www/erp/backend && php artisan schedule:run >> /dev/null 2>&1
@@ -185,10 +205,16 @@ S10 (Operación) agrega las migraciones de los módulos `Support`, `Claims` y `C
 
 S11 (Promociones y paquetes) agrega solo migraciones (módulo `Promotions` y tablas de paquetes en `Sales`; suman columnas a `orders`) y permisos nuevos, que se cargan con los pasos 3 y 4. No agrega dependencias, variables de entorno ni tareas programadas. Las rutas nuevas del sitio (`/catalog/packages/...` y `/checkout/package/...`) las sirve la misma aplicación web.
 
+S12 (Endurecimiento) agrega cinco migraciones (tablas `idempotency_keys` y `holidays`, columnas `users.terms_accepted_at` y `quiz_attempts.draft_answers`, e índices), la tarea diaria `idempotency:prune` (mismo cron) y las variables `AUTH_LOGIN_LOCK_ATTEMPTS`, `AUTH_LOGIN_LOCK_MINUTES`, `API_RATE_LIMIT`, `TRUSTED_PROXIES` y `CORS_ALLOWED_ORIGINS` (todas con valor por defecto salvo `TRUSTED_PROXIES`, que hay que definir si hay proxy). No cambia el catálogo de permisos ni las dependencias del servidor: `league/commonmark` subió de 2.10.1 a 2.10.3 por un aviso de seguridad y Playwright es solo de desarrollo. La aplicación web ahora se publica en muchos archivos pequeños dentro de `frontend/dist/assets`: hay que publicar la carpeta completa en cada despliegue. Los contadores de intentos de acceso, de bloqueo de cuentas y de peticiones viven en la caché (`CACHE_STORE`): con varios servidores, la caché debe ser compartida (`database` o Redis), no `file`.
+
+Revisión de jefatura (entregas 1 y 2) agrega una dependencia del backend, `openspout/openspout` (se instala con `composer install`; usa las extensiones `zip`, `xmlreader` y `xmlwriter`, que ya estaban entre los requisitos), y una migración (tablas `groups` y `group_members`, columna `users.must_change_password`). No agrega permisos, variables de entorno ni tareas programadas. Las importaciones escriben archivos temporales: la carpeta temporal del sistema (`sys_get_temp_dir()`) debe permitir escritura al usuario de PHP. Los archivos que se importan pesan hasta 2 MB, dentro del límite de subida ya indicado.
+
+La entrega 3 de la revisión de jefatura agrega una migración (columnas en `certificate_templates`) y nada más para el servidor. El fondo propio del certificado se guarda con los demás archivos privados de la academia (`storage/app/private`), así que entra en el mismo respaldo. El acceso de soporte abre la academia en su subdominio con la dirección `/support-access`: la sirve la misma aplicación web.
+
 Comprobación tras desplegar:
 
 - `https://dominio/up` responde 200.
-- `https://dominio/api/v1/tenant` responde `{"data":null,...}`.
+- `https://dominio/api/v1/tenant` responde `{"data":null,...}` y trae las cabeceras `X-Request-ID`, `X-Content-Type-Options` y `Strict-Transport-Security` (esta última solo si `TRUSTED_PROXIES` está bien puesta o el HTTPS llega directo a PHP).
 - `https://dominio/register` permite crear una academia y redirige a su subdominio.
 
 **No ejecutar en producción:** `php artisan db:seed` con `APP_ENV=local` (crea cuentas de demostración), ni `php artisan migrate:fresh`.
@@ -197,18 +223,22 @@ Comprobación tras desplegar:
 
 | Tema | Situación |
 | --- | --- |
-| Proxy y HTTPS | Si TLS termina en un proxy, hay que configurar los proxies de confianza de Laravel; de lo contrario los enlaces de recuperación de contraseña saldrán con `http://`. Sin configurar. |
-| CORS | `backend/config/cors.php` acepta cualquier origen. Como la web y la API comparten origen, se puede restringir. Sin ajustar. |
+| Proxy y HTTPS | Resuelto en S12 con la variable `TRUSTED_PROXIES` (sección 7). Falta darle el valor real cuando se conozca el servidor y comprobarlo ahí. |
+| CORS | Resuelto en S12: solo la propia plataforma (dominio central y subdominios). |
+| Cabeceras de la aplicación web | La API ya envía las suyas. Las del HTML, JS y CSS las pone el servidor web: el bloque de Nginx de la sección 5 es orientativo y **no está probado**; la política de contenido (CSP) hay que validarla en staging, sobre todo con los videos de YouTube y el editor de páginas. |
+| Prueba de penetración | El Maestro (§8.2) la pide antes de producción; alcance y frecuencia sin definir. No se hizo. |
+| Monitoreo y alertas | `/up` responde y cada petición lleva su identificador en los registros, pero no hay tablero ni alertas (Maestro §18). Depende del servidor. |
 | Correo | Sin proveedor. La recuperación de contraseña no llega al usuario hasta definirlo. |
 | Archivos | Se guardan en el disco del servidor. Falta decidir si se pasa a un servicio externo, y respaldar la carpeta de archivos. |
 | Colas | Aún no hay trabajos en cola ni proceso `queue:work`. |
 | Respaldos | Sin política de respaldo de la base de datos (Maestro PD-014). |
-| `config:cache` y `route:cache` | No se han probado con este código. |
+| `config:cache` y `route:cache` | Probados en S12 en el equipo de desarrollo. Falta repetirlo en el servidor. |
 | Archivos sensibles en el repositorio | `backend_env_backup` (raíz) está versionado y contiene una `APP_KEY`; hay que retirarlo y no usar esa clave. |
-| CI | `.github/workflows/ci.yml` existe pero no se ha ejecutado. |
+| CI | `.github/workflows/ci.yml` se corrigió en S12 (rama `staging`, auditoría de dependencias, estilo solo en las carpetas vigentes) pero **sigue sin haberse ejecutado**: correrá al subir el commit. |
 
 ## 10. Herramientas solo de desarrollo
 
 - **Laravel Boost:** `composer require laravel/boost --dev` y `php artisan boost:install`. Registra un servidor MCP (`.mcp.json` en la raíz y en `backend/`) y guías en `backend/CLAUDE.md`. No se despliega. Estos archivos (`.claude/`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, `boost.json`) están en `.gitignore`: cada desarrollador los genera en su equipo con `php artisan boost:install`.
 - **Docker Compose:** PostgreSQL y Adminer (puerto 8080) para desarrollo.
+- **Playwright (recorridos de punta a punta):** `npm ci` y, una vez por equipo, `npx playwright install chromium`. Con la web y la API levantadas: `E2E_BASE_URL=http://demo.localhost:5173 E2E_PASSWORD=<clave del administrador> npm run e2e`. Crean datos con el prefijo "E2E": no correrlos contra producción.
 - **Datos de demostración:** `backend/database/seeders/DemoTenantSeeder.php`.

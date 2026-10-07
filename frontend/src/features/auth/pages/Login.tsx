@@ -221,6 +221,14 @@ export const Login: React.FC = () => {
         <div className="w-full max-w-[420px] bg-white/90 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_-15px_rgba(6,47,94,0.12)] border border-white/60 p-8 sm:p-10 relative">
           
           <div className="mb-7">
+            {/* La marca de la academia, si subió su logo en Configuración */}
+            {tenant?.logo_url && (
+              <img
+                src={tenant.logo_url}
+                alt={`Logo de ${tenant.name}`}
+                className="h-12 max-w-[180px] object-contain object-left mb-5"
+              />
+            )}
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">
               Bienvenido de nuevo
             </h2>
@@ -231,7 +239,10 @@ export const Login: React.FC = () => {
           </div>
 
           {status === 'error' && errorMessage && (
-            <div className="mb-5 p-3.5 bg-red-50/90 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-600 animate-fadeIn">
+            <div
+              role="alert"
+              className="mb-5 p-3.5 bg-red-50/90 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 animate-fadeIn"
+            >
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span className="font-medium">{errorMessage}</span>
             </div>
@@ -241,12 +252,13 @@ export const Login: React.FC = () => {
             
             {/* Campo Correo con efecto Focus Glow */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label htmlFor="login-email" className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 Correo electrónico
               </label>
               <div className="relative group">
-                <Mail className="w-4 h-4 text-slate-400 group-focus-within:text-[#0284C7] transition-colors absolute left-3.5 top-3.5 pointer-events-none" />
+                <Mail className="w-4 h-4 text-slate-500 group-focus-within:text-[#0284C7] transition-colors absolute left-3.5 top-3.5 pointer-events-none" />
                 <input
+                  id="login-email"
                   type="email"
                   required
                   value={email}
@@ -260,19 +272,20 @@ export const Login: React.FC = () => {
             {/* Campo Contraseña */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                <label htmlFor="login-password" className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                   Contraseña
                 </label>
                 <Link
                   to="/forgot-password" 
-                  className="text-[11px] font-medium text-slate-400 hover:text-[#0284C7] transition-colors"
+                  className="text-[11px] font-medium text-slate-600 hover:text-[#0369A1] transition-colors"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
               <div className="relative group">
-                <Lock className="w-4 h-4 text-slate-400 group-focus-within:text-[#0284C7] transition-colors absolute left-3.5 top-3.5 pointer-events-none" />
+                <Lock className="w-4 h-4 text-slate-500 group-focus-within:text-[#0284C7] transition-colors absolute left-3.5 top-3.5 pointer-events-none" />
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
@@ -283,8 +296,9 @@ export const Login: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                  tabIndex={-1}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={showPassword}
+                  className="absolute right-2 top-1.5 p-2 rounded-lg text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -358,7 +372,7 @@ export const Login: React.FC = () => {
           </div>
 
           {/* Soporte */}
-          <p className="mt-6 text-center text-[11px] text-slate-400">
+          <p className="mt-6 text-center text-[11px] text-slate-500">
             ¿Problemas para acceder?{' '}
             <a href="#support" className="text-slate-600 hover:text-[#0284C7] transition-colors">
               Contacta a soporte

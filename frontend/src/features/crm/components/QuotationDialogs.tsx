@@ -16,6 +16,7 @@ import {
   type QuotationOptions,
 } from '../api';
 import { QuotationItems, QuotationStatusBadge } from './QuotationParts';
+import { CompanySelect } from './CompanySelect';
 
 interface Line {
   key: number;
@@ -141,25 +142,16 @@ export const QuotationFormModal: React.FC<{
             <div className="grid sm:grid-cols-2 gap-4">
               {!quotation && (
                 <Field label="Empresa">
-                  <select
-                    className={INPUT_CLASS}
-                    required
-                    autoFocus
+                  <CompanySelect
+                    companies={companies}
                     value={companyId}
-                    onChange={(event) => {
-                      setCompanyId(event.target.value);
+                    onChange={(id) => {
+                      setCompanyId(id);
                       setContactId('');
                       setOpportunityId('');
                       setCompany(null);
                     }}
-                  >
-                    <option value="">{companies === null ? 'Cargando…' : 'Elige una empresa'}</option>
-                    {companies?.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </Field>
               )}
               <Field label="Contacto">

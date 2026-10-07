@@ -25,8 +25,6 @@ class TenantSettingsService
         'contact_email' => null,
         'contact_phone' => null,
         'contact_address' => null,
-        'terms' => null,
-        'privacy_policy' => null,
         // null = valor por defecto de la plataforma
         'session_minutes' => null,
         // Nota máxima de la escala en uso (GradeScaleService)
@@ -38,6 +36,12 @@ class TenantSettingsService
         // Días hábiles para responder una hoja del Libro de Reclamaciones; null = valor por defecto
         'claim_response_days' => null,
     ];
+
+    /**
+     * Claves que ya no se editan (los textos legales pasaron a Páginas, S10).
+     * Lo que una organización tuviera guardado se conserva sin mostrarse.
+     */
+    private const LEGACY = ['terms', 'privacy_policy'];
 
     /** Horas que una orden pendiente espera su pago */
     public const ORDER_EXPIRATION_HOURS = 72;
@@ -87,6 +91,14 @@ class TenantSettingsService
     public function currency(): string
     {
         return $this->stored()['primary_currency'] ?? self::DEFAULTS['primary_currency'];
+    }
+
+    /**
+     * Zona horaria en la que la organización cuenta sus días.
+     */
+    public function timezone(): string
+    {
+        return $this->stored()['timezone'] ?? self::DEFAULTS['timezone'];
     }
 
     public function paymentInstructions(): ?string
@@ -140,7 +152,11 @@ class TenantSettingsService
 
             TenantSetting::query()->updateOrCreate(
                 ['key' => self::KEY],
-                ['value' => array_merge(self::DEFAULTS, array_intersect_key($data, self::DEFAULTS))]
+                ['value' => array_merge(
+                    array_intersect_key($this->stored(), array_flip(self::LEGACY)),
+                    self::DEFAULTS,
+                    array_intersect_key($data, self::DEFAULTS)
+                )]
             );
 
             $after = $this->get($tenant);

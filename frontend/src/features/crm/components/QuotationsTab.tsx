@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileText, Plus, Search } from 'lucide-react';
+import { CircleCheckBig, FileText, PencilRuler, Plus, Search, Send, TimerOff, XCircle } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Button, Card, EmptyState, ErrorState, INPUT_CLASS, LoadingState, Pagination, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
+import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filters';
 import type { PageMeta } from '../../identity/api';
 import { formatMoney } from '../../sales/api';
 import { formatDay, QUOTATION_STATUS_LABEL, quotationCode, quotationsApi, type QuotationStatus, type QuotationSummary } from '../api';
@@ -46,12 +47,24 @@ export const QuotationsTab: React.FC = () => {
     setPage(1);
   };
 
+  const counts = meta?.counts ?? {};
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todas', value: counts.ALL ?? null, icon: FileText, tone: 'brand', help: 'Todas las cotizaciones que coinciden con la búsqueda.' },
+    { key: 'DRAFT', label: 'Borradores', value: counts.DRAFT ?? null, icon: PencilRuler, tone: 'neutral', help: 'En preparación: la empresa todavía no las ve.' },
+    { key: 'SENT', label: 'Enviadas', value: counts.SENT ?? null, icon: Send, tone: 'info', help: 'Ya se hicieron llegar a la empresa y esperan su respuesta dentro de la vigencia.' },
+    { key: 'ACCEPTED', label: 'Aceptadas', value: counts.ACCEPTED ?? null, icon: CircleCheckBig, tone: 'success', help: 'La empresa las aceptó: cada una generó su orden de venta.' },
+    { key: 'REJECTED', label: 'Rechazadas', value: counts.REJECTED ?? null, icon: XCircle, tone: 'danger', help: 'La empresa las rechazó, con el motivo anotado.' },
+    { key: 'EXPIRED', label: 'Vencidas', value: counts.EXPIRED ?? null, icon: TimerOff, tone: 'warning', help: 'Se enviaron, pero pasó su fecha de vigencia sin respuesta.' },
+  ];
+
   return (
     <div>
+      <FilterCards cards={cards} active={status} label="Cotizaciones por estado" onSelect={(key) => filter(() => setStatus(key))} />
+
       <Card>
         <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-200/80">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               className={`${INPUT_CLASS} pl-9`}
               placeholder="Buscar por empresa o número"
@@ -68,6 +81,10 @@ export const QuotationsTab: React.FC = () => {
               </option>
             ))}
           </select>
+          <HelpTip
+            text={status ? (cards.find((card) => card.key === status)?.help ?? '') : 'Una cotización nace como borrador, se envía y la empresa la acepta o la rechaza; si pasa su vigencia, vence.'}
+            label="Qué significa el estado elegido"
+          />
           {canEdit && (
             <Button variant="primary" className="ml-auto" icon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
               Nueva cotización

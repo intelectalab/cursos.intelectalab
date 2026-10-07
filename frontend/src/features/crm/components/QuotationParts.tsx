@@ -39,7 +39,7 @@ export const QuotationItems: React.FC<{ items: QuotationItem[]; total: string; c
                 <td className="px-3.5 py-2.5 text-right tnum text-slate-700">{item.quantity}</td>
                 <td className="px-3.5 py-2.5 text-right tnum whitespace-nowrap">
                   <span className="text-slate-900">{formatMoney(item.unit_price, currency)}</span>
-                  {discounted && <span className="block text-[11px] text-slate-400 line-through">{formatMoney(item.list_price as string, currency)}</span>}
+                  {discounted && <span className="block text-[11px] text-slate-500 line-through">{formatMoney(item.list_price as string, currency)}</span>}
                 </td>
                 <td className="px-3.5 py-2.5 text-right tnum font-medium text-slate-900 whitespace-nowrap">{formatMoney(item.total_amount, currency)}</td>
               </tr>

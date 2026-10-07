@@ -44,6 +44,21 @@ export interface PageMeta {
   per_page: number;
   total: number;
   last_page: number;
+  // Cuántos hay en cada estado con la búsqueda actual (ALL = total); alimenta las tarjetas que filtran
+  counts?: Record<string, number>;
+  expiring_days?: number;
+}
+
+// Lista de personas reutilizable
+export interface Group {
+  id: string;
+  name: string;
+  description: string | null;
+  members_count: number;
+}
+
+export interface GroupDetail extends Group {
+  members: { id: string; name: string; email: string; active: boolean }[];
 }
 
 export interface UserInput {
@@ -61,7 +76,27 @@ export interface RoleInput {
 }
 
 export const identityApi = {
-  async listUsers(params: { search?: string; status?: string; page?: number }) {
+  async listGroups() {
+    return (await api.get('/groups')).data.data as Group[];
+  },
+  async group(id: string) {
+    return (await api.get(`/groups/${id}`)).data.data as GroupDetail;
+  },
+  async createGroup(input: { name: string; description: string | null }) {
+    return (await api.post('/groups', input)).data.data as GroupDetail;
+  },
+  async updateGroup(id: string, input: { name: string; description: string | null }) {
+    return (await api.put(`/groups/${id}`, input)).data.data as GroupDetail;
+  },
+  deleteGroup: (id: string) => api.delete(`/groups/${id}`),
+  async addGroupMembers(id: string, userIds: string[]) {
+    return (await api.post(`/groups/${id}/members`, { user_ids: userIds })).data.data as GroupDetail;
+  },
+  async removeGroupMember(id: string, userId: string) {
+    return (await api.delete(`/groups/${id}/members/${userId}`)).data.data as GroupDetail;
+  },
+
+  async listUsers(params: { search?: string; status?: string; page?: number; per_page?: number }) {
     const response = await api.get('/users', { params });
     return response.data as { data: UserRow[]; meta: PageMeta };
   },
@@ -72,6 +107,19 @@ export const identityApi = {
 
   async updateUser(id: string, input: UserInput & { status: UserRow['status'] }) {
     return (await api.put(`/users/${id}`, input)).data.data as UserRow;
+  },
+
+  // Activa o desactiva varias cuentas; las que no se pudieron cambiar vuelven con su motivo
+  async setUsersStatus(ids: string[], status: UserRow['status']) {
+    return (await api.post('/users/bulk-status', { user_ids: ids, status })).data.data as {
+      updated: number;
+      skipped: { email: string; reason: string }[];
+    };
+  },
+
+  // Cierra las sesiones abiertas de la persona; devuelve cuántas eran
+  async revokeUserSessions(id: string) {
+    return (await api.delete(`/users/${id}/sessions`)).data.data.revoked as number;
   },
 
   async setUserRoles(id: string, roles: string[]) {

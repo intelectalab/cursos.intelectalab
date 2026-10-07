@@ -217,6 +217,33 @@ class CertificateTest extends TestCase
         $this->withToken($this->admin)->getJson($this->api('/certificates/candidates'))->assertJsonCount(0, 'data');
     }
 
+    public function test_pending_certificates_are_issued_together_and_the_rest_are_skipped(): void
+    {
+        ['course' => $course, 'resources' => $resources] = $this->publishedCourse(['issues_certificate' => false]);
+        $done = [];
+        foreach (['ana@acme.com' => '45678912', 'beto@acme.com' => '45678913'] as $email => $document) {
+            $student = $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => $email, 'doc_type' => 'DNI', 'doc_number' => $document]);
+            ['enrollment' => $enrollment, 'token' => $token] = $this->enroll($student, $course);
+            $this->complete($token, $course, $resources);
+            $done[] = $enrollment;
+        }
+        // Matriculado pero sin terminar: no cumple los requisitos
+        ['enrollment' => $unfinished] = $this->enroll($this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'caro@acme.com']), $course);
+
+        $this->withToken($this->admin)->putJson($this->api("/courses/{$course}"), ['title' => 'Excel para finanzas', 'language' => 'es', 'duration_hours' => 24, 'issues_certificate' => true])->assertOk();
+
+        $this->withToken($this->admin)->postJson($this->api('/certificates/issue-many'), ['enrollment_ids' => [...$done, $unfinished]])
+            ->assertCreated()
+            ->assertJsonPath('data.issued', 2)
+            ->assertJsonPath('data.skipped', 1);
+
+        $this->withToken($this->admin)->getJson($this->api('/certificates'))
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.counts.ISSUED', 2)
+            ->assertJsonPath('meta.counts.REVOKED', 0);
+        $this->withToken($this->admin)->getJson($this->api('/certificates/candidates'))->assertJsonCount(0, 'data');
+    }
+
     public function test_a_revoked_certificate_stops_being_valid_and_can_be_issued_again(): void
     {
         ['course' => $course, 'resources' => $resources] = $this->publishedCourse();
@@ -286,6 +313,62 @@ class CertificateTest extends TestCase
 
         $this->withToken($this->admin)->deleteJson($this->api('/certificates/template/signature'))->assertOk()->assertJsonPath('data.has_signature', false);
         $this->withToken($this->admin)->getJson($this->api('/certificates/template/signature'))->assertNotFound();
+    }
+
+    public function test_the_organization_designs_its_own_certificate_and_previews_it(): void
+    {
+        $template = $this->api('/certificates/template');
+
+        // Sin tocar nada vale el diseño del sistema
+        $this->withToken($this->admin)->getJson($template)
+            ->assertOk()
+            ->assertJsonPath('data.has_background', false)
+            ->assertJsonPath('data.design.text_align', 'CENTER')
+            ->assertJsonPath('data.design.qr_position', 'RIGHT')
+            ->assertJsonPath('meta.options.positions', ['LEFT', 'CENTER', 'RIGHT']);
+
+        $image = imagecreatetruecolor(297, 210);
+        $path = tempnam(sys_get_temp_dir(), 'fondo').'.png';
+        imagepng($image, $path);
+        $this->withToken($this->admin)->post($template.'/background', ['file' => new UploadedFile($path, 'fondo.png', null, null, true)], ['Accept' => 'application/json'])
+            ->assertOk()->assertJsonPath('data.has_background', true);
+
+        // Solo se envía lo que cambia; el resto conserva su valor
+        $this->withToken($this->admin)->putJson($template, [
+            'signer_name' => 'María Pérez', 'signer_title' => 'Directora',
+            'design' => ['text_align' => 'LEFT', 'name_size' => 'L', 'primary_color' => '#123ABC', 'show_title' => false, 'signature_position' => 'CENTER'],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.design.text_align', 'LEFT')
+            ->assertJsonPath('data.design.primary_color', '#123ABC')
+            ->assertJsonPath('data.design.show_title', false)
+            ->assertJsonPath('data.design.show_logo', true)
+            ->assertJsonPath('data.design.text_top', 'TOP');
+
+        // La firma y el QR no pueden ir en el mismo sitio; un color debe ser #RRGGBB
+        $this->withToken($this->admin)->putJson($template, ['design' => ['qr_position' => 'CENTER']])
+            ->assertStatus(422)->assertJsonStructure(['details' => ['design.qr_position']]);
+        $this->withToken($this->admin)->putJson($template, ['design' => ['accent_color' => 'azul']])->assertStatus(422);
+        $this->withToken($this->admin)->putJson($template, ['design' => ['text_align' => 'ARRIBA']])->assertStatus(422);
+
+        // La vista previa es un PDF con el diseño guardado y datos de ejemplo
+        $preview = $this->withToken($this->admin)->get($template.'/preview')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $preview->getContent());
+
+        $student = $this->login('acme', $this->student()->email);
+        $this->withToken($student)->get($template.'/preview', ['Accept' => 'application/json'])->assertForbidden();
+        $this->withToken($student)->putJson($template, ['design' => ['name_size' => 'S']])->assertForbidden();
+
+        // Un certificado real se genera con el diseño propio, y quitar el fondo vuelve al del sistema
+        ['course' => $course, 'resources' => $resources] = $this->publishedCourse();
+        ['token' => $token] = $this->enroll($this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'beto@acme.com']), $course);
+        $this->complete($token, $course, $resources);
+        $id = $this->withToken($token)->getJson($this->api('/me/certificates'))->json('data.0.id');
+        $this->assertStringStartsWith('%PDF', $this->withToken($token)->get($this->api("/me/certificates/{$id}/pdf"))->assertOk()->getContent());
+
+        $this->withToken($this->admin)->deleteJson($template.'/background')->assertOk()->assertJsonPath('data.has_background', false);
     }
 
     public function test_certificates_are_isolated_and_require_permission(): void

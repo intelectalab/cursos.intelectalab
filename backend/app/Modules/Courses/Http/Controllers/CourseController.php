@@ -11,6 +11,7 @@ use App\Modules\Courses\Http\CoursePresenter;
 use App\Modules\Files\Application\FileStorage;
 use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,18 +33,23 @@ class CourseController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $courses = $this->access->scope(Course::query(), $request->user())
+        $base = $this->access->scope(Course::query(), $request->user())
             ->with(['cover', 'currentVersion', 'teachers'])
             ->withCount(['sections', 'resources'])
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('category', $category))
             ->when($filters['search'] ?? null, fn ($query, $search) => $query
-                ->whereRaw('lower(title) like ?', ['%'.mb_strtolower($search).'%']))
+                ->whereRaw('lower(title) like ?', ['%'.mb_strtolower($search).'%']));
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $counts = StateCounts::of($base, Course::STATUSES, fn ($query, string $status) => $query->where('status', $status));
+
+        $courses = $base
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->orderByDesc('updated_at')
             ->orderBy('id')
             ->paginate($filters['per_page'] ?? 24);
 
-        return ApiResponse::paginated($courses, fn (Course $course) => CoursePresenter::summary($course));
+        return ApiResponse::paginated($courses, fn (Course $course) => CoursePresenter::summary($course), ['counts' => $counts]);
     }
 
     /**

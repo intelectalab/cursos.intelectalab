@@ -22,6 +22,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::get('/certificates', [CertificateController::class, 'index']);
         Route::get('/certificates/template', [CertificateController::class, 'template']);
         Route::get('/certificates/template/signature', [CertificateController::class, 'signature']);
+        Route::get('/certificates/template/preview', [CertificateController::class, 'previewTemplate']);
         Route::get('/certificates/{certificate}/pdf', [CertificateController::class, 'pdf'])->whereUuid('certificate');
     });
 
@@ -29,6 +30,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::get('/certificates/candidates', [CertificateController::class, 'candidates']);
         // Maestro §7.2
         Route::post('/certificates/issue', [CertificateController::class, 'issue']);
+        Route::post('/certificates/issue-many', [CertificateController::class, 'issueMany']);
     });
 
     Route::post('/certificates/{certificate}/revoke', [CertificateController::class, 'revoke'])
@@ -39,5 +41,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::put('/certificates/template', [CertificateController::class, 'updateTemplate']);
         Route::post('/certificates/template/signature', [CertificateController::class, 'uploadSignature']);
         Route::delete('/certificates/template/signature', [CertificateController::class, 'removeSignature']);
+        Route::post('/certificates/template/background', [CertificateController::class, 'uploadBackground']);
+        Route::delete('/certificates/template/background', [CertificateController::class, 'removeBackground']);
     });
 });

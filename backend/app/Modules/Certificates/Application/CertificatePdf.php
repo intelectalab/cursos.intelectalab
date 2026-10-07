@@ -41,6 +41,8 @@ class CertificatePdf
             'qr' => 'data:image/png;base64,'.base64_encode(QrCode::png($verifyUrl)),
             'logo' => $this->dataUri($logo),
             'signature' => $this->dataUri($template->signature),
+            'background' => $this->dataUri($template->background),
+            'design' => $template->resolvedDesign(),
         ])->render();
 
         $options = new Options;

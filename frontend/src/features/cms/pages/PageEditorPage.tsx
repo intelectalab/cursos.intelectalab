@@ -161,7 +161,7 @@ export const PageEditorPage: React.FC = () => {
         <Card>
           {preview ? (
             <div className="p-6 sm:p-8">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-3">Vista previa del borrador{dirty ? ' (con cambios sin guardar)' : ''}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-3">Vista previa del borrador{dirty ? ' (con cambios sin guardar)' : ''}</p>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-5">{title}</h1>
               {(content.content ?? []).length === 0 ? <p className="text-[13px] text-slate-500">La página está vacía.</p> : <PageContentView content={content} />}
             </div>

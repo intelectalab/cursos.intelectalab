@@ -60,7 +60,7 @@ export const VerifyPage: React.FC = () => {
         <Card className="p-5 sm:p-6">
           <form onSubmit={submit} className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 className={`${INPUT_CLASS} pl-9 font-mono uppercase tracking-wide`}
                 placeholder="XXXX-XXXX-XXXX"

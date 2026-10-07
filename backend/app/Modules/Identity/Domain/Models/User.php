@@ -40,6 +40,8 @@ class User extends Authenticatable
         'doc_number',
         'status',
         'last_login_at',
+        'terms_accepted_at',
+        'must_change_password',
     ];
 
     protected $hidden = [
@@ -51,6 +53,8 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'last_login_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
+            'must_change_password' => 'boolean',
         ];
     }
 

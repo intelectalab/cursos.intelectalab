@@ -29,7 +29,7 @@ class ApiResponse
     /**
      * @param  callable(mixed): mixed  $map
      */
-    public static function paginated(LengthAwarePaginator $paginator, callable $map): JsonResponse
+    public static function paginated(LengthAwarePaginator $paginator, callable $map, array $meta = []): JsonResponse
     {
         return self::success(
             collect($paginator->items())->map($map)->values(),
@@ -38,7 +38,7 @@ class ApiResponse
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'last_page' => $paginator->lastPage(),
-            ]
+            ] + $meta
         );
     }
 

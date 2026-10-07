@@ -68,6 +68,8 @@ export interface OpenAttempt {
   started_at: string;
   expires_at: string | null;
   server_time: string;
+  // Lo que ya llevaba marcado al retomar el intento
+  answers: Record<string, Answer>;
   questions: AttemptQuestion[];
 }
 
@@ -109,6 +111,10 @@ export const studentApi = {
   },
   async startAttempt(course: string, activity: string) {
     return (await api.post(`/me/courses/${course}/activities/${activity}/attempts`)).data.data as OpenAttempt;
+  },
+  // Guardado automático mientras responde; no califica
+  async saveAttemptDraft(attempt: string, answers: Record<string, Answer>) {
+    await api.put(`/me/attempts/${attempt}/draft`, { answers });
   },
   async submitAttempt(attempt: string, answers: Record<string, Answer>) {
     return (await api.post(`/me/attempts/${attempt}/submit`, { answers })).data.data as AttemptResult;

@@ -80,7 +80,7 @@ const Kpi: React.FC<{ label: string; value: string; delta: number | null; hint?:
 
 const TodayItem: React.FC<{ icon: LucideIcon; label: string; value: string; hint?: string }> = ({ icon: Icon, label, value, hint }) => (
   <div className="flex items-center gap-3 px-5 py-4">
-    <Icon className="w-4.5 h-4.5 shrink-0 text-slate-400" />
+    <Icon className="w-4.5 h-4.5 shrink-0 text-slate-500" />
     <div className="min-w-0">
       <p className="text-xs text-slate-500">{label}</p>
       <p className="text-[15px] font-semibold text-slate-900 tnum">
@@ -265,7 +265,7 @@ export const ReportsPage: React.FC = () => {
                 <ol className="divide-y divide-slate-100">
                   {report.top_courses.map((course, index) => (
                     <li key={course.course_id} className="flex items-center gap-4 px-5 py-3.5">
-                      <span className="w-6 text-[13px] font-semibold text-slate-400 tnum">{index + 1}</span>
+                      <span className="w-6 text-[13px] font-semibold text-slate-500 tnum">{index + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-semibold text-slate-900 truncate">{course.title}</p>
                         <p className="text-xs text-slate-500">

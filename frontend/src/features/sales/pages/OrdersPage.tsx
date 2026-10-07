@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BadgeCheck, CreditCard, Search } from 'lucide-react';
+import { BadgeCheck, Ban, CircleDollarSign, CreditCard, Hourglass, Search, TimerOff } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -22,6 +22,7 @@ import {
   THead,
   Tr,
 } from '../../../shared/ui';
+import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filters';
 import type { PageMeta } from '../../identity/api';
 import {
   formatDateTime,
@@ -236,14 +237,25 @@ export const OrdersPage: React.FC = () => {
     setPage(1);
   };
 
+  const counts = meta?.counts ?? {};
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todas', value: counts.ALL ?? null, icon: CreditCard, tone: 'brand', help: 'Todas las órdenes que coinciden con la búsqueda.' },
+    { key: 'PENDING', label: 'Pendientes de pago', value: counts.PENDING ?? null, icon: Hourglass, tone: 'warning', help: 'Esperan que confirmes el pago recibido. Pasado su plazo, vencen solas.' },
+    { key: 'PAID', label: 'Pagadas', value: counts.PAID ?? null, icon: CircleDollarSign, tone: 'success', help: 'Pago confirmado: el comprador ya está matriculado, o la empresa ya tiene sus licencias.' },
+    { key: 'EXPIRED', label: 'Vencidas', value: counts.EXPIRED ?? null, icon: TimerOff, tone: 'danger', help: 'No se pagaron dentro del plazo. El comprador puede hacer una compra nueva.' },
+    { key: 'CANCELLED', label: 'Canceladas', value: counts.CANCELLED ?? null, icon: Ban, tone: 'neutral', help: 'Las canceló el comprador o el personal antes de pagarse.' },
+  ];
+
   return (
     <div>
       <PageHeader title="Ventas y pagos" icon={CreditCard} subtitle="Órdenes de compra de tus alumnos y confirmación de los pagos recibidos." />
 
+      <FilterCards cards={cards} active={status} label="Órdenes por estado" onSelect={(key) => filter(() => setStatus(key))} />
+
       <Card>
         <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-200/80">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               className={`${INPUT_CLASS} pl-9`}
               placeholder="Buscar por comprador, empresa, curso o n.º de orden"
@@ -265,6 +277,10 @@ export const OrdersPage: React.FC = () => {
               </option>
             ))}
           </select>
+          <HelpTip
+            text={status ? (cards.find((card) => card.key === status)?.help ?? '') : 'Una orden nace pendiente; pasa a pagada al confirmarse el pago, o vence o se cancela si no se paga.'}
+            label="Qué significa el estado elegido"
+          />
         </div>
 
         {state === 'loading' && <LoadingState />}

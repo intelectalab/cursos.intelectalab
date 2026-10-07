@@ -9,6 +9,7 @@ use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Tenancy\Domain\Models\Tenant;
+use App\Shared\Idempotency\IdempotencyKey;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -371,7 +372,12 @@ class OrderTest extends TestCase
         $payload = [
             'first_name' => 'Rosa', 'last_name' => 'Quispe', 'email' => ' Rosa@Correo.com ',
             'password' => 'clave-segura-1', 'password_confirmation' => 'clave-segura-1',
+            'accept_terms' => true,
         ];
+
+        // Sin aceptar los textos legales no se crea la cuenta
+        $this->postJson($this->api('/auth/register'), ['accept_terms' => false] + $payload)
+            ->assertStatus(422)->assertJsonStructure(['details' => ['accept_terms']]);
 
         $token = $this->postJson($this->api('/auth/register'), $payload)
             ->assertCreated()
@@ -381,6 +387,7 @@ class OrderTest extends TestCase
 
         $this->withToken($token)->postJson($this->api('/orders'), ['course_id' => $course])->assertCreated();
         $this->withToken($token)->getJson($this->api('/users'))->assertForbidden();
+        $this->assertNotNull(User::query()->withoutGlobalScopes()->where('email', 'rosa@correo.com')->value('terms_accepted_at'));
 
         $this->flushHeaders();
         $this->app['auth']->forgetGuards();
@@ -398,5 +405,86 @@ class OrderTest extends TestCase
             $this->tenant->id,
             fn () => AuditEvent::query()->where('action', 'users.registered')->exists()
         ));
+    }
+
+    public function test_repeating_a_checkout_with_the_same_idempotency_key_returns_the_same_order(): void
+    {
+        $course = $this->publishedCourse(['price' => 120]);
+        $token = $this->login('acme', $this->student()->email);
+        $send = fn () => $this->withToken($token)
+            ->postJson($this->api('/orders'), ['course_id' => $course], ['Idempotency-Key' => 'compra-0001']);
+
+        $first = $send()->assertCreated()->assertHeaderMissing('Idempotent-Replayed');
+
+        $send()
+            ->assertCreated()
+            ->assertHeader('Idempotent-Replayed', 'true')
+            ->assertJsonPath('data.id', $first->json('data.id'));
+
+        $this->assertSame(1, Order::query()->withoutGlobalScopes()->count());
+    }
+
+    public function test_an_idempotency_key_cannot_be_reused_for_a_different_operation_or_by_another_person(): void
+    {
+        $course = $this->publishedCourse(['price' => 120]);
+        $other = $this->publishedCourse(['title' => 'Power BI', 'price' => 90]);
+        $ana = $this->login('acme', $this->student()->email);
+        $luis = $this->login('acme', $this->student('luis@acme.com')->email);
+        $headers = ['Idempotency-Key' => 'compra-0001'];
+
+        $this->withToken($ana)->postJson($this->api('/orders'), ['course_id' => $course], $headers)->assertCreated();
+
+        $this->withToken($ana)->postJson($this->api('/orders'), ['course_id' => $other], $headers)
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'IDEMPOTENCY_KEY_REUSED');
+
+        // La clave es de quien la envió: otra persona con la misma clave hace su propia compra
+        $this->withToken($luis)->postJson($this->api('/orders'), ['course_id' => $course], $headers)
+            ->assertCreated()
+            ->assertHeaderMissing('Idempotent-Replayed');
+
+        $this->assertSame(2, Order::query()->withoutGlobalScopes()->count());
+    }
+
+    public function test_a_rejected_checkout_leaves_the_idempotency_key_free_to_retry(): void
+    {
+        $course = $this->publishedCourse(['price' => 120]);
+        $token = $this->login('acme', $this->student()->email);
+        $headers = ['Idempotency-Key' => 'compra-0001'];
+
+        $this->withToken($token)->postJson($this->api('/orders'), ['course_id' => $course, 'expected_total' => 100], $headers)
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'PRICE_CHANGED');
+
+        $this->withToken($token)->postJson($this->api('/orders'), ['course_id' => $course, 'expected_total' => 120], $headers)
+            ->assertCreated();
+    }
+
+    public function test_repeating_a_payment_confirmation_with_the_same_key_does_not_pay_twice(): void
+    {
+        $course = $this->publishedCourse(['price' => 120]);
+        $order = $this->placeOrder($this->login('acme', $this->student()->email), $course);
+        $confirm = fn () => $this->withToken($this->admin)
+            ->postJson($this->api("/orders/{$order}/confirm-payment"), ['method' => 'TRANSFER'], ['Idempotency-Key' => 'pago-0001']);
+
+        $confirm()->assertOk()->assertJsonPath('data.status', 'PAID');
+        $confirm()->assertOk()->assertHeader('Idempotent-Replayed', 'true')->assertJsonPath('data.status', 'PAID');
+
+        $this->assertSame(1, Payment::query()->withoutGlobalScopes()->count());
+    }
+
+    public function test_expired_idempotency_keys_are_pruned_and_stop_replaying(): void
+    {
+        $course = $this->publishedCourse(['price' => 0]);
+        $token = $this->login('acme', $this->student()->email);
+        $headers = ['Idempotency-Key' => 'compra-0001'];
+
+        $this->withToken($token)->postJson($this->api('/orders'), ['course_id' => $course], $headers)->assertCreated();
+        $this->assertSame(1, IdempotencyKey::query()->withoutGlobalScopes()->count());
+
+        $this->travel(25)->hours();
+        $this->artisan('idempotency:prune')->assertSuccessful();
+
+        $this->assertSame(0, IdempotencyKey::query()->withoutGlobalScopes()->count());
     }
 }

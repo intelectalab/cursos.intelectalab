@@ -8,6 +8,8 @@ use App\Modules\Tenancy\Http\Middleware\RequireTenant;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
 use App\Shared\Http\ApiExceptionRenderer;
 use App\Shared\Http\Middleware\AssignRequestId;
+use App\Shared\Http\Middleware\Idempotency;
+use App\Shared\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,6 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
             AssignRequestId::class,
             ResolveTenant::class,
         ]);
+        $middleware->api(append: [SecurityHeaders::class]);
+        // Tope general por usuario o dirección (AppServiceProvider); las rutas sensibles tienen el suyo
+        $middleware->throttleApi();
 
         $middleware->alias([
             'tenant' => RequireTenant::class,
@@ -34,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => RequirePermission::class,
             'tenant.user' => EnsureTenantUser::class,
             'platform.admin' => EnsurePlatformAdmin::class,
+            'idempotent' => Idempotency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

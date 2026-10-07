@@ -41,6 +41,9 @@ export interface Promotion {
   discount_value: string;
   starts_at: string | null;
   ends_at: string | null;
+  // Los mismos límites como días de la academia (AAAA-MM-DD), en su zona horaria
+  starts_on: string | null;
+  ends_on: string | null;
   max_redemptions: number | null;
   once_per_customer: boolean;
   min_purchase: string | null;

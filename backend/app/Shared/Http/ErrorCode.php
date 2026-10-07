@@ -15,6 +15,8 @@ enum ErrorCode: string
     case TooManyRequests = 'TOO_MANY_REQUESTS';
     case HttpError = 'HTTP_ERROR';
     case InternalError = 'INTERNAL_ERROR';
+    case IdempotencyKeyReused = 'IDEMPOTENCY_KEY_REUSED';
+    case IdempotencyInProgress = 'IDEMPOTENCY_IN_PROGRESS';
 
     case TenantNotFound = 'TENANT_NOT_FOUND';
     case TenantInactive = 'TENANT_INACTIVE';
@@ -23,7 +25,10 @@ enum ErrorCode: string
 
     case InvalidCredentials = 'INVALID_CREDENTIALS';
     case TooManyAttempts = 'TOO_MANY_ATTEMPTS';
+    case AccountLocked = 'ACCOUNT_LOCKED';
     case AccountInactive = 'ACCOUNT_INACTIVE';
+    case PasswordChangeRequired = 'PASSWORD_CHANGE_REQUIRED';
+    case SupportReadOnly = 'SUPPORT_READ_ONLY';
     case InvalidResetToken = 'INVALID_RESET_TOKEN';
     case PermissionDenied = 'PERMISSION_DENIED';
     case PrivilegeEscalation = 'PRIVILEGE_ESCALATION';

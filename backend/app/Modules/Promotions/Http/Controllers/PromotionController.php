@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Promociones y sus cupones: la regla del descuento y los códigos que la activan.
@@ -38,7 +39,7 @@ class PromotionController extends Controller
         $uses = $this->usesByCoupon();
 
         return ApiResponse::success(
-            $promotions->map(fn (Promotion $promotion) => PromotionPresenter::make($promotion, $uses))->values(),
+            $promotions->map(fn (Promotion $promotion) => PromotionPresenter::make($promotion, $uses, $this->settings->timezone()))->values(),
             ['currency' => $this->settings->currency()]
         );
     }
@@ -187,7 +188,7 @@ class PromotionController extends Controller
     private function respond(Promotion $promotion, int $status = 200): JsonResponse
     {
         return ApiResponse::success(
-            PromotionPresenter::make($this->listing()->findOrFail($promotion->id), $this->usesByCoupon()),
+            PromotionPresenter::make($this->listing()->findOrFail($promotion->id), $this->usesByCoupon(), $this->settings->timezone()),
             ['currency' => $this->settings->currency()],
             $status
         );
@@ -221,7 +222,7 @@ class PromotionController extends Controller
             'discount_type' => ['required', Rule::in(Promotion::TYPES)],
             'discount_value' => ['required', 'numeric', 'gt:0', $percent ? 'max:100' : 'max:9999999'],
             'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date', 'after:starts_at'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'max_redemptions' => ['nullable', 'integer', 'min:1', 'max:1000000'],
             'once_per_customer' => ['required', 'boolean'],
             'min_purchase' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
@@ -232,7 +233,7 @@ class PromotionController extends Controller
             'items.*.id' => ['required', 'uuid'],
         ], [
             'discount_value.max' => $percent ? 'Un porcentaje no puede pasar de 100.' : 'El monto es demasiado alto.',
-            'ends_at.after' => 'La fecha de fin debe ser posterior a la de inicio.',
+            'ends_at.after_or_equal' => 'La fecha de fin debe ser posterior a la de inicio.',
             'items.required_if' => 'Elige al menos un curso o paquete.',
         ]);
 
@@ -247,8 +248,19 @@ class PromotionController extends Controller
             'Uno de los cursos o paquetes elegidos no existe.'
         );
 
-        foreach (['starts_at', 'ends_at'] as $date) {
-            $data[$date] = isset($data[$date]) ? Carbon::parse($data[$date]) : null;
+        // Una fecha sin hora es un día de la organización: empieza a su medianoche y termina al final de su día
+        $timezone = $this->settings->timezone();
+        $day = fn (string $value) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? Carbon::parse($value, $timezone) : null;
+
+        $data['starts_at'] = isset($data['starts_at'])
+            ? ($day($data['starts_at'])?->startOfDay() ?? Carbon::parse($data['starts_at']))->utc()
+            : null;
+        $data['ends_at'] = isset($data['ends_at'])
+            ? ($day($data['ends_at'])?->endOfDay()->startOfSecond() ?? Carbon::parse($data['ends_at']))->utc()
+            : null;
+
+        if ($data['starts_at'] && $data['ends_at'] && $data['ends_at']->lte($data['starts_at'])) {
+            throw ValidationException::withMessages(['ends_at' => 'La fecha de fin debe ser posterior a la de inicio.']);
         }
 
         return $data;

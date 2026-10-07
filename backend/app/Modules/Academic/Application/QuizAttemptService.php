@@ -69,6 +69,23 @@ class QuizAttemptService
     }
 
     /**
+     * Guarda lo que el alumno lleva marcado, sin calificar, para que pueda
+     * retomar el intento. Solo se conservan las preguntas de este intento.
+     *
+     * @param  array<string, mixed>  $answers  id de pregunta => respuesta
+     */
+    public function saveDraft(QuizAttempt $attempt, array $answers): void
+    {
+        if (! $attempt->isOpen() || $this->isOverdue($attempt)) {
+            throw new ApiException(ErrorCode::AttemptClosed, 'Este intento ya se cerró.', 409);
+        }
+
+        $attempt->update([
+            'draft_answers' => array_intersect_key($answers, array_flip(array_column($attempt->questions, 'id'))),
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $answers  id de pregunta => respuesta
      */
     public function submit(QuizAttempt $attempt, Enrollment $enrollment, array $answers): QuizAttempt
@@ -108,6 +125,7 @@ class QuizAttemptService
 
             $attempt->update([
                 'status' => QuizAttempt::STATUS_SUBMITTED,
+                'draft_answers' => null,
                 'submitted_at' => now(),
                 'score_percent' => $percent,
                 'passed' => $percent >= $attempt->passing_percent,
@@ -175,6 +193,8 @@ class QuizAttemptService
             'started_at' => $attempt->started_at->toIso8601String(),
             'expires_at' => $attempt->expires_at?->toIso8601String(),
             'server_time' => now()->toIso8601String(),
+            // Lo ya marcado en este intento (vacío si recién empieza)
+            'answers' => (object) ($attempt->draft_answers ?? []),
             'questions' => array_map(fn (array $question) => [
                 'id' => $question['id'],
                 'type' => $question['type'],

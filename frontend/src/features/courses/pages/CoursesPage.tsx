@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Clock, FileStack, GraduationCap, Layers, Plus, Search } from 'lucide-react';
+import { Archive, BookOpen, Clock, FileStack, GraduationCap, Layers, PencilRuler, Plus, Rocket, Search } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -17,6 +17,7 @@ import {
   PageHeader,
   Pagination,
 } from '../../../shared/ui';
+import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filters';
 import type { PageMeta } from '../../identity/api';
 import {
   coursesApi,
@@ -126,7 +127,7 @@ const CourseCard: React.FC<{ course: CourseSummary }> = ({ course }) => (
               <Avatar name={teacher.name} size="sm" />
             </span>
           ))}
-          {course.teachers.length === 0 && <span className="text-xs text-slate-400">Sin profesores</span>}
+          {course.teachers.length === 0 && <span className="text-xs text-slate-500">Sin profesores</span>}
         </div>
         <span className="text-xs font-medium text-slate-500 tnum">{course.version ? `Versión ${course.version}` : 'Sin publicar'}</span>
       </div>
@@ -179,6 +180,13 @@ export const CoursesPage: React.FC = () => {
   }, []);
 
   const filtered = search !== '' || status !== '' || category !== '';
+  const counts = meta?.counts ?? {};
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todos', value: counts.ALL ?? null, icon: BookOpen, tone: 'brand', help: 'Todos los cursos que coinciden con la búsqueda y la categoría.' },
+    { key: 'DRAFT', label: 'Borradores', value: counts.DRAFT ?? null, icon: PencilRuler, tone: 'warning', help: 'Aún no se publican: solo los ve el personal. No admiten alumnos.' },
+    { key: 'PUBLISHED', label: 'Publicados', value: counts.PUBLISHED ?? null, icon: Rocket, tone: 'success', help: 'Sus alumnos los pueden llevar. Si tienen precio, aparecen también en el catálogo público.' },
+    { key: 'ARCHIVED', label: 'Archivados', value: counts.ARCHIVED ?? null, icon: Archive, tone: 'neutral', help: 'Retirados: no admiten alumnos nuevos ni se venden. Quienes ya estaban matriculados conservan su acceso.' },
+  ];
   const clearFilters = () => {
     setSearch('');
     setStatus('');
@@ -201,10 +209,20 @@ export const CoursesPage: React.FC = () => {
         }
       />
 
+      <FilterCards
+        cards={cards}
+        active={status}
+        label="Cursos por estado"
+        onSelect={(key) => {
+          setStatus(key);
+          setPage(1);
+        }}
+      />
+
       <Card className="mb-5">
         <div className="flex flex-wrap items-center gap-3 px-4 sm:px-5 py-4">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               className={`${INPUT_CLASS} pl-9`}
               placeholder="Buscar por título"
@@ -230,6 +248,10 @@ export const CoursesPage: React.FC = () => {
             <option value="PUBLISHED">Publicados</option>
             <option value="ARCHIVED">Archivados</option>
           </select>
+          <HelpTip
+            text="Borrador: en preparación, solo lo ve el personal. Publicado: sus alumnos lo pueden llevar. Archivado: retirado, sin alumnos nuevos."
+            label="Qué significa el estado de un curso"
+          />
           {(options?.categories.length ?? 0) > 0 && (
             <select
               className={`${INPUT_CLASS} !w-48`}

@@ -226,7 +226,7 @@ export const RolesPage: React.FC = () => {
             <Card className="p-5 space-y-4">
               {isSystem && (
                 <div className="flex items-start gap-2.5 px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[13px] text-slate-600">
-                  <Lock className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
+                  <Lock className="w-4 h-4 shrink-0 mt-0.5 text-slate-500" />
                   <span>
                     Este es un rol base de la plataforma: no se puede modificar ni eliminar. Para un acceso distinto,
                     crea un rol propio.
@@ -332,7 +332,7 @@ export const RolesPage: React.FC = () => {
                                 <span
                                   className={
                                     editable && !allowed
-                                      ? 'text-slate-400'
+                                      ? 'text-slate-500'
                                       : checked
                                         ? 'text-slate-900 font-medium'
                                         : 'text-slate-600'

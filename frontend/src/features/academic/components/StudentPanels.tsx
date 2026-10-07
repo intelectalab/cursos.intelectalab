@@ -97,7 +97,7 @@ export const TaskPanel: React.FC<{
             {submission.body && <p className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap break-words">{submission.body}</p>}
             {submission.file && (
               <div className="flex flex-wrap items-center gap-3">
-                <Paperclip className="w-4 h-4 text-slate-400 shrink-0" />
+                <Paperclip className="w-4 h-4 text-slate-500 shrink-0" />
                 <span className="text-[13px] text-slate-800 truncate flex-1 min-w-0">
                   {submission.file.name} · {formatSize(submission.file.size_bytes)}
                 </span>
@@ -216,7 +216,7 @@ export const SurveyPanel: React.FC<{
             <fieldset>
               <legend className="text-sm font-semibold text-slate-900 mb-2.5">
                 {index + 1}. {question.text}
-                {!question.required && <span className="ml-2 text-xs font-medium text-slate-400">opcional</span>}
+                {!question.required && <span className="ml-2 text-xs font-medium text-slate-500">opcional</span>}
               </legend>
 
               {question.type === 'SCALE' && (
@@ -239,7 +239,7 @@ export const SurveyPanel: React.FC<{
                       </label>
                     ))}
                   </div>
-                  <p className="flex justify-between max-w-[21.5rem] text-xs text-slate-400 mt-1">
+                  <p className="flex justify-between max-w-[21.5rem] text-xs text-slate-500 mt-1">
                     <span>Muy poco</span>
                     <span>Mucho</span>
                   </p>

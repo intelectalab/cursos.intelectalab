@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Award, ImageUp, Search, Trash2 } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, EmptyState, Field, INPUT_CLASS, LoadingState, Modal } from '../../../shared/ui';
+import { SelectAll, SelectRow } from '../../../shared/ui/filters';
 import {
   certificatesApi,
   formatDate,
@@ -10,6 +11,7 @@ import {
   type CertificateTemplate,
   type SignatureRules,
 } from '../api';
+import { CertificateDesignSection } from './CertificateDesign';
 
 // Emisión manual: alumnos que ya cumplen los requisitos y no tienen certificado vigente
 export const IssueModal: React.FC<{ onClose: () => void; onIssued: () => Promise<void> }> = ({ onClose, onIssued }) => {
@@ -17,6 +19,8 @@ export const IssueModal: React.FC<{ onClose: () => void; onIssued: () => Promise
   const [candidates, setCandidates] = useState<CertificateCandidate[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -46,17 +50,44 @@ export const IssueModal: React.FC<{ onClose: () => void; onIssued: () => Promise
     }
   };
 
+  const issueSelected = async () => {
+    setBusy('many');
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await certificatesApi.issueMany(selected);
+      setNotice(`Se ${result.issued === 1 ? 'emitió 1 certificado' : `emitieron ${result.issued} certificados`}.${result.skipped > 0 ? ` ${result.skipped} ya no cumplían los requisitos.` : ''}`);
+      setSelected([]);
+      await onIssued();
+      await load();
+    } catch (err) {
+      setError(apiErrorMessage(err, 'No se pudieron emitir los certificados.'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <Modal
       title="Emitir certificado"
       subtitle="Alumnos que completaron un curso con certificado y aún no tienen uno vigente."
       onClose={onClose}
-      footer={<Button onClick={onClose}>Cerrar</Button>}
+      footer={
+        <>
+          <Button onClick={onClose}>Cerrar</Button>
+          {selected.length > 0 && (
+            <Button variant="primary" processing={busy === 'many'} disabled={busy !== null} onClick={issueSelected}>
+              Emitir {selected.length} {selected.length === 1 ? 'elegido' : 'elegidos'}
+            </Button>
+          )}
+        </>
+      }
     >
       <div className="space-y-4">
         {error && <Alert>{error}</Alert>}
+        {notice && <Alert tone="success">{notice}</Alert>}
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             className={`${INPUT_CLASS} pl-9`}
             placeholder="Buscar por alumno o curso"
@@ -77,9 +108,15 @@ export const IssueModal: React.FC<{ onClose: () => void; onIssued: () => Promise
         )}
         {candidates && candidates.length > 0 && (
           <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100">
+            <li className="px-3.5 py-2 bg-slate-50/80 rounded-t-xl">
+              <SelectAll ids={candidates.map((candidate) => candidate.enrollment_id)} selected={selected} onChange={setSelected}>
+                Seleccionar todos ({candidates.length})
+              </SelectAll>
+            </li>
             {candidates.map((candidate) => (
-              <li key={candidate.enrollment_id} className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3">
-                <div className="min-w-0">
+              <li key={candidate.enrollment_id} className="flex flex-wrap items-center gap-3 px-3.5 py-3">
+                <SelectRow id={candidate.enrollment_id} label={candidate.student.name} selected={selected} onChange={setSelected} />
+                <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold text-slate-900 truncate">{candidate.student.name}</p>
                   <p className="text-xs text-slate-500 truncate">
                     {candidate.course.title} · completado el {formatDate(candidate.completed_at)}
@@ -161,6 +198,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   const fileInput = useRef<HTMLInputElement>(null);
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [rules, setRules] = useState<SignatureRules>({ max_kb: 2048, extensions: [] });
+  const [backgroundMaxKb, setBackgroundMaxKb] = useState(2048);
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
@@ -178,6 +216,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
         if (!active) return;
         setTemplate(result.template);
         setRules(result.rules);
+        setBackgroundMaxKb(result.backgroundRules.max_kb);
         setName(result.template.signer_name ?? '');
         setTitle(result.template.signer_title ?? '');
       })
@@ -243,13 +282,14 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   return (
     <Modal
       title="Plantilla del certificado"
-      subtitle="El diseño usa el logo de tu academia. Aquí defines quién lo firma."
+      subtitle="Quién firma el certificado y cómo se ve: con el diseño del sistema o con tu propio fondo."
+      size="wide"
       onClose={onClose}
       footer={
         <>
           <Button onClick={onClose}>Cerrar</Button>
           <Button variant="primary" type="submit" form="certificate-template-form" processing={busy === 'save'} disabled={!template}>
-            Guardar
+            Guardar firmante
           </Button>
         </>
       }
@@ -275,7 +315,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                 {preview ? (
                   <img src={preview} alt="Firma cargada" className="max-w-full max-h-full object-contain" />
                 ) : (
-                  <span className="text-xs text-slate-400">{template.has_signature ? 'Cargando…' : 'Sin firma'}</span>
+                  <span className="text-xs text-slate-500">{template.has_signature ? 'Cargando…' : 'Sin firma'}</span>
                 )}
               </div>
               <div className="space-y-2">
@@ -301,6 +341,11 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
             <input ref={fileInput} type="file" accept=".png,.jpg,.jpeg" className="hidden" onChange={upload} />
           </div>
         </form>
+      )}
+      {template && (
+        <div className="mt-5">
+          <CertificateDesignSection template={template} maxKb={backgroundMaxKb} onChange={setTemplate} />
+        </div>
       )}
     </Modal>
   );

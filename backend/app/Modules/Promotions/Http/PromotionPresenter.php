@@ -15,7 +15,7 @@ class PromotionPresenter
      * @param  array<string, int>  $usesByCoupon  usos que cuentan por cupón
      * @return array<string, mixed>
      */
-    public static function make(Promotion $promotion, array $usesByCoupon = []): array
+    public static function make(Promotion $promotion, array $usesByCoupon = [], ?string $timezone = null): array
     {
         return [
             'id' => $promotion->id,
@@ -24,6 +24,9 @@ class PromotionPresenter
             'discount_value' => $promotion->discount_value,
             'starts_at' => $promotion->starts_at?->toIso8601String(),
             'ends_at' => $promotion->ends_at?->toIso8601String(),
+            // Los mismos límites como días de la organización, que es como se eligen y se muestran
+            'starts_on' => $promotion->starts_at?->copy()->setTimezone($timezone ?? config('app.timezone'))->toDateString(),
+            'ends_on' => $promotion->ends_at?->copy()->setTimezone($timezone ?? config('app.timezone'))->toDateString(),
             'max_redemptions' => $promotion->max_redemptions,
             'once_per_customer' => $promotion->once_per_customer,
             'min_purchase' => $promotion->min_purchase,

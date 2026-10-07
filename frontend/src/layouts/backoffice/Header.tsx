@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isMenuOpen }) =
           onClick={logout}
           aria-label="Cerrar sesión"
           title="Cerrar sesión"
-          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+          className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
         >
           <LogOut className="w-[18px] h-[18px]" />
         </button>

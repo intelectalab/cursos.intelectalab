@@ -59,8 +59,6 @@ class TenantSettingsController extends Controller
             'contact_email' => ['nullable', 'email', 'max:180'],
             'contact_phone' => ['nullable', 'string', 'max:40'],
             'contact_address' => ['nullable', 'string', 'max:255'],
-            'terms' => ['nullable', 'string', 'max:50000'],
-            'privacy_policy' => ['nullable', 'string', 'max:50000'],
             'grade_scale' => ['required', 'integer', Rule::in($this->scales->availableMaxScores())],
             'payment_instructions' => ['nullable', 'string', 'max:5000'],
             'order_expiration_hours' => [

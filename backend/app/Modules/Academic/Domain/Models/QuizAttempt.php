@@ -35,6 +35,7 @@ class QuizAttempt extends Model
         'submitted_at',
         'score_percent',
         'passed',
+        'draft_answers',
     ];
 
     protected function casts(): array
@@ -42,6 +43,7 @@ class QuizAttempt extends Model
         return [
             'number' => 'integer',
             'questions' => 'array',
+            'draft_answers' => 'array',
             'passing_percent' => 'float',
             'started_at' => 'datetime',
             'expires_at' => 'datetime',

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowRightCircle, Pencil, Plus, Search, UserPlus, XCircle } from 'lucide-react';
+import { ArrowRightCircle, CircleCheckBig, FileSpreadsheet, Inbox, Pencil, PhoneCall, Plus, Search, Sparkles, UserPlus, XCircle } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
   Avatar,
@@ -18,11 +18,13 @@ import {
   THead,
   Tr,
 } from '../../../shared/ui';
+import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filters';
+import { ImportModal } from '../../../shared/ui/ImportModal';
 import type { PageMeta } from '../../identity/api';
 import { crmApi, formatDay, LEAD_SOURCE_LABEL, LEAD_STATUS_LABEL, LEAD_STATUS_TONE, type Lead, type Person } from '../api';
 import { ConvertLeadModal, DiscardLeadModal, LeadFormModal } from './LeadDialogs';
 
-type Dialog = { kind: 'create' } | { kind: 'edit' | 'convert' | 'discard'; lead: Lead };
+type Dialog = { kind: 'create' } | { kind: 'import' } | { kind: 'edit' | 'convert' | 'discard'; lead: Lead };
 
 export const LeadsTab: React.FC<{ canManage: boolean; owners: Person[] }> = ({ canManage, owners }) => {
   const [rows, setRows] = useState<Lead[]>([]);
@@ -61,12 +63,23 @@ export const LeadsTab: React.FC<{ canManage: boolean; owners: Person[] }> = ({ c
   };
   const open = (lead: Lead) => lead.status === 'NEW' || lead.status === 'CONTACTED';
 
+  const counts = meta?.counts ?? {};
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todos', value: counts.ALL ?? null, icon: Inbox, tone: 'brand', help: 'Todos los prospectos registrados que coinciden con la búsqueda.' },
+    { key: 'NEW', label: 'Nuevos', value: counts.NEW ?? null, icon: Sparkles, tone: 'info', help: 'Recién registrados: nadie los ha contactado todavía.' },
+    { key: 'CONTACTED', label: 'Contactados', value: counts.CONTACTED ?? null, icon: PhoneCall, tone: 'warning', help: 'Ya se habló con ellos, pero aún no son una oportunidad de venta.' },
+    { key: 'CONVERTED', label: 'Convertidos', value: counts.CONVERTED ?? null, icon: CircleCheckBig, tone: 'success', help: 'Pasaron a ser una empresa con su contacto y, si se eligió, una oportunidad.' },
+    { key: 'DISCARDED', label: 'Descartados', value: counts.DISCARDED ?? null, icon: XCircle, tone: 'neutral', help: 'Se cerraron sin venta, con el motivo anotado.' },
+  ];
+
   return (
     <div>
+      <FilterCards cards={cards} active={status} label="Prospectos por estado" onSelect={(key) => filter(() => setStatus(key))} />
+
       <Card>
         <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-200/80">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               className={`${INPUT_CLASS} pl-9`}
               placeholder="Buscar por nombre, empresa o correo"
@@ -81,10 +94,19 @@ export const LeadsTab: React.FC<{ canManage: boolean; owners: Person[] }> = ({ c
             <option value="DISCARDED">Descartados</option>
             <option value="">Todos</option>
           </select>
+          <HelpTip
+            text="Por trabajar reúne nuevos y contactados: los que todavía esperan una acción tuya. Las tarjetas de arriba separan cada estado."
+            label="Qué significa el estado de un prospecto"
+          />
           {canManage && (
-            <Button variant="primary" className="ml-auto" icon={<Plus className="w-4 h-4" />} onClick={() => setDialog({ kind: 'create' })}>
-              Nuevo prospecto
-            </Button>
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Button icon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setDialog({ kind: 'import' })}>
+                Importar
+              </Button>
+              <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setDialog({ kind: 'create' })}>
+                Nuevo prospecto
+              </Button>
+            </div>
           )}
         </div>
 
@@ -163,6 +185,16 @@ export const LeadsTab: React.FC<{ canManage: boolean; owners: Person[] }> = ({ c
       </Card>
 
       {dialog?.kind === 'create' && <LeadFormModal owners={owners} onClose={() => setDialog(null)} onSaved={done} />}
+      {dialog?.kind === 'import' && (
+        <ImportModal
+          title="Importar prospectos"
+          intro="Para cargar una lista de un evento o de un formulario externo. Quedan como nuevos y a tu cargo; un correo que ya está por trabajar no se duplica."
+          basePath="/crm/leads/import"
+          templateName="plantilla-prospectos.xlsx"
+          onClose={() => setDialog(null)}
+          onImported={load}
+        />
+      )}
       {dialog?.kind === 'edit' && <LeadFormModal lead={dialog.lead} owners={owners} onClose={() => setDialog(null)} onSaved={done} />}
       {dialog?.kind === 'convert' && <ConvertLeadModal lead={dialog.lead} onClose={() => setDialog(null)} onConverted={done} />}
       {dialog?.kind === 'discard' && <DiscardLeadModal lead={dialog.lead} onClose={() => setDialog(null)} onDiscarded={done} />}

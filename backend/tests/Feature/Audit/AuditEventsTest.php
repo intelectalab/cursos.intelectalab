@@ -22,11 +22,13 @@ class AuditEventsTest extends TestCase
 
         $this->withToken($token)->getJson($url)
             ->assertOk()
-            ->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('meta.total', 3)
             ->assertJsonPath('data.0.action', 'roles.created')
             ->assertJsonPath('data.0.actor.email', 'admin@acme.com')
             ->assertJsonPath('data.0.after.permissions', ['reports.read'])
-            ->assertJsonPath('data.1.action', 'tenants.provisioned');
+            // El inicio de sesión del administrador también queda registrado
+            ->assertJsonPath('data.1.action', 'auth.login')
+            ->assertJsonPath('data.2.action', 'tenants.provisioned');
 
         $this->withToken($token)->getJson($url.'?action=roles')
             ->assertJsonPath('meta.total', 1)
@@ -42,7 +44,7 @@ class AuditEventsTest extends TestCase
         $student = $this->createUser($alfa, RoleCatalog::STUDENT);
 
         $entities = $this->withToken($this->login('alfa', 'admin@alfa.com'))
-            ->getJson($this->tenantUrl('alfa', '/audit-events'))
+            ->getJson($this->tenantUrl('alfa', '/audit-events?action=tenants'))
             ->assertOk()
             ->json('data.*.entity_id');
 

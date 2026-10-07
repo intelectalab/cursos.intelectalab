@@ -112,6 +112,27 @@ class RoleService
     }
 
     /**
+     * Suma un rol base (Alumno, Profesor) a quien no lo tiene, sin tocar sus
+     * otros roles. Lo usa el sistema cuando alguien recibe un papel en un
+     * curso; no pasa por la regla de no otorgar más de lo que uno tiene porque
+     * el rol es fijo y de alcance acotado.
+     */
+    public function grantBaseRole(User $target, string $code): void
+    {
+        $role = Role::query()->where('code', $code)->where('is_system', true)->firstOrFail();
+
+        if ($target->roles()->whereKey($role->id)->exists()) {
+            return;
+        }
+
+        $before = $target->roles()->pluck('name')->all();
+        $target->roles()->attach($role->id);
+        $target->unsetRelation('roles');
+
+        $this->audit->record('users.roles_updated', $target, ['roles' => $before], ['roles' => [...$before, $role->name]]);
+    }
+
+    /**
      * @return array{name: string, description: ?string, permissions: list<string>}
      */
     private function snapshot(Role $role): array

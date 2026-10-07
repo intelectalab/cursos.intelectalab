@@ -23,8 +23,6 @@ class TenantSettingsTest extends TestCase
             'contact_email' => 'contacto@acme.com',
             'contact_phone' => '01 555 0100',
             'contact_address' => 'Av. Principal 123, Lima',
-            'terms' => 'Términos de la academia.',
-            'privacy_policy' => 'Política de privacidad.',
             'session_minutes' => 30,
             'grade_scale' => 20,
         ];

@@ -20,6 +20,7 @@ import {
   type Person,
   type Stage,
 } from '../api';
+import { CompanySelect } from './CompanySelect';
 
 const ACTIVITY_ICON: Record<ActivityType, LucideIcon> = {
   CALL: Phone,
@@ -114,23 +115,15 @@ export const OpportunityFormModal: React.FC<{
         {noCompanies && <Alert tone="info">Primero registra la empresa en la pestaña Empresas: toda oportunidad pertenece a una.</Alert>}
         {!fixedCompany && (
           <Field label="Empresa">
-            <select
-              className={INPUT_CLASS}
-              required
+            <CompanySelect
+              companies={companies}
               value={companyId}
-              onChange={(event) => {
-                setCompanyId(event.target.value);
+              onChange={(id) => {
+                setCompanyId(id);
                 setContactId('');
                 setContacts([]);
               }}
-            >
-              <option value="">{companies === null ? 'Cargando…' : 'Elige una empresa'}</option>
-              {companies?.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            />
           </Field>
         )}
         <Field label="Qué se quiere vender" hint="Ejemplo: 40 licencias de Power BI para el área de finanzas.">
@@ -327,21 +320,21 @@ export const OpportunityModal: React.FC<{
               <div>
                 <dt className="text-xs text-slate-500">Cierre previsto</dt>
                 <dd className="text-slate-800 flex items-center gap-1.5">
-                  <CalendarClock className="w-3.5 h-3.5 text-slate-400" />
+                  <CalendarClock className="w-3.5 h-3.5 text-slate-500" />
                   {formatDay(opportunity.expected_close_date)}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-slate-500">Contacto</dt>
                 <dd className="text-slate-800 flex items-center gap-1.5">
-                  <UserRound className="w-3.5 h-3.5 text-slate-400" />
+                  <UserRound className="w-3.5 h-3.5 text-slate-500" />
                   {opportunity.contact?.name ?? '—'}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-slate-500">A cargo de</dt>
                 <dd className="text-slate-800 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                  <Building2 className="w-3.5 h-3.5 text-slate-500" />
                   {opportunity.owner?.name ?? 'Nadie'}
                 </dd>
               </div>

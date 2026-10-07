@@ -12,15 +12,64 @@ class CertificateTemplate extends Model
 {
     use BelongsToTenant, HasUuids;
 
+    public const POSITIONS = ['LEFT', 'CENTER', 'RIGHT'];
+
+    public const HEIGHTS = ['TOP', 'MIDDLE', 'LOW'];
+
+    public const SIZES = ['S', 'M', 'L'];
+
+    /** El diseño de siempre: es lo que vale mientras la organización no cambie nada */
+    public const DEFAULT_DESIGN = [
+        // Bloque de texto: alineación y a qué altura empieza
+        'text_align' => 'CENTER',
+        'text_top' => 'TOP',
+        'name_size' => 'M',
+        // Títulos y curso, nombre del alumno, y texto secundario
+        'primary_color' => '#0a2540',
+        'accent_color' => '#0c4a8a',
+        'text_color' => '#475569',
+        // Con un fondo propio que ya trae el logo o la palabra "Certificado", se ocultan
+        'show_logo' => true,
+        'show_organization' => true,
+        'show_title' => true,
+        // Zona inferior: la firma y el código con su QR, cada uno en un tercio
+        'signature_position' => 'LEFT',
+        'qr_position' => 'RIGHT',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'signer_name',
         'signer_title',
         'signature_file_id',
+        'background_file_id',
+        'design',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'design' => 'array',
+        ];
+    }
 
     public function signature(): BelongsTo
     {
         return $this->belongsTo(File::class, 'signature_file_id');
+    }
+
+    public function background(): BelongsTo
+    {
+        return $this->belongsTo(File::class, 'background_file_id');
+    }
+
+    /**
+     * Diseño vigente: lo guardado sobre los valores por defecto.
+     *
+     * @return array<string, mixed>
+     */
+    public function resolvedDesign(): array
+    {
+        return array_intersect_key($this->design ?? [], self::DEFAULT_DESIGN) + self::DEFAULT_DESIGN;
     }
 }

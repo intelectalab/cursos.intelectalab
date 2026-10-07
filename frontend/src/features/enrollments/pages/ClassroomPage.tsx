@@ -342,7 +342,7 @@ export const ClassroomPage: React.FC = () => {
                                 selected ? 'bg-brand-50 text-brand-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
                               }`}
                             >
-                              <Icon className={`w-4 h-4 shrink-0 ${selected ? 'text-brand-600' : 'text-slate-400'}`} />
+                              <Icon className={`w-4 h-4 shrink-0 ${selected ? 'text-brand-600' : 'text-slate-500'}`} />
                               <span className="truncate flex-1">{item.kind === 'resource' ? item.resource.title : item.activity.title}</span>
                               {done && (
                                 <>
