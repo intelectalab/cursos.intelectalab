@@ -27,7 +27,7 @@ class CourseService
     private const EDITABLE = ['title', 'summary', 'description', 'category', 'level', 'duration_hours', 'language'];
 
     /** Se aplican al guardar, sin pasar por una publicación */
-    private const COMMERCIAL = ['access_days', 'price', 'issues_certificate'];
+    private const COMMERCIAL = ['access_days', 'price', 'issues_certificate', 'sequential'];
 
     public function __construct(
         private readonly FileStorage $storage,
@@ -44,6 +44,7 @@ class CourseService
                 'access_days' => $data['access_days'] ?? null,
                 'price' => $data['price'] ?? null,
                 'issues_certificate' => $data['issues_certificate'] ?? false,
+                'sequential' => $data['sequential'] ?? false,
                 'status' => Course::STATUS_DRAFT,
                 'created_by' => $actor->id,
             ]);
@@ -72,10 +73,11 @@ class CourseService
                 $this->audit->record('courses.updated', $course, $before, $course->only(self::EDITABLE));
             }
 
-            // Reglas de matrícula, venta y certificación, no contenido: no generan cambios por publicar
+            // Reglas de matrícula, venta, certificación y recorrido, no contenido: no generan cambios por publicar
             $course->access_days = $data['access_days'] ?? null;
             $course->price = $data['price'] ?? null;
             $course->issues_certificate = $data['issues_certificate'] ?? false;
+            $course->sequential = $data['sequential'] ?? false;
 
             if ($course->isDirty(self::COMMERCIAL)) {
                 $previous = array_intersect_key($course->getOriginal(), $course->getDirty());
@@ -264,6 +266,19 @@ class CourseService
     private function attributes(array $data): array
     {
         return array_merge(array_fill_keys(self::EDITABLE, null), array_intersect_key($data, array_flip(self::EDITABLE)));
+    }
+
+    /**
+     * El borrador con la forma de una versión publicada, sin publicarlo:
+     * para la vista previa.
+     *
+     * @return array<string, mixed>
+     */
+    public function draftSnapshot(Course $course): array
+    {
+        $course->load(['sections.resources.file']);
+
+        return $this->snapshot($course);
     }
 
     /**

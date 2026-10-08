@@ -18,6 +18,7 @@ const ResetPassword = lazyPage(() => import('../features/auth/pages/PasswordReco
 const AccountPage = lazyPage(() => import('../features/account/pages/AccountPage'), 'AccountPage');
 const CourseEditorPage = lazyPage(() => import('../features/courses/pages/CourseEditorPage'), 'CourseEditorPage');
 const ClassroomPage = lazyPage(() => import('../features/enrollments/pages/ClassroomPage'), 'ClassroomPage');
+const ClassroomPreviewPage = lazyPage(() => import('../features/enrollments/pages/ClassroomPage'), 'ClassroomPreviewPage');
 const PlatformConsole = lazyPage(() => import('../features/platform/pages/PlatformConsole'), 'PlatformConsole');
 const PublicCatalogPage = lazyPage(() => import('../features/sales/pages/CatalogPages'), 'PublicCatalogPage');
 const PublicCoursePage = lazyPage(() => import('../features/sales/pages/CatalogPages'), 'PublicCoursePage');
@@ -111,6 +112,14 @@ function TenantRoutes() {
               element={
                 <PermissionGate permission={['courses.read', 'courses.assigned.read']}>
                   <CourseEditorPage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/courses/:courseId/preview"
+              element={
+                <PermissionGate permission={['courses.read', 'courses.assigned.read']}>
+                  <ClassroomPreviewPage />
                 </PermissionGate>
               }
             />

@@ -11,6 +11,7 @@ use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use OpenSpout\Reader\XLSX\Reader;
 use Tests\TestCase;
 
 /**
@@ -437,6 +438,189 @@ class ActivityDeliveryTest extends TestCase
         // El alumno no entra al seguimiento
         $this->withToken($this->token)->getJson($this->api("/courses/{$this->course}/tracking"))->assertForbidden();
         $this->withToken($this->token)->getJson($this->api("/courses/{$this->course}/submissions"))->assertForbidden();
+    }
+
+    public function test_task_deadline_marks_late_submissions_or_rejects_them(): void
+    {
+        $task = ['title' => 'Presupuesto', 'description' => 'Arma un presupuesto.', 'allow_text' => true, 'allow_file' => true];
+        $endpoint = $this->me("/activities/{$this->task}/submission");
+
+        $this->withToken($this->admin)->putJson($this->api("/courses/{$this->course}/activities/{$this->task}"), $task + ['due_days' => 3])
+            ->assertOk()->assertJsonPath('data.due_days', 3)->assertJsonPath('data.accept_late', true);
+        $this->withToken($this->admin)->postJson($this->api("/courses/{$this->course}/publish"))->assertOk();
+
+        // Dentro del plazo: tres días desde el inicio de la matrícula
+        $this->withToken($this->token)->getJson($this->me("/activities/{$this->task}"))
+            ->assertOk()
+            ->assertJsonPath('data.state.past_due', false)
+            ->assertJsonPath('data.state.can_submit', true);
+        $this->assertNotNull($this->withToken($this->token)->getJson($this->me("/activities/{$this->task}"))->json('data.state.due_at'));
+
+        $this->travel(4)->days();
+        $token = $this->login('acme', 'ana@acme.com');
+
+        // Fuera de plazo se recibe, marcada como tardía
+        $this->withToken($token)->post($endpoint, ['body' => 'Llegué tarde.'], self::JSON)
+            ->assertOk()->assertJsonPath('data.is_late', true);
+
+        $admin = $this->login('acme', 'admin@acme.com');
+        $this->withToken($admin)->getJson($this->api("/courses/{$this->course}/tracking"))
+            ->assertJsonPath("data.students.0.grades.{$this->task}.is_late", true);
+
+        // Si la tarea no admite tardías, quien aún no entregó ya no puede hacerlo
+        $this->withToken($admin)->putJson($this->api("/courses/{$this->course}/activities/{$this->task}"), $task + ['due_days' => 3, 'accept_late' => false])->assertOk();
+        $this->withToken($admin)->postJson($this->api("/courses/{$this->course}/publish"))->assertOk();
+
+        $other = $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'beto@acme.com']);
+        $this->withToken($admin)->postJson($this->api("/courses/{$this->course}/enrollments"), ['student_ids' => [$other->id]])->assertCreated();
+
+        $this->travel(4)->days();
+        $otherToken = $this->login('acme', 'beto@acme.com');
+
+        $this->withToken($otherToken)->getJson($this->me("/activities/{$this->task}"))
+            ->assertJsonPath('data.state.past_due', true)
+            ->assertJsonPath('data.state.can_submit', false);
+        $this->withToken($otherToken)->post($endpoint, ['body' => 'Tarde.'], self::JSON)
+            ->assertStatus(409)->assertJsonPath('code', 'SUBMISSION_LATE');
+    }
+
+    public function test_reviewer_returns_a_submission_and_the_student_resubmits(): void
+    {
+        $endpoint = $this->me("/activities/{$this->task}/submission");
+        $this->withToken($this->token)->post($endpoint, ['body' => 'Primera versión.'], self::JSON)->assertOk();
+
+        $submission = $this->withToken($this->admin)->getJson($this->api("/courses/{$this->course}/submissions"))->json('data.0.id');
+        $review = $this->api("/courses/{$this->course}/submissions/{$submission}");
+
+        $this->withToken($this->admin)->postJson("{$review}/grade", ['grade_percent' => 40])->assertOk();
+
+        // Devolver exige decir qué corregir, y borra la nota
+        $this->withToken($this->admin)->postJson("{$review}/return", [])->assertStatus(422);
+        $this->withToken($this->admin)->postJson("{$review}/return", ['feedback' => 'Faltan los totales.'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'RETURNED')
+            ->assertJsonPath('data.grade_percent', null);
+
+        // Devuelta no se califica ni se devuelve otra vez
+        $this->withToken($this->admin)->postJson("{$review}/grade", ['grade_percent' => 90])->assertStatus(422);
+        $this->withToken($this->admin)->postJson("{$review}/return", ['feedback' => 'Otra vez.'])->assertStatus(422);
+        $this->withToken($this->admin)->getJson($this->api("/courses/{$this->course}/submissions?status=RETURNED"))->assertJsonPath('meta.total', 1);
+
+        $this->withToken($this->token)->getJson($this->me("/activities/{$this->task}"))
+            ->assertJsonPath('data.state.can_submit', true)
+            ->assertJsonPath('data.state.submission.status', 'RETURNED')
+            ->assertJsonPath('data.state.submission.feedback', 'Faltan los totales.');
+
+        $this->withToken($this->token)->post($endpoint, ['body' => 'Con totales.'], self::JSON)
+            ->assertOk()->assertJsonPath('data.status', 'SUBMITTED');
+        $this->withToken($this->admin)->postJson("{$review}/grade", ['grade_percent' => 90])->assertOk()->assertJsonPath('data.status', 'GRADED');
+
+        $this->assertTrue(AuditEvent::query()->where('action', 'submissions.returned')->exists());
+    }
+
+    public function test_reviewer_sees_each_attempt_and_grants_extra_attempts(): void
+    {
+        foreach ([1, 2] as $ignored) {
+            [$attempt, $ids] = $this->startAttempt();
+            $this->withToken($this->token)->postJson($this->api("/me/attempts/{$attempt}/submit"), ['answers' => [$ids['TRUE_FALSE'] => true]])->assertOk();
+        }
+
+        $this->withToken($this->token)->postJson($this->me("/activities/{$this->quiz}/attempts"))->assertStatus(409);
+
+        $enrollment = $this->withToken($this->admin)->getJson($this->api("/courses/{$this->course}/tracking"))->json('data.students.0.enrollment_id');
+        $detail = $this->api("/courses/{$this->course}/enrollments/{$enrollment}/activities/{$this->quiz}");
+
+        // Quien revisa ve lo que marcó el alumno y la respuesta correcta
+        $this->withToken($this->admin)->getJson("{$detail}/attempts")
+            ->assertOk()
+            ->assertJsonPath('data.student.name', 'Ana Alumna')
+            ->assertJsonPath('data.max_attempts', 2)
+            ->assertJsonPath('data.attempts_left', 0)
+            ->assertJsonCount(2, 'data.attempts')
+            ->assertJsonPath('data.attempts.0.score_percent', 25)
+            ->assertJsonPath('data.attempts.0.answers_revealed', true);
+
+        $this->withToken($this->admin)->postJson("{$detail}/extra-attempts", ['attempts' => 1])->assertStatus(422);
+        $this->withToken($this->admin)->postJson("{$detail}/extra-attempts", ['attempts' => 1, 'reason' => 'Se le cortó la luz.'])
+            ->assertCreated()->assertJsonPath('data.extra_attempts', 1);
+
+        $this->withToken($this->admin)->getJson("{$detail}/attempts")
+            ->assertJsonPath('data.attempts_left', 1)
+            ->assertJsonPath('data.grants.0.reason', 'Se le cortó la luz.');
+
+        // El alumno recupera un intento, y solo uno
+        $this->withToken($this->token)->getJson($this->me('/activities'))
+            ->assertJsonPath("data.{$this->quiz}.attempts_left", 1)
+            ->assertJsonPath("data.{$this->quiz}.extra_attempts", 1);
+        [$third, $ids] = $this->startAttempt();
+        $this->withToken($this->token)->postJson($this->api("/me/attempts/{$third}/submit"), ['answers' => [$ids['SINGLE'] => 'b', $ids['TRUE_FALSE'] => true]])
+            ->assertOk()->assertJsonPath('data.passed', true);
+        $this->withToken($this->token)->postJson($this->me("/activities/{$this->quiz}/attempts"))->assertStatus(409);
+
+        // Ni el alumno ni un profesor de otro curso llegan a esto
+        $teacher = $this->createUser($this->tenant, RoleCatalog::TEACHER);
+        $this->withToken($this->login('acme', $teacher->email))->postJson("{$detail}/extra-attempts", ['attempts' => 1, 'reason' => 'x'])->assertNotFound();
+        $this->withToken($this->token)->getJson("{$detail}/attempts")->assertForbidden();
+
+        $this->assertTrue(AuditEvent::query()->where('action', 'attempts.granted')->exists());
+    }
+
+    public function test_final_grade_is_the_weighted_average_of_quizzes_and_tasks(): void
+    {
+        $task = ['title' => 'Presupuesto', 'description' => 'Arma un presupuesto.', 'allow_text' => true, 'allow_file' => true];
+        $taskUrl = $this->api("/courses/{$this->course}/activities/{$this->task}");
+
+        // La tarea pesa el triple que el cuestionario
+        $this->withToken($this->admin)->putJson($taskUrl, $task + ['weight' => 101])->assertStatus(422);
+        $this->withToken($this->admin)->putJson($taskUrl, $task + ['weight' => 3])->assertOk()->assertJsonPath('data.weight', 3);
+        $this->withToken($this->admin)->postJson($this->api("/courses/{$this->course}/publish"))->assertOk();
+
+        [$attempt, $ids] = $this->startAttempt();
+        $this->withToken($this->token)->postJson($this->api("/me/attempts/{$attempt}/submit"), ['answers' => [$ids['SINGLE'] => 'b', $ids['TRUE_FALSE'] => true]])->assertOk();
+        $this->withToken($this->token)->post($this->me("/activities/{$this->task}/submission"), ['body' => 'Entrega.'], self::JSON)->assertOk();
+
+        // Lo que aún no tiene nota cuenta como cero: (1 × 100 + 3 × 0) / 4
+        $this->withToken($this->token)->getJson($this->me('/grades'))
+            ->assertOk()
+            ->assertJsonPath('data.final_percent', 25)
+            // La encuesta no lleva nota
+            ->assertJsonCount(2, 'data.items')
+            ->assertJsonPath('data.items.1.weight', 3)
+            ->assertJsonPath('data.items.1.status', 'SUBMITTED');
+
+        $submission = $this->withToken($this->admin)->getJson($this->api("/courses/{$this->course}/submissions"))->json('data.0.id');
+        $this->withToken($this->admin)->postJson($this->api("/courses/{$this->course}/submissions/{$submission}/grade"), ['grade_percent' => 60])->assertOk();
+
+        // (1 × 100 + 3 × 60) / 4
+        $this->withToken($this->token)->getJson($this->me('/grades'))->assertJsonPath('data.final_percent', 70);
+        $this->withToken($this->admin)->getJson($this->api("/courses/{$this->course}/tracking"))
+            ->assertOk()
+            ->assertJsonPath('data.students.0.final_percent', 70)
+            ->assertJsonPath('data.activities.1.weight', 3)
+            ->assertJsonPath('data.activities.2.weight', null);
+
+        $export = $this->withToken($this->admin)->get($this->api("/courses/{$this->course}/gradebook/export"))
+            ->assertOk()->assertHeader('Content-Disposition', 'attachment; filename=notas.xlsx');
+
+        // El Excel trae las notas en la escala de la academia (0 a 20)
+        $reader = new Reader;
+        $reader->open($export->baseResponse->getFile()->getPathname());
+        $rows = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+        }
+        $reader->close();
+        $this->assertSame(['Alumno', 'Correo', 'Documento', 'Evaluación (peso 1)', 'Presupuesto (peso 3)', 'Nota final (0 a 20)'], $rows[0]);
+        $this->assertSame('Ana Alumna', $rows[1][0]);
+        $this->assertEquals([20, 12, 14], array_slice($rows[1], 3));
+        $this->withToken($this->token)->get($this->api("/courses/{$this->course}/gradebook/export"), self::JSON)->assertForbidden();
+
+        // Con peso cero la tarea deja de contar
+        $this->withToken($this->admin)->putJson($taskUrl, $task + ['weight' => 0])->assertOk();
+        $this->withToken($this->admin)->postJson($this->api("/courses/{$this->course}/publish"))->assertOk();
+        $this->withToken($this->token)->getJson($this->me('/grades'))->assertJsonPath('data.final_percent', 100);
     }
 
     public function test_results_are_kept_when_the_course_changes_and_isolated_between_tenants(): void

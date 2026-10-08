@@ -109,6 +109,21 @@ export const CourseFields: React.FC<{
           <span className="block text-xs text-slate-500">Se emite solo cuando el alumno completa el curso al 100 %, con código y QR de verificación.</span>
         </span>
       </label>
+      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          className={`${CHECKBOX_CLASS} mt-0.5`}
+          disabled={disabled}
+          checked={value.sequential}
+          onChange={(event) => set('sequential', event.target.checked)}
+        />
+        <span>
+          <span className="block text-[13px] font-medium text-slate-800">Avance secuencial</span>
+          <span className="block text-xs text-slate-500">
+            Cada sección se abre cuando el alumno completa la anterior. Dentro de una sección avanza en el orden que quiera. Vale desde que se guarda.
+          </span>
+        </span>
+      </label>
       {withDescription && (
         <Field label="Descripción (opcional)" hint="Qué aprenderá el alumno, a quién va dirigido y qué necesita saber antes.">
           <textarea {...text('description')} rows={8} maxLength={20000} />

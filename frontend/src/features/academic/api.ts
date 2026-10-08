@@ -123,6 +123,8 @@ export interface Activity {
   type: ActivityType;
   title: string;
   description: string | null;
+  // Peso en la nota final del curso (cuestionarios y tareas); 0 = no cuenta
+  weight: number;
   // Cuestionario
   passing_percent?: number;
   max_attempts?: number | null;
@@ -133,18 +135,24 @@ export interface Activity {
   // Tarea
   allow_text?: boolean;
   allow_file?: boolean;
+  // Plazo en días desde el inicio de la matrícula; null = sin plazo
+  due_days?: number | null;
+  accept_late?: boolean;
 }
 
 export interface ActivityInput {
   type: ActivityType;
   title: string;
   description: string | null;
+  weight?: number;
   passing_percent?: number;
   max_attempts?: number | null;
   time_limit_minutes?: number | null;
   shuffle?: boolean;
   allow_text?: boolean;
   allow_file?: boolean;
+  due_days?: number | null;
+  accept_late?: boolean;
   questions?: SurveyQuestion[];
 }
 

@@ -4,7 +4,7 @@ Comparación entre las historias del backlog que entrega jefatura (códigos `YC-
 
 El backlog llega por partes (un sprint por semana). Cada parte se agrega aquí.
 
-Última actualización: 2026-10-06, al cerrar S12 (sprint 1 del backlog, 13 épicas).
+Última actualización: 2026-10-08, al cerrar la entrega 3 de "Evaluaciones y aula". El sprint 2 del backlog (12 épicas) se comparó el 2026-10-07. El sprint 1 se comparó el 2026-10-06, al cerrar S12.
 
 **Estados:** Hecho · Parcial (existe, pero le falta algo de lo que pide la historia) · Falta · Distinto (se resolvió de otra forma por una decisión ya tomada).
 
@@ -143,6 +143,174 @@ Decisión ya tomada con jefatura: los videos se alojan en YouTube y el sistema s
 | YC-DASH-001 Panel según el rol | Parcial | El alumno ve su avance; el resto ve accesos directos a sus módulos y dos cifras. |
 | YC-DASH-002 Indicadores y pendientes por rol | Parcial | Los indicadores están en Reportes (para quien tiene permiso), no en el inicio; no hay lista de pendientes por rol. |
 
+## Sprint 2 del backlog
+
+Recibido el 2026-10-07: 12 épicas y 83 historias (la épica B2C vino pegada dos veces; se cuenta una). Solo llegaron los títulos de las historias y el contexto de cada épica, sin criterios de aceptación ni el texto de las reglas. La comparación se hizo por título contra el código: una historia marcada "Hecho" puede tener criterios que todavía no conocemos.
+
+Resumen: 83 historias. 27 hechas, 21 parciales, 32 faltan y 3 se resolvieron distinto. Al compararlo eran 21, 25, 34 y 3: el bloque "Evaluaciones y aula" cerró seis (EVA-005, 006, 007 y 009; AULA-003 y 004). De las 32 que faltan, 16 son de Pagos y Facturación electrónica, que esperan la decisión 8.
+
+| Épica | Historias | Hecho | Parcial | Falta | Distinto |
+| --- | --- | --- | --- | --- | --- |
+| EVA Evaluaciones | 9 | 8 | 1 | 0 | 0 |
+| CER Certificados | 7 | 3 | 3 | 1 | 0 |
+| AULA | 4 | 3 | 1 | 0 | 0 |
+| B2C Venta a personas | 9 | 3 | 3 | 2 | 1 |
+| PAG Pagos | 10 | 0 | 3 | 7 | 0 |
+| FAC Facturación electrónica | 9 | 0 | 0 | 9 | 0 |
+| PRM Promociones | 16 | 4 | 3 | 7 | 2 |
+| APR Aprobaciones | 2 | 0 | 0 | 2 | 0 |
+| ALU Alumnos | 2 | 0 | 1 | 1 | 0 |
+| WEB Sitio público | 6 | 1 | 3 | 2 | 0 |
+| CAMPUS Portal del alumno | 7 | 5 | 2 | 0 | 0 |
+| PRO Docentes | 2 | 0 | 1 | 1 | 0 |
+
+### EVA — Evaluaciones
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-EVA-001 Bancos con editor por tipo | Hecho | Bancos por academia y siete tipos de pregunta, cada uno con su editor, más importación desde Excel. Falta la pregunta de respuesta abierta. |
+| YC-EVA-002 Configuración del cuestionario | Hecho | Nota mínima, intentos, tiempo límite, orden al azar y puntos por pregunta. Sin fechas de apertura y cierre. |
+| YC-EVA-003 Rendir con calificación en el servidor | Hecho | El servidor arma el intento, guarda el borrador y califica; las respuestas correctas no viajan al navegador. |
+| YC-EVA-004 Cierre automático al agotarse el tiempo | Parcial | El intento vence solo, pero queda en nota 0 aunque hubiera respuestas guardadas. Falta decidir si se califica lo guardado. |
+| YC-EVA-005 Intentos, intentos adicionales y revisión | Hecho (2026-10-08) | Tope de intentos y cuenta el mejor; el alumno revisa su intento. Quien revisa ve cada intento con sus respuestas y da intentos adicionales con motivo. No se pueden retirar una vez dados. |
+| YC-EVA-006 Entrega de tareas, a tiempo o tardía | Hecho (2026-10-08) | Entrega con texto o archivo. Plazo opcional en días desde la matrícula; fuera de plazo se marca como tardía o se rechaza, según la tarea. No es una fecha de calendario ni hay prórroga por alumno. |
+| YC-EVA-007 Calificar y devolver tareas | Hecho (2026-10-08) | Se califica con nota y comentario, o se devuelve con comentario para que el alumno la rehaga. No se guarda el historial de entregas anteriores. |
+| YC-EVA-008 Encuestas: responder y ver resultados | Hecho | Una respuesta por alumno y resultados sin nombres. |
+| YC-EVA-009 Libro de notas y nota final | Hecho (2026-10-08) | Nota final por alumno como promedio de cuestionarios y tareas según su peso, a la vista de quien revisa y del alumno, con descarga en Excel. Sin nota mínima para aprobar el curso ni categorías de peso. |
+
+### CER — Certificados
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-CER-001 Plantillas de certificado | Parcial | Una plantilla por academia con fondo propio, posiciones, colores y vista previa. No hay varias plantillas ni una por curso. |
+| YC-CER-002 Requisitos generales y por curso | Parcial | Cada curso decide si entrega certificado, y se exige el 100 % completado. No hay nota mínima, encuesta obligatoria ni requisitos generales de la academia. |
+| YC-CER-003 Emisión automática con código y QR | Hecho | — |
+| YC-CER-004 Emitidos y emisión manual o forzada | Hecho | Listado, emisión manual de uno o de varios pendientes. La manual exige que el curso esté completado: no hay emisión "forzada" sin cumplir requisitos. |
+| YC-CER-005 Detalle, descarga y revocación | Parcial | Descarga del PDF y anulación con motivo desde el listado. No hay pantalla de detalle por certificado. |
+| YC-CER-006 Verificación pública por código o QR | Hecho | Página pública; cada consulta queda registrada. |
+| YC-CER-007 Asistencia mínima (F2) | Falta | No existe la asistencia: los cursos son grabados. Va ligada al módulo de horarios (decisión 15). |
+
+### AULA
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-AULA-001 Portada con avance, anuncios y requisitos del certificado | Parcial | Portada con el avance y el temario. No hay anuncios (tampoco existen en Cursos) ni se muestran los requisitos del certificado. |
+| YC-AULA-002 Reproductor: video, PDF, texto y enlace | Hecho | Los cuatro tipos, con registro de avance al abrirlos. El video es de YouTube. |
+| YC-AULA-003 Avance secuencial por secciones | Hecho (2026-10-08) | Interruptor por curso: cada sección se abre al completar la anterior, y el servidor no entrega el contenido de una sección cerrada. Un cuestionario bloquea hasta aprobarlo. |
+| YC-AULA-004 Vista previa para profesores y administradores | Hecho (2026-10-08) | "Ver como alumno" abre el aula de lo publicado o del borrador, sin avance. De las actividades se ve la ficha; no se rinden. |
+
+### B2C — Venta a personas
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-B2C-001 Carrito | Distinto | Decisión de S5: un curso (o un paquete) por compra, sin carrito. |
+| YC-B2C-002 Precios y totales solo en el backend | Hecho | — |
+| YC-B2C-003 Pedido con datos de facturación y precio congelado | Parcial | El pedido guarda título y precio del momento. No pide datos de facturación (boleta o factura, RUC). |
+| YC-B2C-004 Efectos del primer pago aprobado | Parcial | El pago confirmado matricula. El cupón se cuenta al crear el pedido, no al pagar; no hay carrito que vaciar ni comprobante. |
+| YC-B2C-005 Pedido del alumno: estado y cancelación | Hecho | "Mis compras" con el estado, las instrucciones de pago y cancelar si está pendiente. |
+| YC-B2C-006 Caducidad y pedidos fallidos | Parcial | El pedido pendiente vence a las 72 horas. No existe el estado "fallido" porque no hay pasarela. |
+| YC-B2C-007 Pedidos en el back-office | Hecho | Listado con filtros y tarjetas, detalle, confirmar pago y cancelar. |
+| YC-B2C-008 Venta asistida | Falta | El personal no puede registrar una venta a nombre de un alumno (sí matricular directamente). |
+| YC-B2C-009 Cierre del pedido al completarse sus matrículas | Falta | El pedido termina en "Pagado" y matricula en ese mismo momento; no hay un estado "cerrado". Falta saber qué pide la historia. |
+
+### PAG — Pagos
+
+Todo este módulo es el S6 del plan y espera la decisión 8 de jefatura (pasarela, quién cobra, Yape, reembolsos).
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-PAG-001 Configuración de la pasarela | Falta | Está el punto de conexión en el código, sin ninguna pasarela enchufada. |
+| YC-PAG-002 Métodos de pago por academia | Falta | Hoy la academia solo escribe sus instrucciones de pago. |
+| YC-PAG-003 Tarjeta con reintentos | Falta | — |
+| YC-PAG-004 Yape con celular y código | Falta | — |
+| YC-PAG-005 Tarjeta guardada | Falta | — |
+| YC-PAG-006 PagoEfectivo (CIP) | Falta | — |
+| YC-PAG-007 Transferencia y Yape o Plin por QR con constancia | Parcial | El alumno paga por fuera con las instrucciones de la academia. No hay QR ni puede adjuntar su constancia. |
+| YC-PAG-008 Conciliación manual por Finanzas | Parcial | El personal confirma el pago con medio, referencia y nota. No existe el rol Finanzas ni una bandeja de pagos por conciliar. |
+| YC-PAG-009 Webhooks con firma e idempotencia | Falta | La idempotencia de la compra y de la confirmación ya existe; los avisos de la pasarela no. |
+| YC-PAG-010 Pagos en el back-office | Parcial | Los pagos se ven dentro de cada pedido; no hay un listado propio de pagos. |
+
+### FAC — Facturación electrónica
+
+Depende de la decisión 8 (comprobantes, RUC, IGV) y de contratar un OSE o PSE. Decisión vigente de S5: precio final, sin IGV ni comprobante.
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-FAC-001 Configuración: OSE/PSE, series y certificado | Falta | — |
+| YC-FAC-002 IGV en tres modos | Falta | — |
+| YC-FAC-003 Boleta o factura automática al pagar | Falta | — |
+| YC-FAC-004 Envío de facturas y respuesta de SUNAT | Falta | — |
+| YC-FAC-005 Resumen diario de boletas | Falta | — |
+| YC-FAC-006 Corrección y reenvío de rechazados | Falta | — |
+| YC-FAC-007 Comunicación de baja | Falta | — |
+| YC-FAC-008 Notas de crédito | Falta | — |
+| YC-FAC-009 Bandeja de comprobantes | Falta | — |
+
+### PRM — Promociones
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-PRM-001 Porcentaje y monto fijo con alcance | Hecho | Aplica a todo o a los cursos y paquetes elegidos. No hay alcance por categoría. |
+| YC-PRM-002 Ciclo de vida | Parcial | Activa o inactiva, con fechas de inicio y fin. "Programada", "pausada" y "vencida" no son estados propios: se deducen. |
+| YC-PRM-003 Promoción automática por línea | Falta | Todo descuento necesita un código. |
+| YC-PRM-004 Cupones: códigos, límites y activación | Hecho | Varios cupones por promoción, cada uno se activa o desactiva. |
+| YC-PRM-005 Aplicar cupón con el motivo del rechazo | Hecho | En el checkout (no hay carrito), con ocho motivos distintos. |
+| YC-PRM-006 Acumulación de promoción y cupón | Distinto | Decisión de S11: los descuentos no se acumulan, un cupón por compra. |
+| YC-PRM-007 Canje al aprobarse el primer pago | Distinto | Decisión de S11: el uso cuenta al crear el pedido y se libera si vence o se cancela. El tope se controla con bloqueo en la base de datos. |
+| YC-PRM-008 Condiciones del comprador (F2) | Parcial | Compra mínima y una vez por persona. Faltan primera compra, segmento y moneda. |
+| YC-PRM-009 Tipos avanzados (F2) | Falta | — |
+| YC-PRM-010 Exclusivas de un convenio (F3) | Falta | — |
+| YC-PRM-011 Lotes de cupones de un solo uso (F2) | Falta | — |
+| YC-PRM-012 Campañas (F2) | Falta | — |
+| YC-PRM-013 Simulador «Probar cupón» | Falta | — |
+| YC-PRM-014 Registro de intentos e indicadores | Parcial | Se registran los usos de cada cupón. No los intentos rechazados ni indicadores. |
+| YC-PRM-015 Exclusiones (F2) | Falta | Tampoco existen los pagos en cuotas. |
+| YC-PRM-016 Alcance de paquetes (F2) | Hecho | — |
+
+### APR — Aprobaciones
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-APR-001 Motor de solicitudes | Falta | Hoy quien tiene el permiso ejecuta directamente (publicar, entregar licencias sin pago, anular). |
+| YC-APR-002 Bandeja «Por aprobar» | Falta | — |
+
+### ALU — Alumnos
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-ALU-001 Listado y alta de alumnos | Parcial | Los alumnos se crean e importan desde Usuarios, junto con el resto de cuentas. No hay pantalla propia de alumnos. |
+| YC-ALU-002 Alumno 360 | Falta | Sus matrículas, compras, certificados y tickets están cada uno en su módulo. |
+
+### WEB — Sitio público
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-WEB-001 Portada del sitio | Falta | La cara pública es el catálogo; no hay portada editable. |
+| YC-WEB-002 Catálogo con filtros | Parcial | Catálogo público de cursos y paquetes, sin buscador ni filtros. |
+| YC-WEB-003 Ficha pública del curso | Hecho | — |
+| YC-WEB-004 Rutas de aprendizaje y ficha del paquete (F2) | Parcial | Paquetes con ficha pública. No existe la "ruta" como concepto aparte. |
+| YC-WEB-005 Landing para empresas con formulario (F3) | Falta | Los prospectos los registra o importa el personal. |
+| YC-WEB-006 Posicionamiento, caché y rendimiento | Parcial | El rendimiento se trabajó en S12. Para buscadores no hay nada: es una sola aplicación que se arma en el navegador. |
+
+### CAMPUS — Portal del alumno
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-CAMPUS-001 Inicio del campus | Hecho | — |
+| YC-CAMPUS-002 Catálogo del campus | Hecho | "Cursos disponibles". No muestra los paquetes. |
+| YC-CAMPUS-003 Ficha del curso y agregar al carrito | Parcial | Ficha con compra directa; sin carrito. |
+| YC-CAMPUS-004 Mis cursos con avance y vigencia | Hecho | — |
+| YC-CAMPUS-005 Mis certificados | Hecho | Ver, descargar y añadir a LinkedIn. |
+| YC-CAMPUS-006 Mis pagos: pedidos y comprobantes | Parcial | Pedidos sí; comprobantes no existen. |
+| YC-CAMPUS-007 Mi perfil | Hecho | Datos, contraseña y sesiones abiertas. |
+
+### PRO — Docentes
+
+| Historia | Estado | Qué hay y qué falta |
+| --- | --- | --- |
+| YC-PRO-001 Listado y alta de docentes | Parcial | Son usuarios con rol Profesor y se asignan a cada curso. No hay pantalla propia de docentes. |
+| YC-PRO-002 Ficha con cursos, carga de calificación y valoraciones | Falta | Las tareas por calificar se ven por curso; las valoraciones no existen (tampoco las reseñas). |
+
 ## Dudas para quien escribió el backlog
 
 1. Cuál es el octavo rol (hoy hay siete: Administrador, Alumno, Profesor, Soporte, Ventas/CRM, B2B autorizado y Responsable de empresa).
@@ -150,3 +318,13 @@ Decisión ya tomada con jefatura: los videos se alojan en YouTube y el sistema s
 3. El texto de las reglas que citan las épicas (`RN-…` y `R-…`): no vinieron con la lista.
 4. Video protegido (VID): confirmar si se cambia la decisión de usar YouTube. Hacerlo exige contratar un proveedor de video.
 5. Precio por moneda (MON-002): confirmar si se cambia la decisión de una sola moneda por academia.
+
+Del sprint 2:
+
+6. Los criterios de aceptación de las 83 historias: solo llegaron los títulos.
+7. Carrito (B2C-001, CAMPUS-003): confirmar si se cambia la decisión de un curso o paquete por compra.
+8. Acumulación y momento del canje (PRM-006, PRM-007): confirmar si se cambia lo decidido en S11.
+9. Qué significa "cierre del pedido al completarse sus matrículas" (B2C-009).
+10. El rol Finanzas aparece en PAG, FAC, APR y ALU: ¿es el octavo rol de la duda 1?
+11. Qué diferencia una "ruta de aprendizaje" de un paquete (WEB-004).
+12. Emisión "forzada" de certificados (CER-004): ¿sin cumplir los requisitos, con motivo?

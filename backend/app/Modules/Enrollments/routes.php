@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Enrollments\Http\Controllers\AvailableCoursesController;
+use App\Modules\Enrollments\Http\Controllers\CoursePreviewController;
 use App\Modules\Enrollments\Http\Controllers\EnrollmentController;
 use App\Modules\Enrollments\Http\Controllers\MyCoursesController;
 use App\Modules\Enrollments\Http\Controllers\ParticipantController;
@@ -42,6 +43,11 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::post('/preview', [PeopleImportController::class, 'preview']);
         Route::post('/', [PeopleImportController::class, 'store']);
     });
+
+    // Personal: el aula tal como la ve un alumno, de lo publicado o del borrador
+    Route::get('/courses/{course}/preview', [CoursePreviewController::class, 'show'])
+        ->whereUuid('course')
+        ->middleware('permission:courses.read,courses.assigned.read');
 
     // Alumno: sus cursos (Maestro §7.2, GET /me/courses) y el aula
     Route::middleware('permission:enrollments.self.read')->group(function () {

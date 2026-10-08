@@ -133,6 +133,8 @@ class ActivityController extends Controller
                 'max_attempts' => ['nullable', 'integer', 'min:1', 'max:50'],
                 'time_limit_minutes' => ['nullable', 'integer', 'min:1', 'max:600'],
                 'shuffle' => ['nullable', 'boolean'],
+                // Peso en la nota final del curso; 0 = no cuenta
+                'weight' => ['nullable', 'numeric', 'min:0', 'max:100'],
             ],
             CourseActivity::TYPE_TASK => [
                 // La consigna de una tarea es obligatoria
@@ -143,6 +145,10 @@ class ActivityController extends Controller
                         $fail('La tarea debe aceptar un texto, un archivo o ambos.');
                     }
                 }],
+                // Plazo en días desde el inicio de la matrícula; vacío = sin plazo
+                'due_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
+                'accept_late' => ['nullable', 'boolean'],
+                'weight' => ['nullable', 'numeric', 'min:0', 'max:100'],
             ],
             CourseActivity::TYPE_SURVEY => SurveyConfig::rules(),
         });

@@ -1,24 +1,39 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle2, Download, ExternalLink, FileText, Link2, Paperclip, Video, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Download, ExternalLink, Eye, FileText, Link2, Lock, Paperclip, Video, type LucideIcon } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
-import { Badge, Button, Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { Alert, Badge, Button, Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { ACTIVITY_LABEL, toScale } from '../../academic/api';
 import { QuizPanel } from '../../academic/components/QuizPanel';
+import { StudentGrades } from '../../academic/components/StudentGrades';
 import { SurveyPanel, TaskPanel } from '../../academic/components/StudentPanels';
 import { ACTIVITY_ICON } from '../../academic/icons';
 import { studentApi, type ActivityState, type QuizState, type SurveyState, type TaskState } from '../../academic/studentApi';
 import { formatSize, RESOURCE_LABEL, type ResourceType } from '../../courses/api';
-import { enrollmentsApi, type Classroom, type ClassroomActivity, type ClassroomResource, type Progress } from '../api';
+import {
+  enrollmentsApi,
+  type ClassroomActivity,
+  type ClassroomContent,
+  type ClassroomResource,
+  type PreviewMeta,
+  type PreviewSource,
+  type Progress,
+} from '../api';
 
 const RESOURCE_ICON: Record<ResourceType, LucideIcon> = { VIDEO: Video, DOCUMENT: Paperclip, LINK: Link2, TEXT: FileText };
 
 // Recursos y actividades de todas las secciones, en el orden en que se recorren
 type Item =
-  | { key: string; kind: 'resource'; section: string; resource: ClassroomResource }
-  | { key: string; kind: 'activity'; section: string; activity: ClassroomActivity };
+  | { key: string; kind: 'resource'; section: string; locked: boolean; resource: ClassroomResource }
+  | { key: string; kind: 'activity'; section: string; locked: boolean; activity: ClassroomActivity };
 
-const ResourceView: React.FC<{ courseId: string; resource: ClassroomResource }> = ({ courseId, resource }) => {
+const PREVIEW_HINT: Record<ClassroomActivity['type'], string> = {
+  QUIZ: 'Aquí el alumno rinde el cuestionario. En la vista previa no se abren intentos.',
+  TASK: 'Aquí el alumno escribe o adjunta su entrega. En la vista previa no se entrega nada.',
+  SURVEY: 'Aquí el alumno responde la encuesta. En la vista previa no se registran respuestas.',
+};
+
+const ResourceView: React.FC<{ resource: ClassroomResource; onDownload: () => Promise<void> }> = ({ resource, onDownload }) => {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +41,7 @@ const ResourceView: React.FC<{ courseId: string; resource: ClassroomResource }> 
     setDownloading(true);
     setError(null);
     try {
-      await enrollmentsApi.download(courseId, resource);
+      await onDownload();
     } catch (err) {
       setError(apiErrorMessage(err, 'No se pudo descargar el archivo.'));
     } finally {
@@ -98,8 +113,10 @@ const ActivityView: React.FC<{
   activity: ClassroomActivity;
   state: ActivityState | undefined;
   gradeScale: number;
+  // Vista previa del personal: se muestra la ficha, sin rendir ni entregar
+  preview: boolean;
   onChanged: () => Promise<void>;
-}> = ({ courseId, activity, state, gradeScale, onChanged }) => {
+}> = ({ courseId, activity, state, gradeScale, preview, onChanged }) => {
   const facts: string[] = [];
 
   if (activity.type === 'QUIZ') {
@@ -121,7 +138,9 @@ const ActivityView: React.FC<{
         </div>
       )}
 
-      {!state ? (
+      {preview ? (
+        <Alert tone="info">{PREVIEW_HINT[activity.type]}</Alert>
+      ) : !state ? (
         <LoadingState />
       ) : activity.type === 'QUIZ' ? (
         <QuizPanel courseId={courseId} activityId={activity.id} state={state as QuizState} gradeScale={gradeScale} onChanged={onChanged} />
@@ -142,9 +161,12 @@ const ActivityView: React.FC<{
   );
 };
 
-export const ClassroomPage: React.FC = () => {
+export const ClassroomPage: React.FC<{ preview?: boolean }> = ({ preview = false }) => {
   const { courseId = '' } = useParams();
-  const [classroom, setClassroom] = useState<Classroom | null>(null);
+  const [classroom, setClassroom] = useState<ClassroomContent | null>(null);
+  // Vista previa: qué se está mirando (lo publicado o el borrador)
+  const [source, setSource] = useState<PreviewSource | undefined>(undefined);
+  const [previewMeta, setPreviewMeta] = useState<PreviewMeta | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [states, setStates] = useState<Record<string, ActivityState>>({});
   const [gradeScale, setGradeScale] = useState(20);
@@ -157,15 +179,23 @@ export const ClassroomPage: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    Promise.all([enrollmentsApi.classroom(courseId), studentApi.states(courseId)])
-      .then(([result, activityStates]) => {
-        if (!active) return;
-        setClassroom(result.classroom);
-        setProgress(result.classroom.progress);
-        setStates(activityStates);
-        setGradeScale(result.gradeScale);
-        setState('ready');
-      })
+    (preview
+      ? enrollmentsApi.preview(courseId, source).then((result) => {
+          if (!active) return;
+          setClassroom(result.classroom);
+          setPreviewMeta(result.meta);
+          setGradeScale(result.gradeScale);
+          setState('ready');
+        })
+      : Promise.all([enrollmentsApi.classroom(courseId), studentApi.states(courseId)]).then(([result, activityStates]) => {
+          if (!active) return;
+          setClassroom(result.classroom);
+          setProgress(result.classroom.progress);
+          setStates(activityStates);
+          setGradeScale(result.gradeScale);
+          setState('ready');
+        })
+    )
       .catch((err) => {
         if (!active) return;
         setError(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
@@ -174,11 +204,13 @@ export const ClassroomPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [courseId, attempt]);
+  }, [courseId, attempt, preview, source]);
 
   // Tras rendir o entregar: estado de las actividades y avance al día
   const refresh = useCallback(async () => {
     const [result, activityStates] = await Promise.all([enrollmentsApi.classroom(courseId), studentApi.states(courseId)]);
+    // Con avance secuencial, lo recién completado puede abrir la sección siguiente
+    setClassroom(result.classroom);
     setProgress(result.classroom.progress);
     setStates(activityStates);
   }, [courseId]);
@@ -186,23 +218,35 @@ export const ClassroomPage: React.FC = () => {
   const items = useMemo<Item[]>(
     () =>
       (classroom?.sections ?? []).flatMap((section) => [
-        ...section.resources.map((resource): Item => ({ key: `r-${resource.id}`, kind: 'resource', section: section.title, resource })),
-        ...section.activities.map((activity): Item => ({ key: `a-${activity.id}`, kind: 'activity', section: section.title, activity })),
+        ...section.resources.map((resource): Item => ({ key: `r-${resource.id}`, kind: 'resource', section: section.title, locked: section.locked, resource })),
+        ...section.activities.map((activity): Item => ({ key: `a-${activity.id}`, kind: 'activity', section: section.title, locked: section.locked, activity })),
       ]),
     [classroom],
   );
 
-  const index = Math.max(0, items.findIndex((item) => item.key === currentKey));
+  const found = items.findIndex((item) => item.key === currentKey);
+  // Un elemento de una sección cerrada no se abre: se vuelve al primero
+  const index = found >= 0 && !items[found].locked ? found : 0;
   const current = items[index] as Item | undefined;
   const openResourceId = current?.kind === 'resource' ? current.resource.id : null;
 
   // Un recurso cuenta como visto al abrirlo; el servidor lleva la cuenta
   useEffect(() => {
-    if (!openResourceId || progress?.resource_ids.includes(openResourceId)) return;
+    if (preview || !openResourceId || progress?.resource_ids.includes(openResourceId)) return;
     let active = true;
     enrollmentsApi
       .completeResource(courseId, openResourceId)
-      .then((result) => active && setProgress(result))
+      .then((result) => {
+        if (!active) return;
+        setProgress(result);
+        // Con avance secuencial, completar este recurso puede abrir la sección siguiente
+        if (classroom?.sequential) {
+          enrollmentsApi
+            .classroom(courseId)
+            .then((fresh) => active && setClassroom(fresh.classroom))
+            .catch(() => undefined);
+        }
+      })
       .catch(() => undefined);
     return () => {
       active = false;
@@ -237,9 +281,36 @@ export const ClassroomPage: React.FC = () => {
 
   return (
     <div>
-      <Link to="/my-courses" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-brand-700 mb-4">
-        <ArrowLeft className="w-4 h-4" /> Mis cursos
+      <Link
+        to={preview ? `/courses/${courseId}` : '/my-courses'}
+        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-brand-700 mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" /> {preview ? 'Volver al curso' : 'Mis cursos'}
       </Link>
+
+      {preview && previewMeta && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 mb-5 rounded-xl border border-amber-200 bg-amber-50 text-amber-900" role="status">
+          <Eye className="w-5 h-5 shrink-0 text-amber-600" />
+          <p className="flex-1 min-w-0 text-[13px]">
+            <span className="font-semibold">Vista previa del aula.</span>{' '}
+            {previewMeta.source === 'published'
+              ? `Así ven los alumnos la versión ${previewMeta.version} publicada.`
+              : 'Así se verá el borrador cuando lo publiques.'}{' '}
+            No se registra avance ni se rinden actividades.
+            {classroom.sequential && ' El curso tiene avance secuencial: aquí se muestra todo abierto.'}
+          </p>
+          {previewMeta.has_published && previewMeta.pending_changes && (
+            <div className="flex gap-1.5" role="group" aria-label="Qué ver en la vista previa">
+              <Button size="sm" variant={previewMeta.source === 'published' ? 'primary' : 'secondary'} onClick={() => setSource('published')}>
+                Publicado
+              </Button>
+              <Button size="sm" variant={previewMeta.source === 'draft' ? 'primary' : 'secondary'} onClick={() => setSource('draft')}>
+                Borrador
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
         <div className="min-w-0">
@@ -268,9 +339,16 @@ export const ClassroomPage: React.FC = () => {
                 style={{ width: `${progress.percent}%` }}
               />
             </div>
+            <StudentGrades courseId={courseId} gradeScale={gradeScale} watch={states} />
           </div>
         )}
       </div>
+
+      {!preview && classroom.sections.some((section) => section.locked) && (
+        <div className="mb-5">
+          <Alert tone="info">Este curso se recorre en orden: cada sección se abre cuando completas la anterior.</Alert>
+        </div>
+      )}
 
       {!current ? (
         <Card>
@@ -290,7 +368,15 @@ export const ClassroomPage: React.FC = () => {
               </h2>
 
               {current.kind === 'resource' ? (
-                <ResourceView key={current.key} courseId={classroom.course_id} resource={current.resource} />
+                <ResourceView
+                  key={current.key}
+                  resource={current.resource}
+                  onDownload={() =>
+                    preview
+                      ? enrollmentsApi.downloadAsStaff(classroom.course_id, current.resource)
+                      : enrollmentsApi.download(classroom.course_id, current.resource)
+                  }
+                />
               ) : (
                 <ActivityView
                   key={current.key}
@@ -298,6 +384,7 @@ export const ClassroomPage: React.FC = () => {
                   activity={current.activity}
                   state={states[current.activity.id]}
                   gradeScale={gradeScale}
+                  preview={preview}
                   onChanged={refresh}
                 />
               )}
@@ -310,7 +397,12 @@ export const ClassroomPage: React.FC = () => {
               <span className="text-xs text-slate-500 tnum">
                 {index + 1} de {items.length}
               </span>
-              <Button variant="primary" disabled={index === items.length - 1} onClick={() => go(items[index + 1].key)}>
+              <Button
+                variant="primary"
+                disabled={index === items.length - 1 || items[index + 1].locked}
+                title={items[index + 1]?.locked ? 'Completa esta sección para abrir la siguiente' : undefined}
+                onClick={() => go(items[index + 1].key)}
+              >
                 Siguiente <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
@@ -324,6 +416,7 @@ export const ClassroomPage: React.FC = () => {
                 <div key={section.id}>
                   <p className="px-4 pt-3 pb-1.5 text-xs font-semibold text-slate-500">
                     {sectionIndex + 1}. {section.title}
+                    {section.locked && <span className="block font-normal mt-0.5">Se abre al completar la sección anterior</span>}
                   </p>
                   <ul>
                     {items
@@ -337,12 +430,21 @@ export const ClassroomPage: React.FC = () => {
                             <button
                               type="button"
                               aria-current={selected}
+                              disabled={item.locked}
                               onClick={() => go(item.key)}
-                              className={`w-full flex items-center gap-2.5 px-4 py-2 text-left text-[13px] transition-colors cursor-pointer ${
-                                selected ? 'bg-brand-50 text-brand-800 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                              className={`w-full flex items-center gap-2.5 px-4 py-2 text-left text-[13px] transition-colors ${
+                                item.locked
+                                  ? 'text-slate-500 cursor-not-allowed'
+                                  : selected
+                                    ? 'bg-brand-50 text-brand-800 font-semibold cursor-pointer'
+                                    : 'text-slate-700 hover:bg-slate-50 cursor-pointer'
                               }`}
                             >
-                              <Icon className={`w-4 h-4 shrink-0 ${selected ? 'text-brand-600' : 'text-slate-500'}`} />
+                              {item.locked ? (
+                                <Lock className="w-4 h-4 shrink-0 text-slate-400" aria-label="Cerrado" />
+                              ) : (
+                                <Icon className={`w-4 h-4 shrink-0 ${selected ? 'text-brand-600' : 'text-slate-500'}`} />
+                              )}
                               <span className="truncate flex-1">{item.kind === 'resource' ? item.resource.title : item.activity.title}</span>
                               {done && (
                                 <>
@@ -365,3 +467,6 @@ export const ClassroomPage: React.FC = () => {
     </div>
   );
 };
+
+// Vista previa del aula para el personal: el mismo recorrido, sin matrícula ni avance
+export const ClassroomPreviewPage: React.FC = () => <ClassroomPage preview />;

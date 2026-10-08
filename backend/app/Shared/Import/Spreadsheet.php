@@ -138,6 +138,29 @@ class Spreadsheet
     }
 
     /**
+     * Hoja de Excel con una fila de títulos y los datos recibidos.
+     *
+     * @param  list<string>  $headers
+     * @param  list<list<string|int|float|null>>  $rows
+     * @return string ruta del archivo temporal generado
+     */
+    public static function write(string $sheetName, array $headers, array $rows): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'xls').'.xlsx';
+
+        $writer = new Writer;
+        $writer->openToFile($path);
+        $writer->getCurrentSheet()->setName(mb_substr($sheetName, 0, 31));
+        $writer->addRow(Row::fromValuesWithStyle($headers, new Style(fontBold: true)));
+        foreach ($rows as $row) {
+            $writer->addRow(Row::fromValues($row));
+        }
+        $writer->close();
+
+        return $path;
+    }
+
+    /**
      * Ubica cada columna esperada por su título, sin importar el orden, las
      * mayúsculas ni las tildes.
      *

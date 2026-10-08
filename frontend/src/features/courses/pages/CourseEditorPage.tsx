@@ -7,6 +7,7 @@ import {
   BookOpen,
   ChartNoAxesColumn,
   CheckCircle2,
+  Eye,
   History,
   ImageUp,
   Info,
@@ -75,6 +76,7 @@ function toInput(course: CourseDetail): CourseInput {
     access_days: course.access_days,
     price: course.price !== null ? Number(course.price) : null,
     issues_certificate: course.issues_certificate,
+    sequential: course.sequential,
     language: course.language,
   };
 }
@@ -450,6 +452,12 @@ export const CourseEditorPage: React.FC = () => {
               {course.pending_changes && <Badge tone="info">Cambios sin publicar</Badge>}
               {course.category && <span className="text-[13px] text-slate-500">{course.category}</span>}
             </div>
+            <Link
+              to={`/courses/${course.id}/preview`}
+              className="inline-flex items-center gap-1.5 mt-2.5 text-[13px] font-semibold text-brand-700 hover:text-brand-800"
+            >
+              <Eye className="w-4 h-4" /> Ver como alumno
+            </Link>
           </div>
         </div>
 

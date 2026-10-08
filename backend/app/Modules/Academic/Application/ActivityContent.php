@@ -58,7 +58,7 @@ class ActivityContent implements CourseContentExtension
      */
     private function copy(CourseActivity $activity): array
     {
-        $base = $activity->only(['id', 'type', 'title', 'description']);
+        $base = $activity->only(['id', 'type', 'title', 'description', 'weight']);
 
         return $base + match ($activity->type) {
             CourseActivity::TYPE_QUIZ => ['quiz' => $activity->quiz->only(['passing_percent', 'max_attempts', 'time_limit_minutes', 'shuffle']) + [
@@ -71,7 +71,7 @@ class ActivityContent implements CourseContentExtension
                     'points' => $item->points,
                 ])->all(),
             ]],
-            CourseActivity::TYPE_TASK => ['task' => $activity->task->only(['allow_text', 'allow_file'])],
+            CourseActivity::TYPE_TASK => ['task' => $activity->task->only(['allow_text', 'allow_file', 'due_days', 'accept_late'])],
             CourseActivity::TYPE_SURVEY => ['survey' => ['questions' => $activity->survey->questions]],
         };
     }

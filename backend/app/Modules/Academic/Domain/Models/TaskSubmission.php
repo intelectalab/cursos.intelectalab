@@ -17,6 +17,11 @@ class TaskSubmission extends Model
 
     public const STATUS_GRADED = 'GRADED';
 
+    /** Devuelta para que el alumno la rehaga */
+    public const STATUS_RETURNED = 'RETURNED';
+
+    public const STATUSES = [self::STATUS_SUBMITTED, self::STATUS_GRADED, self::STATUS_RETURNED];
+
     /** Uso declarado en config/files.php para los archivos entregados */
     public const FILE_PURPOSE = 'task_submission';
 
@@ -34,6 +39,9 @@ class TaskSubmission extends Model
         'feedback',
         'graded_by',
         'graded_at',
+        'is_late',
+        'returned_at',
+        'returned_by',
     ];
 
     protected function casts(): array
@@ -42,12 +50,19 @@ class TaskSubmission extends Model
             'submitted_at' => 'datetime',
             'grade_percent' => 'float',
             'graded_at' => 'datetime',
+            'is_late' => 'boolean',
+            'returned_at' => 'datetime',
         ];
     }
 
     public function isGraded(): bool
     {
         return $this->status === self::STATUS_GRADED;
+    }
+
+    public function isReturned(): bool
+    {
+        return $this->status === self::STATUS_RETURNED;
     }
 
     public function file(): BelongsTo

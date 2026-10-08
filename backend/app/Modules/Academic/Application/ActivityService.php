@@ -34,6 +34,7 @@ class ActivityService
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
                 'position' => (int) CourseActivity::query()->where('section_id', $section->id)->max('position') + 1,
+                'weight' => $data['weight'] ?? 1,
             ]);
 
             match ($type) {
@@ -54,7 +55,12 @@ class ActivityService
     public function update(Course $course, CourseActivity $activity, array $data): CourseActivity
     {
         return $this->changing($course, function () use ($activity, $data) {
-            $activity->update(['title' => $data['title'], 'description' => $data['description'] ?? null]);
+            $activity->update([
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                // Si no llega, se conserva el peso que tenía
+                'weight' => $data['weight'] ?? $activity->weight,
+            ]);
 
             match ($activity->type) {
                 CourseActivity::TYPE_QUIZ => $activity->quiz->update($this->quizSettings($data)),
@@ -157,13 +163,15 @@ class ActivityService
 
     /**
      * @param  array<string, mixed>  $data
-     * @return array<string, bool>
+     * @return array<string, bool|int|null>
      */
     private function taskSettings(array $data): array
     {
         return [
             'allow_text' => (bool) $data['allow_text'],
             'allow_file' => (bool) $data['allow_file'],
+            'due_days' => $data['due_days'] ?? null,
+            'accept_late' => (bool) ($data['accept_late'] ?? true),
         ];
     }
 }

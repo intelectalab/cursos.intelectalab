@@ -155,6 +155,9 @@ export const ActivityModal: React.FC<{
   const [shuffle, setShuffle] = useState(activity?.shuffle ?? false);
   const [allowText, setAllowText] = useState(activity?.allow_text ?? true);
   const [allowFile, setAllowFile] = useState(activity?.allow_file ?? true);
+  const [weight, setWeight] = useState(String(activity?.weight ?? 1));
+  const [dueDays, setDueDays] = useState(activity?.due_days ? String(activity.due_days) : '');
+  const [acceptLate, setAcceptLate] = useState(activity?.accept_late ?? true);
   const [questions, setQuestions] = useState<SurveyQuestion[]>(
     activity?.type === 'SURVEY' ? (activity.questions as SurveyQuestion[]) : [{ type: 'SCALE', text: '', required: true }],
   );
@@ -176,13 +179,19 @@ export const ActivityModal: React.FC<{
         type,
         title: title.trim(),
         description: description.trim() || null,
+        ...(type !== 'SURVEY' && { weight: Number(weight) }),
         ...(type === 'QUIZ' && {
           passing_percent: toPercent(Number(passing), gradeScale),
           max_attempts: limited ? Number(maxAttempts) : null,
           time_limit_minutes: timeLimit ? Number(timeLimit) : null,
           shuffle,
         }),
-        ...(type === 'TASK' && { allow_text: allowText, allow_file: allowFile }),
+        ...(type === 'TASK' && {
+          allow_text: allowText,
+          allow_file: allowFile,
+          due_days: dueDays ? Number(dueDays) : null,
+          accept_late: acceptLate,
+        }),
         ...(type === 'SURVEY' && { questions }),
       });
     } catch (err) {
@@ -307,19 +316,58 @@ export const ActivityModal: React.FC<{
         )}
 
         {type === 'TASK' && (
-          <fieldset>
-            <legend className="block text-[13px] font-medium text-slate-700 mb-1.5">El alumno puede entregar</legend>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
-                <input type="checkbox" className={CHECKBOX_CLASS} checked={allowText} onChange={(event) => setAllowText(event.target.checked)} />
-                Un texto escrito
+          <>
+            <fieldset>
+              <legend className="block text-[13px] font-medium text-slate-700 mb-1.5">El alumno puede entregar</legend>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
+                  <input type="checkbox" className={CHECKBOX_CLASS} checked={allowText} onChange={(event) => setAllowText(event.target.checked)} />
+                  Un texto escrito
+                </label>
+                <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
+                  <input type="checkbox" className={CHECKBOX_CLASS} checked={allowFile} onChange={(event) => setAllowFile(event.target.checked)} />
+                  Un archivo
+                </label>
+              </div>
+            </fieldset>
+            <Field
+              label="Plazo de entrega en días (opcional)"
+              hint="Se cuenta desde que empieza la matrícula de cada alumno. Vacío: sin plazo."
+            >
+              <input
+                className={`${INPUT_CLASS} max-w-32`}
+                type="number"
+                min={1}
+                max={3650}
+                value={dueDays}
+                onChange={(event) => setDueDays(event.target.value)}
+              />
+            </Field>
+            {dueDays && (
+              <label className="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
+                <input type="checkbox" className={CHECKBOX_CLASS} checked={acceptLate} onChange={(event) => setAcceptLate(event.target.checked)} />
+                Recibir entregas fuera de plazo, marcadas como tardías
               </label>
-              <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
-                <input type="checkbox" className={CHECKBOX_CLASS} checked={allowFile} onChange={(event) => setAllowFile(event.target.checked)} />
-                Un archivo
-              </label>
-            </div>
-          </fieldset>
+            )}
+          </>
+        )}
+
+        {type !== 'SURVEY' && (
+          <Field
+            label="Peso en la nota final del curso"
+            hint="La nota del curso es el promedio de cuestionarios y tareas según su peso. Con 2 vale el doble; con 0 no cuenta."
+          >
+            <input
+              className={`${INPUT_CLASS} max-w-32`}
+              type="number"
+              required
+              min={0}
+              max={100}
+              step="any"
+              value={weight}
+              onChange={(event) => setWeight(event.target.value)}
+            />
+          </Field>
         )}
 
         {type === 'SURVEY' && <SurveyQuestions value={questions} onChange={setQuestions} />}

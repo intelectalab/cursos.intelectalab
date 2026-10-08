@@ -31,6 +31,7 @@ class CoursePresenter
             // Precio de venta en la moneda de la organización; null = no está en venta, 0 = gratuito
             'price' => $course->price,
             'issues_certificate' => $course->issues_certificate,
+            'sequential' => $course->sequential,
             'language' => $course->language,
             'status' => $course->status,
             'cover_url' => $course->cover?->publicUrl(),

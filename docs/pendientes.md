@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-07, al cerrar la tercera entrega de la revisión de jefatura.
+Última actualización: 2026-10-08, al cerrar el bloque "Evaluaciones y aula" (entrega 3).
 
 ## Dónde estamos
 
 **Revisión de jefatura (12 puntos): las tres entregas acordadas están terminadas.** Nueve puntos hechos, uno a medias ("hacerlo más visual": falta saber si señalaron pantallas concretas) y dos esperan respuestas (Moodle y horarios). Los sprints del plan siguen igual: S12 terminado; S6 Pagos espera la decisión 8, S9 SCORM la decisión 9, y S13 necesita servidor, dominio y correo (decisiones 1 a 3).
 
-**Siguiente paso:** no queda trabajo que se pueda empezar sin una respuesta. Lo más cercano: comparar el sprint 2 del backlog YC (decisión 13) y, con sus respuestas, estimar Moodle y horarios. Moodle y el horario por disponibilidad docente esperan respuestas (decisiones 14 y 15). El backlog de historias YC sigue llegando por semana (decisión 13).
+**Terminado:** el bloque "Evaluaciones y aula", que sale del sprint 2 del backlog YC (83 historias: 27 hechas, 21 a medias, 32 faltan y 3 resueltas distinto), en tres entregas. **Sigue** el bloque "Alumnos y docentes" (pantallas propias y ficha Alumno 360) y el buscador con filtros del catálogo público. Jefatura pidió además cobrar con PayPal y Mercado Pago: es el S6 y espera las respuestas de la decisión 8 que se listan abajo. Moodle y el horario por disponibilidad docente esperan respuestas (decisiones 14 y 15). El backlog de historias YC sigue llegando por semana (decisión 13).
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -43,10 +43,14 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Revisión de jefatura · entrega 1 | Participantes (alumno o docente por curso), seleccionar todo y acciones sobre varias filas, tarjetas con cifras que filtran, ayuda en los filtros | Hecho |
 | Revisión de jefatura · entrega 2 | Grupos de personas e importaciones desde Excel con plantilla (personas con matrícula y grupo, preguntas, prospectos); cambio obligatorio de la contraseña temporal | Hecho |
 | Revisión de jefatura · entrega 3 | Plantilla de certificado propia (fondo, posiciones, colores, vista previa) y consola del super administrador (cifras, alta de academias, acceso de soporte en solo lectura) | Hecho |
+| Evaluaciones y aula · entrega 1 | Plazo de las tareas con entrega tardía, devolver una tarea para rehacerla, intentos adicionales por alumno y detalle de cada intento para quien revisa | Hecho |
+| Evaluaciones y aula · entrega 2 | Nota final del curso (promedio según el peso de cada cuestionario y tarea), libro de notas con descarga en Excel y "Mis notas" del alumno | Hecho |
+| Evaluaciones y aula · entrega 3 | Avance secuencial por secciones (interruptor por curso) y vista previa del aula para el personal, de lo publicado o del borrador | Hecho |
+| Alumnos y docentes | Pantallas propias de alumnos y de docentes, y ficha Alumno 360 | Pendiente |
 
 - **Avance del plan:** 11 de 14 sprints completos (S0 a S5, S7, S8 y S10 a S12). Faltan S6 y S9, en espera de decisiones, y S13.
-- **Calidad:** 260 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia); la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
-- **Seguridad:** las pruebas revisan que las 249 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 62 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
+- **Calidad:** 266 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia); la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
+- **Seguridad:** las pruebas revisan que las 255 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 63 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
 - **Certificados:** el curso que lo indique entrega un certificado en PDF, con código y QR, a quien lo completa; cualquiera lo verifica en una página pública; el personal puede emitir a mano y anular.
@@ -72,9 +76,9 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 | 7 | Cuentas de prueba | Quiénes probarán en staging y con qué cuentas y datos. | Pruebas en staging |
 | 10 | Vigencia de la matrícula | Resuelto: cada curso define sus "días de acceso" (vacío = no vence) y el personal ajusta la vigencia de cada matrícula. Falta que cada academia decida qué valor pone a sus cursos. | Nada |
 | 11 | Curso archivado | Resuelto: quienes ya estaban matriculados conservan el acceso; solo se bloquean las matrículas nuevas. | Nada |
-| 8 | Pasarela de pagos y facturación | Proveedor de pagos, Yape y comprobantes electrónicos. **Ya urge:** es lo siguiente. Mientras tanto la venta funciona con pago por fuera y confirmación manual. También falta definir la política de reembolsos. Para la venta a empresas se suma: si se factura con RUC e IGV, y si habrá crédito o pagos parciales. | S6 Pagos |
+| 8 | Pasarela de pagos y facturación | **Respuesta del 2026-10-08: cobrar con PayPal y Mercado Pago.** Falta precisar: a nombre de quién se cobra (una cuenta por academia o una de IntelectaLab); las credenciales de prueba de ambas; qué se hace con la moneda (PayPal no cobra en soles); si Yape entra por Mercado Pago; y si el carrito se hace junto con esto. Sigue abierto: comprobantes electrónicos. Mientras tanto la venta funciona con pago por fuera y confirmación manual. También falta definir la política de reembolsos. Para la venta a empresas se suma: si se factura con RUC e IGV, y si habrá crédito o pagos parciales. | S6 Pagos |
 | 12 | Libro de Reclamaciones | Que jefatura o quien lleve lo legal confirme el formato de la hoja y el plazo de respuesta. Se armó con el formato habitual del INDECOPI y un plazo configurable (15 días hábiles por defecto), sin revisión legal. Desde S12 el plazo descuenta los feriados que la academia registre, y hay un botón que carga los nacionales del año: **esa lista también debe revisarla quien lleve lo legal.** | Salida a producción |
-| 13 | Backlog de historias YC | Jefatura entrega un backlog por partes (un sprint por semana). El sprint 1 ya está comparado con el sistema: 62 historias, de las que 18 faltan y 19 están a medias. Hay que decidir **qué se construye primero** (doble factor para el personal, correos con plantillas, campana de avisos, límites por plan, centro de reglas, reseñas y anuncios en los cursos…) y responder cinco dudas, entre ellas si se cambia la decisión de usar YouTube por un video protegido. Ver [verificacion-backlog.md](verificacion-backlog.md). | El orden del trabajo que viene |
+| 13 | Backlog de historias YC | Jefatura entrega un backlog por partes (un sprint por semana). Los sprints 1 y 2 ya están comparados con el sistema: del sprint 1, 62 historias (18 faltan y 19 a medias); del sprint 2, 83 historias (34 faltan, 16 de ellas de pagos y facturación, y 25 a medias). Del sprint 2 solo llegaron los títulos, sin criterios de aceptación. Hay que decidir **qué se construye primero** (doble factor para el personal, correos con plantillas, campana de avisos, límites por plan, centro de reglas, reseñas y anuncios en los cursos…) y responder cinco dudas, entre ellas si se cambia la decisión de usar YouTube por un video protegido. Ver [verificacion-backlog.md](verificacion-backlog.md). | El orden del trabajo que viene |
 | 14 | Sincronizar con Moodle | Jefatura lo quiere en los dos sentidos. Para estimarlo y poder probarlo hace falta: qué versión de Moodle tienen; un acceso de administrador (o un Moodle de prueba) para activar sus servicios web y generar una clave; qué se sincroniza (cursos, usuarios, matrículas, notas, avance) y cuál de los dos sistemas manda cuando un dato difiere; y cada cuánto. | Sincronización con Moodle |
 | 15 | Horario por disponibilidad docente | Se pide generar un horario a partir de la disponibilidad que registre cada docente. Hoy los cursos son grabados y no tienen horarios. Hay que definir: horario de qué (clases en vivo, asesorías, sesiones de un curso); si se dictan por videollamada y con qué herramienta; duración y frecuencia de las sesiones; si el horario lo arma el sistema solo o propone y una persona confirma; y qué pasa con los alumnos (se inscriben a un horario o se les asigna). | Módulo de horarios |
 | 9 | SCORM | Si la academia ya tiene cursos en SCORM o clientes que los pidan, y en qué versiones. Si no hay ninguno, S9 se puede posponer. | S9 SCORM |
@@ -144,7 +148,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 **De certificados (S7, entrega 1)**
 
-- Nota mínima para el certificado (depende de definir la nota final del curso).
+- Nota mínima para el certificado (la nota final del curso ya existe; falta la nota mínima).
 - Aviso por correo al emitir el certificado (depende de la decisión 3).
 - Más de una plantilla o un editor de diseño; plantilla por curso.
 - Que el alumno vea desde "Mis cursos" que ya tiene certificado, y que el profesor vea los de sus cursos.
@@ -230,10 +234,31 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Editar la portada y el menú del sitio público.
 - Revisar en teléfono el editor de páginas por dentro.
 
+**De evaluaciones y aula (entrega 1, 2026-10-08)**
+
+- Fecha límite de calendario para cursos con grupo fijo, y prórroga del plazo por alumno.
+- Descuento automático de nota por entrega tardía (hoy solo se marca).
+- Historial de las entregas anteriores cuando una tarea se devuelve.
+- Retirar un intento adicional ya dado.
+- Avisar por correo de la devolución y del intento adicional (depende de la decisión 3).
+
+**Del avance secuencial y la vista previa (entrega 3, 2026-10-08)**
+
+- Regla para el alumno que agota los intentos de un cuestionario sin aprobar y queda sin poder avanzar (hoy lo resuelve el profesor con un intento adicional).
+- Liberar una sección a un alumno en particular; orden elemento por elemento.
+- Probar un cuestionario desde la vista previa, como lo rinde el alumno.
+- Anuncios y requisitos del certificado en la portada del aula.
+
+**De la nota final y el libro de notas (entrega 2, 2026-10-08)**
+
+- Nota mínima para aprobar el curso, y usarla como requisito del certificado.
+- Ver la nota solo de lo ya calificado, además de la que cuenta lo pendiente como cero.
+- Categorías de peso (por ejemplo, tareas 40 % y exámenes 60 %).
+- Ajustar a mano la nota final de un alumno, con observación.
+- Mostrar la nota final en "Mis cursos", en Reportes y en el portal de la empresa.
+
 **De rendir actividades (S3, entrega 3)**
 
-- Que quien revisa vea el detalle de cada intento, la nota final del curso y pueda exportar las notas.
-- Fechas límite para las tareas (la vigencia de la matrícula ya existe; falta definir cómo se fijan los plazos).
 - Si el tiempo de un cuestionario se acaba con la pestaña cerrada, el intento vence con nota 0 aunque hubiera respuestas guardadas: falta decidir si se califica lo guardado.
 
 
@@ -294,8 +319,9 @@ Lista que jefatura envió el 2026-10-07 tras revisar el sistema.
 
 ## 5. Orden propuesto
 
-1. Commit de S12 y de las tres entregas de la revisión; limpieza del repositorio (sección 2).
-2. Pasar el sprint 2 del backlog YC para compararlo (decisión 13).
+1. Commit de las tres entregas de "Evaluaciones y aula"; limpieza del repositorio (sección 2).
+2. Seguir con "Alumnos y docentes" y el buscador con filtros del catálogo público. Los criterios de aceptación del backlog YC se pedirán después.
+2. Responder lo que falta de la decisión 8 para empezar los cobros con PayPal y Mercado Pago (S6).
 3. Responder las decisiones 14 (Moodle) y 15 (horarios) para poder estimarlas.
 4. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging: con eso se puede hacer S13.
 5. Definir pasarela, Yape y facturación (decisión 8) para S6, y si hace falta SCORM (decisión 9) para S9.

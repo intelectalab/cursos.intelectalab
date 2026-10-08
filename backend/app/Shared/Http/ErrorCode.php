@@ -46,6 +46,7 @@ enum ErrorCode: string
     case EnrollmentNotActive = 'ENROLLMENT_NOT_ACTIVE';
     case EnrollmentExpired = 'ENROLLMENT_EXPIRED';
     case EnrollmentNotStarted = 'ENROLLMENT_NOT_STARTED';
+    case SectionLocked = 'SECTION_LOCKED';
 
     case CourseNotForSale = 'COURSE_NOT_FOR_SALE';
     case PriceChanged = 'PRICE_CHANGED';
@@ -72,5 +73,6 @@ enum ErrorCode: string
     case NoAttemptsLeft = 'NO_ATTEMPTS_LEFT';
     case AttemptClosed = 'ATTEMPT_CLOSED';
     case SubmissionGraded = 'SUBMISSION_GRADED';
+    case SubmissionLate = 'SUBMISSION_LATE';
     case SurveyAlreadyAnswered = 'SURVEY_ALREADY_ANSWERED';
 }

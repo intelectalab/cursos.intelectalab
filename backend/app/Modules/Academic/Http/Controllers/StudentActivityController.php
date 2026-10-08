@@ -3,12 +3,14 @@
 namespace App\Modules\Academic\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Academic\Application\GradebookService;
 use App\Modules\Academic\Application\QuizAttemptService;
 use App\Modules\Academic\Application\SurveyResponseService;
 use App\Modules\Academic\Application\TaskSubmissionService;
 use App\Modules\Academic\Domain\Models\QuizAttempt;
 use App\Modules\Academic\Domain\Models\TaskSubmission;
 use App\Modules\Enrollments\Application\EnrollmentService;
+use App\Modules\Enrollments\Application\SequenceGate;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Http\ClassroomPresenter;
 use App\Modules\Files\Application\FileStorage;
@@ -30,6 +32,7 @@ class StudentActivityController extends Controller
         private readonly QuizAttemptService $quizzes,
         private readonly TaskSubmissionService $tasks,
         private readonly SurveyResponseService $surveys,
+        private readonly SequenceGate $gate,
     ) {}
 
     /**
@@ -46,6 +49,14 @@ class StudentActivityController extends Controller
         }
 
         return ApiResponse::success((object) $states);
+    }
+
+    /**
+     * Notas del alumno en el curso y su nota final hasta el momento.
+     */
+    public function grades(Request $request, string $course, GradebookService $gradebook): JsonResponse
+    {
+        return ApiResponse::success($gradebook->forStudent($this->enrollments->activeFor($request->user(), $course)));
     }
 
     /**
@@ -154,7 +165,7 @@ class StudentActivityController extends Controller
     {
         return match ($activity['type']) {
             'QUIZ' => $this->quizzes->state($enrollment, $activity),
-            'TASK' => ['submission' => $this->tasks->present($this->tasks->find($enrollment, $activity['id']))],
+            'TASK' => $this->tasks->state($enrollment, $activity),
             'SURVEY' => ['answered' => $this->surveys->hasAnswered($enrollment, $activity['id'])],
             default => [],
         };
@@ -173,6 +184,9 @@ class StudentActivityController extends Controller
         if (! $record || ($type !== null && $record['type'] !== $type)) {
             throw new ApiException(ErrorCode::NotFound, 'La actividad no existe.', 404);
         }
+
+        // Con avance secuencial, la actividad de una sección cerrada no se abre ni se rinde
+        $this->gate->assertOpen($enrollment, $record['id']);
 
         return [$enrollment, $record];
     }
@@ -206,7 +220,11 @@ class StudentActivityController extends Controller
             return true;
         }
 
-        $state = $this->quizzes->stateFrom($this->quizzes->attempts($enrollment, $attempt->activity_id), $activity);
+        $state = $this->quizzes->stateFrom(
+            $this->quizzes->attempts($enrollment, $attempt->activity_id),
+            $activity,
+            $this->quizzes->extraAttempts($enrollment, $attempt->activity_id)
+        );
 
         return $state['passed'] || $state['attempts_left'] === 0;
     }

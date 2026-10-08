@@ -19,15 +19,20 @@ export interface QuizState {
   passed: boolean;
   // null: intentos ilimitados
   attempts_left: number | null;
+  // Intentos adicionales que le concedió quien revisa
+  extra_attempts: number;
   open_attempt_id: string | null;
 }
 
 export interface Submission {
   id: string;
-  status: 'SUBMITTED' | 'GRADED';
+  // RETURNED: quien revisa la devolvió para rehacerla
+  status: 'SUBMITTED' | 'GRADED' | 'RETURNED';
   body: string | null;
   file: { name: string; size_bytes: number } | null;
   submitted_at: string;
+  is_late: boolean;
+  returned_at: string | null;
   grade_percent: number | null;
   feedback: string | null;
   graded_at: string | null;
@@ -35,6 +40,10 @@ export interface Submission {
 
 export interface TaskState {
   submission: Submission | null;
+  // Fecha límite de este alumno; null = la tarea no tiene plazo
+  due_at: string | null;
+  past_due: boolean;
+  can_submit: boolean;
 }
 
 export interface SurveyState {
@@ -42,6 +51,22 @@ export interface SurveyState {
 }
 
 export type ActivityState = QuizState | TaskState | SurveyState;
+
+// Notas del alumno en un curso: solo cuestionarios y tareas
+export interface StudentGrades {
+  // null: ninguna actividad cuenta para la nota
+  final_percent: number | null;
+  items: {
+    id: string;
+    type: ActivityType;
+    title: string;
+    section: string;
+    weight: number;
+    grade_percent: number | null;
+    status?: Submission['status'] | null;
+    is_late?: boolean;
+  }[];
+}
 
 // Lo que ve quien rinde: sin respuestas correctas. Emparejar trae dos columnas; ordenar, los ítems mezclados.
 export interface StudentQuestionConfig {
@@ -103,6 +128,9 @@ function saveBlob(blob: Blob, name: string) {
 }
 
 export const studentApi = {
+  async grades(course: string) {
+    return (await api.get(`/me/courses/${course}/grades`)).data.data as StudentGrades;
+  },
   async states(course: string) {
     return (await api.get(`/me/courses/${course}/activities`)).data.data as Record<string, ActivityState>;
   },
@@ -143,6 +171,8 @@ export interface TrackedActivity {
   type: ActivityType;
   title: string;
   section: string;
+  // Peso en la nota final; null en las encuestas
+  weight: number | null;
 }
 
 export interface TrackedStudent {
@@ -150,13 +180,35 @@ export interface TrackedStudent {
   name: string;
   email: string;
   progress: { percent: number; completed: number; total: number };
-  grades: Record<string, { grade_percent?: number | null; status?: 'SUBMITTED' | 'GRADED' | null; done?: boolean }>;
+  // Promedio ponderado; lo que no tiene nota cuenta como cero. null: nada cuenta para la nota
+  final_percent: number | null;
+  grades: Record<string, { grade_percent?: number | null; status?: Submission['status'] | null; is_late?: boolean; done?: boolean }>;
 }
 
 export interface ReviewSubmission extends Submission {
   activity_id: string;
   activity_title: string;
   student: { name: string; email: string };
+}
+
+export interface AttemptGrant {
+  attempts: number;
+  reason: string;
+  granted_by: string | null;
+  created_at: string;
+}
+
+export interface StudentAttempts {
+  student: { name: string; email: string };
+  title: string;
+  // null: intentos ilimitados
+  max_attempts: number | null;
+  extra_attempts: number;
+  attempts_left: number | null;
+  in_progress: boolean;
+  can_grant: boolean;
+  attempts: AttemptResult[];
+  grants: AttemptGrant[];
 }
 
 export interface SurveyResults {
@@ -189,6 +241,17 @@ export const reviewApi = {
   },
   grade: (course: string, submission: string, gradePercent: number, feedback: string | null) =>
     api.post(`/courses/${course}/submissions/${submission}/grade`, { grade_percent: gradePercent, feedback }),
+  async exportGradebook(course: string) {
+    const response = await api.get(`/courses/${course}/gradebook/export`, { responseType: 'blob' });
+    saveBlob(response.data as Blob, 'notas.xlsx');
+  },
+  returnSubmission: (course: string, submission: string, feedback: string) =>
+    api.post(`/courses/${course}/submissions/${submission}/return`, { feedback }),
+  async attempts(course: string, enrollment: string, activity: string) {
+    return (await api.get(`/courses/${course}/enrollments/${enrollment}/activities/${activity}/attempts`)).data.data as StudentAttempts;
+  },
+  grantAttempts: (course: string, enrollment: string, activity: string, attempts: number, reason: string) =>
+    api.post(`/courses/${course}/enrollments/${enrollment}/activities/${activity}/extra-attempts`, { attempts, reason }),
   async download(course: string, submission: ReviewSubmission) {
     const response = await api.get(`/courses/${course}/submissions/${submission.id}/download`, { responseType: 'blob' });
     saveBlob(response.data as Blob, submission.file?.name ?? 'entrega');

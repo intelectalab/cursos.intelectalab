@@ -29,12 +29,14 @@ class CourseActivity extends Model
         'title',
         'description',
         'position',
+        'weight',
     ];
 
     protected function casts(): array
     {
         return [
             'position' => 'integer',
+            'weight' => 'float',
         ];
     }
 

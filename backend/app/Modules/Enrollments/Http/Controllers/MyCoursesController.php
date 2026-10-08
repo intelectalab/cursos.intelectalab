@@ -5,6 +5,7 @@ namespace App\Modules\Enrollments\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Enrollments\Application\EnrollmentService;
 use App\Modules\Enrollments\Application\ProgressService;
+use App\Modules\Enrollments\Application\SequenceGate;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Domain\Models\EnrollmentProgress;
 use App\Modules\Enrollments\Http\ClassroomPresenter;
@@ -27,6 +28,7 @@ class MyCoursesController extends Controller
     public function __construct(
         private readonly EnrollmentService $enrollments,
         private readonly ProgressService $progress,
+        private readonly SequenceGate $gate,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -53,8 +55,10 @@ class MyCoursesController extends Controller
     {
         $enrollment = $this->enrollments->activeFor($request->user(), $course);
 
+        $summary = $this->progress->summary($enrollment);
+
         return ApiResponse::success(
-            ClassroomPresenter::classroom($enrollment) + ['progress' => $this->progress->summary($enrollment)],
+            ClassroomPresenter::classroom($enrollment, $this->gate->lockedSectionIds($enrollment, $summary)) + ['progress' => $summary],
             // Escala en la que se muestran las notas de la organización
             ['grade_scale' => $settings->gradeScale()]
         );
@@ -71,6 +75,8 @@ class MyCoursesController extends Controller
             throw new ApiException(ErrorCode::NotFound, 'El recurso no existe.', 404);
         }
 
+        $this->gate->assertOpen($enrollment, $resource);
+
         $this->progress->complete($enrollment, EnrollmentProgress::TYPE_RESOURCE, $resource);
 
         return ApiResponse::success($this->progress->summary($enrollment));
@@ -82,6 +88,7 @@ class MyCoursesController extends Controller
     public function download(Request $request, string $course, string $resource, FileStorage $storage): StreamedResponse
     {
         $enrollment = $this->enrollments->activeFor($request->user(), $course);
+        $this->gate->assertOpen($enrollment, $resource);
         $reference = ClassroomPresenter::fileOf($enrollment->course->currentVersion, $resource);
         $file = $reference ? File::query()->find($reference['id']) : null;
 

@@ -39,12 +39,17 @@ function describe(activity: Activity, gradeScale: number): { text: string; probl
       activity.max_attempts ? `${activity.max_attempts} ${activity.max_attempts === 1 ? 'intento' : 'intentos'}` : 'intentos ilimitados',
     ];
     if (activity.time_limit_minutes) parts.push(`${activity.time_limit_minutes} min`);
+    if (activity.weight !== 1) parts.push(activity.weight === 0 ? 'no cuenta para la nota' : `peso ${activity.weight}`);
     return { text: parts.join(' · '), problem: count === 0 ? 'Sin preguntas' : undefined };
   }
 
   if (activity.type === 'TASK') {
     const accepts = [activity.allow_text && 'texto', activity.allow_file && 'archivo'].filter(Boolean).join(' y ');
-    return { text: `Entrega: ${accepts}` };
+    const due = activity.due_days
+      ? ` · plazo de ${activity.due_days} ${activity.due_days === 1 ? 'día' : 'días'}${activity.accept_late === false ? ', sin tardías' : ''}`
+      : '';
+    const weight = activity.weight === 1 ? '' : activity.weight === 0 ? ' · no cuenta para la nota' : ` · peso ${activity.weight}`;
+    return { text: `Entrega: ${accepts}${due}${weight}` };
   }
 
   const required = (activity.questions as SurveyQuestion[]).filter((question) => question.required).length;

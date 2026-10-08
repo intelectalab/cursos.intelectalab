@@ -15,6 +15,8 @@ class Task extends Model
         'activity_id',
         'allow_text',
         'allow_file',
+        'due_days',
+        'accept_late',
     ];
 
     protected function casts(): array
@@ -22,6 +24,8 @@ class Task extends Model
         return [
             'allow_text' => 'boolean',
             'allow_file' => 'boolean',
+            'due_days' => 'integer',
+            'accept_late' => 'boolean',
         ];
     }
 }

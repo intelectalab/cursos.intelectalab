@@ -124,19 +124,36 @@ export interface ClassroomActivity {
   time_limit_minutes?: number | null;
   allow_text?: boolean;
   allow_file?: boolean;
+  due_days?: number | null;
+  accept_late?: boolean;
 }
 
 export interface ClassroomSection {
   id: string;
   title: string;
+  // Avance secuencial: cerrada hasta completar las anteriores; llega sin contenido
+  locked: boolean;
   resources: ClassroomResource[];
   activities: ClassroomActivity[];
 }
 
 export interface Classroom extends MyCourse {
   description: string | null;
+  sequential: boolean;
   sections: ClassroomSection[];
   progress: Progress;
+}
+
+// Lo que el aula necesita para dibujarse; también lo trae la vista previa del personal
+export type ClassroomContent = Pick<Classroom, 'course_id' | 'title' | 'summary' | 'category' | 'description' | 'sequential' | 'sections'>;
+
+export type PreviewSource = 'draft' | 'published';
+
+export interface PreviewMeta {
+  source: PreviewSource;
+  version: number | null;
+  has_published: boolean;
+  pending_changes: boolean;
 }
 
 // Inicio del alumno
@@ -255,6 +272,24 @@ export const enrollmentsApi = {
   async classroom(course: string) {
     const response = await api.get(`/me/courses/${course}`);
     return { classroom: response.data.data as Classroom, gradeScale: response.data.meta.grade_scale as number };
+  },
+  // Personal: el aula como la ve un alumno, de lo publicado o del borrador
+  async preview(course: string, source?: PreviewSource) {
+    const response = await api.get(`/courses/${course}/preview`, { params: { source } });
+    return {
+      classroom: response.data.data as ClassroomContent,
+      gradeScale: response.data.meta.grade_scale as number,
+      meta: response.data.meta as PreviewMeta,
+    };
+  },
+  async downloadAsStaff(course: string, resource: ClassroomResource) {
+    const response = await api.get(`/courses/${course}/resources/${resource.id}/download`, { responseType: 'blob' });
+    const url = URL.createObjectURL(response.data as Blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = resource.file?.name ?? resource.title;
+    link.click();
+    URL.revokeObjectURL(url);
   },
   async completeResource(course: string, resource: string) {
     return (await api.post(`/me/courses/${course}/resources/${resource}/complete`)).data.data as Progress;

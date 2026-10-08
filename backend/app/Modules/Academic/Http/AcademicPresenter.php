@@ -53,6 +53,7 @@ class AcademicPresenter
             'type' => $activity->type,
             'title' => $activity->title,
             'description' => $activity->description,
+            'weight' => $activity->weight,
         ];
 
         return $base + match ($activity->type) {
@@ -71,6 +72,8 @@ class AcademicPresenter
             CourseActivity::TYPE_TASK => [
                 'allow_text' => $activity->task->allow_text,
                 'allow_file' => $activity->task->allow_file,
+                'due_days' => $activity->task->due_days,
+                'accept_late' => $activity->task->accept_late,
             ],
             CourseActivity::TYPE_SURVEY => [
                 'questions' => $activity->survey->questions,

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Enrollments\Http;
 
+use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Courses\Domain\Models\CourseVersion;
 use App\Modules\Courses\Domain\YouTube;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
@@ -45,21 +46,67 @@ class ClassroomPresenter
     }
 
     /**
+     * @param  list<string>  $lockedSectionIds  secciones que el alumno aún no puede abrir (avance secuencial)
      * @return array<string, mixed>
      */
-    public static function classroom(Enrollment $enrollment): array
+    public static function classroom(Enrollment $enrollment, array $lockedSectionIds = []): array
     {
         $version = $enrollment->course->currentVersion;
 
         return self::summary($enrollment) + [
             'description' => $version->snapshot['description'] ?? null,
-            'sections' => array_map(fn (array $section) => [
+            'sequential' => $enrollment->course->sequential,
+            'sections' => self::sections($version->snapshot, $lockedSectionIds),
+        ];
+    }
+
+    /**
+     * El aula sin matrícula, para la vista previa del personal. Recibe el
+     * contenido de una versión publicada o del borrador.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<string, mixed>
+     */
+    public static function preview(Course $course, array $snapshot): array
+    {
+        return [
+            'course_id' => $course->id,
+            'title' => $snapshot['title'],
+            'summary' => $snapshot['summary'] ?? null,
+            'category' => $snapshot['category'] ?? null,
+            'description' => $snapshot['description'] ?? null,
+            'sequential' => $course->sequential,
+            'sections' => self::sections($snapshot),
+        ];
+    }
+
+    /**
+     * De una sección cerrada solo se entregan los títulos: su contenido no
+     * sale del servidor hasta que se abre.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @param  list<string>  $lockedSectionIds
+     * @return list<array<string, mixed>>
+     */
+    private static function sections(array $snapshot, array $lockedSectionIds = []): array
+    {
+        return array_map(function (array $section) use ($lockedSectionIds) {
+            $locked = in_array($section['id'], $lockedSectionIds, true);
+
+            return [
                 'id' => $section['id'],
                 'title' => $section['title'],
-                'resources' => array_map(fn (array $resource) => self::resource($resource), $section['resources'] ?? []),
-                'activities' => array_map(fn (array $activity) => self::activity($activity), $section['activities'] ?? []),
-            ], $version->snapshot['sections'] ?? []),
-        ];
+                'locked' => $locked,
+                'resources' => array_map(
+                    fn (array $resource) => self::resource($locked ? ['url' => null, 'body' => null, 'file' => null] + $resource : $resource),
+                    $section['resources'] ?? []
+                ),
+                'activities' => array_map(
+                    fn (array $activity) => self::activity($locked ? ['description' => null] + $activity : $activity),
+                    $section['activities'] ?? []
+                ),
+            ];
+        }, $snapshot['sections'] ?? []);
     }
 
     /**
@@ -160,6 +207,8 @@ class ClassroomPresenter
             'TASK' => [
                 'allow_text' => $activity['task']['allow_text'] ?? false,
                 'allow_file' => $activity['task']['allow_file'] ?? false,
+                'due_days' => $activity['task']['due_days'] ?? null,
+                'accept_late' => $activity['task']['accept_late'] ?? true,
             ],
             'SURVEY' => ['questions_count' => count($activity['survey']['questions'] ?? [])],
             default => [],

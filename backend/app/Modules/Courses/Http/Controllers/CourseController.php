@@ -191,6 +191,8 @@ class CourseController extends Controller
             'price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
             // Quien completa el curso recibe certificado (RN-007)
             'issues_certificate' => ['nullable', 'boolean'],
+            // Una sección se abre al completar la anterior
+            'sequential' => ['nullable', 'boolean'],
             'language' => ['required', Rule::in(Course::LANGUAGES)],
         ]);
     }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Download, Hourglass, Paperclip, Send } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Download, Hourglass, Paperclip, RotateCcw, Send } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
-import { Alert, Button, Field, INPUT_CLASS, LoadingState } from '../../../shared/ui';
+import { Alert, Badge, Button, Field, INPUT_CLASS, LoadingState } from '../../../shared/ui';
 import { formatSize } from '../../courses/api';
 import { toScale, type SurveyQuestion } from '../api';
 import { studentApi, type SurveyState, type TaskState } from '../studentApi';
@@ -30,7 +30,8 @@ export const TaskPanel: React.FC<{
   const [error, setError] = useState<string | null>(null);
 
   const graded = submission?.status === 'GRADED';
-  const showForm = !submission || (editing && !graded);
+  const returned = submission?.status === 'RETURNED';
+  const showForm = state.can_submit && (!submission || (editing && !graded));
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -61,6 +62,22 @@ export const TaskPanel: React.FC<{
     <div className="space-y-4">
       {error && <Alert>{error}</Alert>}
 
+      {state.due_at && !graded && (
+        <div
+          className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-[13px] ${
+            state.past_due ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}
+          role="status"
+        >
+          <CalendarClock className={`w-4 h-4 shrink-0 ${state.past_due ? 'text-amber-600' : 'text-slate-500'}`} />
+          <p>
+            {state.past_due ? 'El plazo venció el ' : 'Entrega hasta el '}
+            <span className="font-semibold">{formatDate(state.due_at)}</span>.
+            {state.past_due && !returned && (state.can_submit ? ' Aún puedes entregar: quedará marcada como tardía.' : ' Esta tarea ya no recibe entregas.')}
+          </p>
+        </div>
+      )}
+
       {submission && !showForm && (
         <>
           {graded ? (
@@ -75,12 +92,20 @@ export const TaskPanel: React.FC<{
                 <span className="text-base font-semibold opacity-70"> / {gradeScale}</span>
               </p>
             </div>
+          ) : returned ? (
+            <div className="flex items-center gap-3 p-4 rounded-xl border bg-amber-50 border-amber-200 text-amber-900" role="status">
+              <RotateCcw className="w-6 h-6 text-amber-600 shrink-0" />
+              <p className="text-[13px]">
+                <span className="block font-semibold">Tu profesor te devolvió la tarea el {formatDate(submission.returned_at)}</span>
+                Revisa su comentario y vuelve a entregarla.
+              </p>
+            </div>
           ) : (
             <div className="flex items-center gap-3 p-4 rounded-xl border bg-sky-50 border-sky-200 text-sky-900" role="status">
               <Hourglass className="w-6 h-6 text-sky-600 shrink-0" />
               <p className="text-[13px]">
                 <span className="block font-semibold">Entregada el {formatDate(submission.submitted_at)}</span>
-                Tu profesor aún no la revisa; mientras tanto puedes reemplazarla.
+                Tu profesor aún no la revisa{state.can_submit ? '; mientras tanto puedes reemplazarla.' : '.'}
               </p>
             </div>
           )}
@@ -93,7 +118,10 @@ export const TaskPanel: React.FC<{
           )}
 
           <div className="p-4 rounded-xl border border-slate-200 space-y-3">
-            <p className="text-xs font-semibold text-slate-500">Tu entrega</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-semibold text-slate-500">Tu entrega</p>
+              {submission.is_late && <Badge tone="warning">Fuera de plazo</Badge>}
+            </div>
             {submission.body && <p className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap break-words">{submission.body}</p>}
             {submission.file && (
               <div className="flex flex-wrap items-center gap-3">
@@ -108,7 +136,11 @@ export const TaskPanel: React.FC<{
             )}
           </div>
 
-          {!graded && <Button onClick={() => setEditing(true)}>Reemplazar mi entrega</Button>}
+          {state.can_submit && (
+            <Button variant={returned ? 'primary' : 'secondary'} onClick={() => setEditing(true)}>
+              {returned ? 'Volver a entregar' : 'Reemplazar mi entrega'}
+            </Button>
+          )}
         </>
       )}
 
@@ -142,7 +174,7 @@ export const TaskPanel: React.FC<{
           )}
           <div className="flex flex-wrap gap-2">
             <Button variant="primary" type="submit" processing={processing} icon={<Send className="w-4 h-4" />}>
-              {submission ? 'Reemplazar entrega' : 'Entregar tarea'}
+              {returned ? 'Volver a entregar' : submission ? 'Reemplazar entrega' : 'Entregar tarea'}
             </Button>
             {submission && <Button onClick={() => setEditing(false)}>Cancelar</Button>}
           </div>

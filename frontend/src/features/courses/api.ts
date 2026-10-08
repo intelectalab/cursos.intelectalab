@@ -53,6 +53,8 @@ export interface CourseSummary {
   price: string | null;
   // Quien completa el curso recibe certificado
   issues_certificate: boolean;
+  // Avance secuencial: una sección se abre al completar la anterior
+  sequential: boolean;
   language: string;
   status: CourseStatus;
   cover_url: string | null;
@@ -124,6 +126,7 @@ export interface CourseInput {
   access_days: number | null;
   price: number | null;
   issues_certificate: boolean;
+  sequential: boolean;
   language: string;
 }
 
@@ -137,6 +140,7 @@ export const EMPTY_COURSE: CourseInput = {
   access_days: null,
   price: null,
   issues_certificate: false,
+  sequential: false,
   language: 'es',
 };
 

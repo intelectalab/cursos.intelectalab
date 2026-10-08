@@ -47,12 +47,17 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     // Seguimiento: quien revisa todos los cursos o el profesor en los suyos
     Route::middleware('permission:submissions.review,submissions.assigned.review')
         ->prefix('/courses/{course}')
-        ->whereUuid(['course', 'submission', 'activity'])
+        ->whereUuid(['course', 'submission', 'activity', 'enrollment'])
         ->group(function () {
             Route::get('/tracking', [ReviewController::class, 'tracking']);
+            Route::get('/gradebook/export', [ReviewController::class, 'exportGradebook']);
             Route::get('/submissions', [ReviewController::class, 'submissions']);
             Route::post('/submissions/{submission}/grade', [ReviewController::class, 'grade']);
+            Route::post('/submissions/{submission}/return', [ReviewController::class, 'returnSubmission']);
             Route::get('/submissions/{submission}/download', [ReviewController::class, 'download']);
+            // Intentos de un alumno en un cuestionario, con el detalle de cada uno
+            Route::get('/enrollments/{enrollment}/activities/{activity}/attempts', [ReviewController::class, 'attempts']);
+            Route::post('/enrollments/{enrollment}/activities/{activity}/extra-attempts', [ReviewController::class, 'grantAttempts']);
             Route::get('/activities/{activity}/survey-results', [ReviewController::class, 'surveyResults']);
         });
 
@@ -62,6 +67,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     // Alumno: consultar sus actividades…
     Route::middleware('permission:activities.self')->whereUuid(['course', 'activity', 'attempt'])->group(function () {
         Route::get('/me/courses/{course}/activities', [StudentActivityController::class, 'index']);
+        Route::get('/me/courses/{course}/grades', [StudentActivityController::class, 'grades']);
         Route::get('/me/courses/{course}/activities/{activity}', [StudentActivityController::class, 'show']);
         Route::get('/me/courses/{course}/activities/{activity}/submission/download', [StudentActivityController::class, 'downloadSubmission']);
         Route::get('/me/attempts/{attempt}', [StudentActivityController::class, 'showAttempt']);

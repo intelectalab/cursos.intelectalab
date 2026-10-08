@@ -210,6 +210,40 @@ function describeCorrect(type: ResultQuestion['type'], correct: QuestionConfig):
 
 /* ───────────────────────────── Resultado ───────────────────────────── */
 
+// Pregunta por pregunta: lo que se respondió, su puntaje y, si ya se puede ver, la respuesta correcta.
+// La usa el alumno en su resultado y quien revisa en el detalle de un intento.
+export const AttemptQuestions: React.FC<{ result: AttemptResult; answerLabel?: string }> = ({ result, answerLabel = 'Tu respuesta' }) => (
+  <ol className="space-y-3">
+    {result.questions.map((question, index) => {
+      const tone = question.score >= 1 ? 'success' : question.score > 0 ? 'warning' : 'danger';
+      const label = question.score >= 1 ? 'Correcta' : question.score > 0 ? 'Parcial' : 'Incorrecta';
+      return (
+        <li key={question.id} className="p-4 rounded-xl border border-slate-200">
+          <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+            <p className="text-[13px] font-semibold text-slate-900 flex-1 min-w-0">
+              {index + 1}. {question.statement}
+            </p>
+            <Badge tone={tone} dot>
+              {label} · {Math.round(question.score * question.points * 100) / 100} de {question.points} pts
+            </Badge>
+          </div>
+          <p className="text-[13px] text-slate-600">
+            <span className="font-medium text-slate-700">{answerLabel}:</span> {describeAnswer(question)}
+          </p>
+          {question.correct && question.score < 1 && (
+            <p className="text-[13px] text-emerald-800 mt-1">
+              <span className="font-medium">Respuesta correcta:</span> {describeCorrect(question.type, question.correct)}
+            </p>
+          )}
+          {question.explanation && result.answers_revealed && (
+            <p className="text-[13px] text-slate-500 mt-2 pt-2 border-t border-slate-100">{question.explanation}</p>
+          )}
+        </li>
+      );
+    })}
+  </ol>
+);
+
 const ResultView: React.FC<{ result: AttemptResult; gradeScale: number; onBack: () => void }> = ({ result, gradeScale, onBack }) => (
   <div className="space-y-5">
     <div
@@ -237,37 +271,7 @@ const ResultView: React.FC<{ result: AttemptResult; gradeScale: number; onBack: 
       <Alert tone="info">Las respuestas correctas se muestran cuando apruebas o cuando ya no te quedan intentos.</Alert>
     )}
 
-    {result.status !== 'EXPIRED' && (
-      <ol className="space-y-3">
-        {result.questions.map((question, index) => {
-          const tone = question.score >= 1 ? 'success' : question.score > 0 ? 'warning' : 'danger';
-          const label = question.score >= 1 ? 'Correcta' : question.score > 0 ? 'Parcial' : 'Incorrecta';
-          return (
-            <li key={question.id} className="p-4 rounded-xl border border-slate-200">
-              <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                <p className="text-[13px] font-semibold text-slate-900 flex-1 min-w-0">
-                  {index + 1}. {question.statement}
-                </p>
-                <Badge tone={tone} dot>
-                  {label} · {Math.round(question.score * question.points * 100) / 100} de {question.points} pts
-                </Badge>
-              </div>
-              <p className="text-[13px] text-slate-600">
-                <span className="font-medium text-slate-700">Tu respuesta:</span> {describeAnswer(question)}
-              </p>
-              {question.correct && question.score < 1 && (
-                <p className="text-[13px] text-emerald-800 mt-1">
-                  <span className="font-medium">Respuesta correcta:</span> {describeCorrect(question.type, question.correct)}
-                </p>
-              )}
-              {question.explanation && result.answers_revealed && (
-                <p className="text-[13px] text-slate-500 mt-2 pt-2 border-t border-slate-100">{question.explanation}</p>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    )}
+    {result.status !== 'EXPIRED' && <AttemptQuestions result={result} />}
 
     <Button onClick={onBack}>Volver al cuestionario</Button>
   </div>
@@ -514,6 +518,7 @@ export const QuizPanel: React.FC<{
             : exhausted
               ? 'Ya usaste todos tus intentos.'
               : `Te ${state.attempts_left === 1 ? 'queda 1 intento' : `quedan ${state.attempts_left} intentos`}.`}{' '}
+          {state.extra_attempts > 0 && !exhausted && 'Tu profesor te dio un intento adicional. '}
           Cuenta el mejor.
         </span>
       </div>

@@ -3,11 +3,14 @@
 namespace App\Modules\Academic\Application;
 
 use App\Modules\Academic\Domain\Models\QuizAttempt;
+use App\Modules\Academic\Domain\Models\QuizAttemptGrant;
 use App\Modules\Academic\Domain\QuestionConfig;
 use App\Modules\Academic\Domain\QuestionGrader;
+use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Enrollments\Application\ProgressService;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Domain\Models\EnrollmentProgress;
+use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Support\Collection;
@@ -23,7 +26,10 @@ class QuizAttemptService
     /** Margen tras el tiempo límite para que llegue un envío automático */
     private const GRACE_SECONDS = 60;
 
-    public function __construct(private readonly ProgressService $progress) {}
+    public function __construct(
+        private readonly ProgressService $progress,
+        private readonly AuditLogger $audit,
+    ) {}
 
     /**
      * Abre un intento o devuelve el que ya está abierto.
@@ -46,7 +52,7 @@ class QuizAttemptService
                 return $open;
             }
 
-            if ($quiz['max_attempts'] !== null && $attempts->count() >= $quiz['max_attempts']) {
+            if ($quiz['max_attempts'] !== null && $attempts->count() >= $quiz['max_attempts'] + $this->extraAttempts($enrollment, $activity['id'])) {
                 throw new ApiException(ErrorCode::NoAttemptsLeft, 'Ya usaste todos los intentos de este cuestionario.', 409);
             }
 
@@ -149,15 +155,16 @@ class QuizAttemptService
     {
         $this->closeExpired($enrollment, $activity['id']);
 
-        return $this->stateFrom($this->attempts($enrollment, $activity['id']), $activity);
+        return $this->stateFrom($this->attempts($enrollment, $activity['id']), $activity, $this->extraAttempts($enrollment, $activity['id']));
     }
 
     /**
      * @param  Collection<int, QuizAttempt>  $attempts  intentos del alumno en ese cuestionario
      * @param  array<string, mixed>  $activity
+     * @param  int  $extra  intentos adicionales concedidos a este alumno
      * @return array<string, mixed>
      */
-    public function stateFrom(Collection $attempts, array $activity): array
+    public function stateFrom(Collection $attempts, array $activity, int $extra = 0): array
     {
         $closed = $attempts->reject(fn (QuizAttempt $attempt) => $attempt->isOpen());
         $max = $activity['quiz']['max_attempts'];
@@ -174,7 +181,8 @@ class QuizAttemptService
             // Cuenta el mejor intento
             'best_percent' => $closed->max('score_percent'),
             'passed' => $closed->contains(fn (QuizAttempt $attempt) => $attempt->passed),
-            'attempts_left' => $max === null ? null : max(0, $max - $attempts->count()),
+            'attempts_left' => $max === null ? null : max(0, $max + $extra - $attempts->count()),
+            'extra_attempts' => $extra,
             'open_attempt_id' => $attempts->first(fn (QuizAttempt $attempt) => $attempt->isOpen())?->id,
         ];
     }
@@ -236,6 +244,42 @@ class QuizAttemptService
                 'correct' => $reveal ? $question['config'] : null,
             ], $attempt->questions),
         ];
+    }
+
+    /**
+     * Concede intentos adicionales a un alumno en un cuestionario con tope
+     * (YC-EVA-005). Se suman a los del cuestionario y quedan en auditoría.
+     *
+     * @param  array<string, mixed>  $activity
+     */
+    public function grant(Enrollment $enrollment, array $activity, int $attempts, string $reason, User $reviewer): QuizAttemptGrant
+    {
+        if ($activity['quiz']['max_attempts'] === null) {
+            throw new ApiException(ErrorCode::ValidationError, 'Este cuestionario no tiene tope de intentos.', 422);
+        }
+
+        return DB::transaction(function () use ($enrollment, $activity, $attempts, $reason, $reviewer) {
+            $grant = QuizAttemptGrant::create([
+                'enrollment_id' => $enrollment->id,
+                'course_id' => $enrollment->course_id,
+                'activity_id' => $activity['id'],
+                'attempts' => $attempts,
+                'reason' => $reason,
+                'granted_by' => $reviewer->id,
+            ]);
+
+            $this->audit->record('attempts.granted', $grant, null, $grant->only(['enrollment_id', 'activity_id', 'attempts', 'reason']));
+
+            return $grant;
+        });
+    }
+
+    public function extraAttempts(Enrollment $enrollment, string $activityId): int
+    {
+        return (int) QuizAttemptGrant::query()
+            ->where('enrollment_id', $enrollment->id)
+            ->where('activity_id', $activityId)
+            ->sum('attempts');
     }
 
     /**
