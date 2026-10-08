@@ -63,6 +63,8 @@ class RoleCatalog
                 'description' => 'Atención y seguimiento de tickets',
                 'permissions' => [
                     'tickets.*', 'users.support.read', 'orders.support.read', 'enrollments.support.read',
+                    // La ficha del alumno le da el contexto completo de quien consulta
+                    'students.read',
                     // Ve los reclamos para dar contexto a quien consulta; responderlos es del Administrador
                     'claims.read',
                 ],
@@ -71,7 +73,8 @@ class RoleCatalog
                 'name' => 'Ventas/CRM',
                 'description' => 'Gestión comercial y CRM',
                 // Además del Maestro §8.1: ve promociones y paquetes para poder ofrecerlos
-                'permissions' => ['crm.*', 'quotations.*', 'orders.read', 'orders.create', 'promotions.read', 'packages.read'],
+                // y la ficha de cada alumno, para saber qué compró y qué cursa
+                'permissions' => ['crm.*', 'quotations.*', 'orders.read', 'orders.create', 'promotions.read', 'packages.read', 'students.read'],
             ],
             self::B2B => [
                 'name' => 'B2B autorizado',

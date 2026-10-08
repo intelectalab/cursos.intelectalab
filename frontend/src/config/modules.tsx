@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   BookOpen,
   GraduationCap,
+  Presentation,
   ClipboardList,
   Compass,
   Library,
@@ -34,6 +35,8 @@ const QuestionBanksPage = lazyPage(() => import('../features/academic/pages/Ques
 const MyCoursesPage = lazyPage(() => import('../features/enrollments/pages/MyCoursesPage'), 'MyCoursesPage');
 const AvailableCoursesPage = lazyPage(() => import('../features/enrollments/pages/AvailableCoursesPage'), 'AvailableCoursesPage');
 const EnrollmentsPage = lazyPage(() => import('../features/enrollments/pages/EnrollmentsPage'), 'EnrollmentsPage');
+const TeachersPage = lazyPage(() => import('../features/teachers/pages/TeachersPage'), 'TeachersPage');
+const StudentsPage = lazyPage(() => import('../features/students/pages/StudentsPage'), 'StudentsPage');
 const MyOrdersPage = lazyPage(() => import('../features/sales/pages/MyOrdersPages'), 'MyOrdersPage');
 const OrdersPage = lazyPage(() => import('../features/sales/pages/OrdersPage'), 'OrdersPage');
 const MyCertificatesPage = lazyPage(() => import('../features/certificates/pages/MyCertificatesPage'), 'MyCertificatesPage');
@@ -175,6 +178,28 @@ export const APP_MODULES: ModuleItem[] = [
     // El profesor entra con el permiso de cursos asignados
     permission: ['courses.read', 'courses.assigned.read'],
     component: CoursesPage,
+  },
+  {
+    id: 'students',
+    name: 'Alumnos',
+    description: 'Quiénes estudian y la ficha completa de cada uno',
+    href: '/students',
+    icon: GraduationCap,
+    tone: 'brand',
+    group: 'operation',
+    permission: 'students.read',
+    component: StudentsPage,
+  },
+  {
+    id: 'teachers',
+    name: 'Docentes',
+    description: 'Quiénes dictan, sus cursos y lo que tienen por calificar',
+    href: '/teachers',
+    icon: Presentation,
+    tone: 'violet',
+    group: 'operation',
+    permission: 'teachers.read',
+    component: TeachersPage,
   },
   {
     id: 'enrollments',

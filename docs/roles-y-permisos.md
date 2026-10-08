@@ -22,8 +22,8 @@ Cada academia recibe estos roles al crearse. Son fijos: no se editan ni se elimi
 | Administrador | `ADMIN` | Administración integral de la organización | Acceso total |
 | Alumno | `STUDENT` | Consumo de cursos, actividades y certificados | 13 |
 | Profesor | `TEACHER` | Gestión académica de los cursos asignados | 7 |
-| Soporte | `SUPPORT` | Atención y seguimiento de tickets | 5 |
-| Ventas/CRM | `SALES` | Gestión comercial y CRM | 6 |
+| Soporte | `SUPPORT` | Atención y seguimiento de tickets | 6 |
+| Ventas/CRM | `SALES` | Gestión comercial y CRM | 7 |
 | B2B autorizado | `B2B` | Operaciones corporativas: cuentas, licencias y cotizaciones | 3 |
 | Responsable de empresa | `COMPANY` | Portal de una empresa cliente: licencias, trabajadores, avance y cotizaciones | 3 |
 
@@ -45,7 +45,7 @@ Es el contacto externo de una empresa cliente (uno o varios por empresa). Regist
 
 ### Administrador
 
-Acceso total a todos los módulos de su academia (80 permisos). No alcanza las operaciones de plataforma.
+Acceso total a todos los módulos de su academia (82 permisos). No alcanza las operaciones de plataforma.
 
 ### Alumno
 
@@ -79,6 +79,7 @@ Acceso total a todos los módulos de su academia (80 permisos). No alcanza las o
 - `users.support.read`: Consultar usuarios para atención de soporte
 - `orders.support.read`: Consultar órdenes para atención de soporte
 - `enrollments.support.read`: Consultar matrículas para atención de soporte
+- `students.read`: Consultar los alumnos y la ficha completa de cada uno (matrículas, compras, certificados y tickets)
 - `claims.read`: Consultar las hojas del Libro de Reclamaciones
 
 ### Ventas/CRM
@@ -89,6 +90,7 @@ Acceso total a todos los módulos de su academia (80 permisos). No alcanza las o
 - `orders.create`: Crear órdenes
 - `promotions.read`: Consultar promociones, cupones y sus usos
 - `packages.read`: Consultar los paquetes de cursos
+- `students.read`: Consultar los alumnos y la ficha completa de cada uno (matrículas, compras, certificados y tickets)
 
 ### B2B autorizado
 
@@ -152,6 +154,7 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | `question_banks.manage` | Crear y editar bancos de preguntas | ✔ |  | ✔ |  |  |  |  |
 | `submissions.review` | Revisar entregas y ver el avance en todos los cursos | ✔ |  |  |  |  |  |  |
 | `submissions.assigned.review` | Revisar entregas de los cursos asignados | ✔ |  | ✔ |  |  |  |  |
+| `teachers.read` | Consultar los docentes, sus cursos y su carga de calificación | ✔ |  |  |  |  |  |  |
 
 ### Matrículas y portal del alumno
 
@@ -164,6 +167,7 @@ Una marca indica que el rol base tiene ese permiso, ya sea directamente o por un
 | `enrollments.self.read` | Consultar las matrículas propias | ✔ | ✔ |  |  |  |  |  |
 | `enrollments.support.read` | Consultar matrículas para atención de soporte | ✔ |  |  | ✔ |  |  |  |
 | `student.portal` | Acceder al portal del alumno | ✔ | ✔ |  |  |  |  |  |
+| `students.read` | Consultar los alumnos y la ficha completa de cada uno (matrículas, compras, certificados y tickets) | ✔ |  |  | ✔ | ✔ |  |  |
 
 ### Certificados
 

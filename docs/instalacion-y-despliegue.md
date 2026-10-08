@@ -4,7 +4,7 @@ Guía de respaldo para instalar el sistema en un servidor. Se actualiza cada vez
 
 > **Estado:** todavía no se ha hecho un despliegue real. Los pasos de instalación local están probados; los de servidor (sección 5 en adelante) describen lo que el sistema necesita, pero no se han ejecutado en un servidor. Los puntos sin resolver están en la sección 9.
 
-Última actualización: 2026-10-08 (Evaluaciones y aula, tres entregas: tres migraciones nuevas, sin dependencias ni variables de entorno; al actualizar basta `php artisan migrate --force`).
+Última actualización: 2026-10-08 (Evaluaciones y aula: tres migraciones nuevas; Alumnos y docentes: dos permisos nuevos. Sin dependencias ni variables de entorno. Al actualizar: `php artisan migrate --force` y `php artisan access:sync`).
 
 ## 1. Componentes
 

@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-08, al cerrar el bloque "Evaluaciones y aula" (entrega 3).
+Última actualización: 2026-10-08, al cerrar el bloque "Alumnos y docentes" (entrega 2).
 
 ## Dónde estamos
 
 **Revisión de jefatura (12 puntos): las tres entregas acordadas están terminadas.** Nueve puntos hechos, uno a medias ("hacerlo más visual": falta saber si señalaron pantallas concretas) y dos esperan respuestas (Moodle y horarios). Los sprints del plan siguen igual: S12 terminado; S6 Pagos espera la decisión 8, S9 SCORM la decisión 9, y S13 necesita servidor, dominio y correo (decisiones 1 a 3).
 
-**Terminado:** el bloque "Evaluaciones y aula", que sale del sprint 2 del backlog YC (83 historias: 27 hechas, 21 a medias, 32 faltan y 3 resueltas distinto), en tres entregas. **Sigue** el bloque "Alumnos y docentes" (pantallas propias y ficha Alumno 360) y el buscador con filtros del catálogo público. Jefatura pidió además cobrar con PayPal y Mercado Pago: es el S6 y espera las respuestas de la decisión 8 que se listan abajo. Moodle y el horario por disponibilidad docente esperan respuestas (decisiones 14 y 15). El backlog de historias YC sigue llegando por semana (decisión 13).
+**Terminado:** el bloque "Evaluaciones y aula", que sale del sprint 2 del backlog YC (83 historias: 30 hechas, 20 a medias, 30 faltan y 3 resueltas distinto), en tres entregas; y el bloque "Alumnos y docentes", en dos. **Sigue** el buscador con filtros del catálogo público. Jefatura pidió además cobrar con PayPal y Mercado Pago: es el S6 y espera las respuestas de la decisión 8 que se listan abajo. Moodle y el horario por disponibilidad docente esperan respuestas (decisiones 14 y 15). El backlog de historias YC sigue llegando por semana (decisión 13).
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -46,11 +46,13 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Evaluaciones y aula · entrega 1 | Plazo de las tareas con entrega tardía, devolver una tarea para rehacerla, intentos adicionales por alumno y detalle de cada intento para quien revisa | Hecho |
 | Evaluaciones y aula · entrega 2 | Nota final del curso (promedio según el peso de cada cuestionario y tarea), libro de notas con descarga en Excel y "Mis notas" del alumno | Hecho |
 | Evaluaciones y aula · entrega 3 | Avance secuencial por secciones (interruptor por curso) y vista previa del aula para el personal, de lo publicado o del borrador | Hecho |
-| Alumnos y docentes | Pantallas propias de alumnos y de docentes, y ficha Alumno 360 | Pendiente |
+| Alumnos y docentes · entrega 1 | Pantalla "Alumnos" (tarjetas que filtran, buscador, alta) y ficha Alumno 360 con cursos, compras, certificados y consultas | Hecho |
+| Alumnos y docentes · entrega 2 | Pantalla "Docentes" (tarjetas que filtran, buscador, alta) y ficha del docente con sus cursos, alumnos y carga de calificación | Hecho |
+| Catálogo público | Buscador y filtros | Pendiente |
 
 - **Avance del plan:** 11 de 14 sprints completos (S0 a S5, S7, S8 y S10 a S12). Faltan S6 y S9, en espera de decisiones, y S13.
-- **Calidad:** 266 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia); la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
-- **Seguridad:** las pruebas revisan que las 255 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 63 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
+- **Calidad:** 271 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia); la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
+- **Seguridad:** las pruebas revisan que las 259 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 63 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
 - **Certificados:** el curso que lo indique entrega un certificado en PDF, con código y QR, a quien lo completa; cualquiera lo verifica en una página pública; el personal puede emitir a mano y anular.
@@ -242,6 +244,20 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Retirar un intento adicional ya dado.
 - Avisar por correo de la devolución y del intento adicional (depende de la decisión 3).
 
+**De docentes (2026-10-08)**
+
+- Valoraciones del docente (dependen de las reseñas de cursos).
+- Repartir la carga de calificación cuando un curso tiene varios docentes; tiempo de respuesta y alertas por demora.
+- Asignar cursos desde la ficha del docente.
+
+**De alumnos y la ficha Alumno 360 (2026-10-08)**
+
+- Actuar desde la ficha: matricular, editar la cuenta, responder una consulta; y enlazar cada compra, certificado y consulta a su detalle.
+- Limitar la ficha por bloques según el rol (por ejemplo, que Ventas no vea las consultas).
+- Rol Finanzas, que el backlog menciona y no existe.
+- Exportar la lista de alumnos a Excel y ordenar por otras columnas.
+- Medir el listado con miles de alumnos.
+
 **Del avance secuencial y la vista previa (entrega 3, 2026-10-08)**
 
 - Regla para el alumno que agota los intentos de un cuestionario sin aprobar y queda sin poder avanzar (hoy lo resuelve el profesor con un intento adicional).
@@ -319,8 +335,8 @@ Lista que jefatura envió el 2026-10-07 tras revisar el sistema.
 
 ## 5. Orden propuesto
 
-1. Commit de las tres entregas de "Evaluaciones y aula"; limpieza del repositorio (sección 2).
-2. Seguir con "Alumnos y docentes" y el buscador con filtros del catálogo público. Los criterios de aceptación del backlog YC se pedirán después.
+1. Commit de las cinco entregas del 2026-10-08; limpieza del repositorio (sección 2).
+2. Buscador con filtros del catálogo público. Los criterios de aceptación del backlog YC se pedirán después.
 2. Responder lo que falta de la decisión 8 para empezar los cobros con PayPal y Mercado Pago (S6).
 3. Responder las decisiones 14 (Moodle) y 15 (horarios) para poder estimarlas.
 4. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging: con eso se puede hacer S13.

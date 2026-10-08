@@ -27,6 +27,8 @@ const PackageCheckoutPage = lazyPage(() => import('../features/sales/pages/Packa
 const PublicPackagePage = lazyPage(() => import('../features/sales/pages/PackagePages'), 'PublicPackagePage');
 const MyOrderPage = lazyPage(() => import('../features/sales/pages/MyOrdersPages'), 'MyOrderPage');
 const VerifyPage = lazyPage(() => import('../features/certificates/pages/VerifyPage'), 'VerifyPage');
+const TeacherProfilePage = lazyPage(() => import('../features/teachers/pages/TeacherProfilePage'), 'TeacherProfilePage');
+const StudentProfilePage = lazyPage(() => import('../features/students/pages/StudentProfilePage'), 'StudentProfilePage');
 const CorporateAccountPage = lazyPage(() => import('../features/company/pages/CorporateAccountPage'), 'CorporateAccountPage');
 const ClaimFormPage = lazyPage(() => import('../features/claims/pages/PublicClaimPages'), 'ClaimFormPage');
 const ClaimLookupPage = lazyPage(() => import('../features/claims/pages/PublicClaimPages'), 'ClaimLookupPage');
@@ -112,6 +114,22 @@ function TenantRoutes() {
               element={
                 <PermissionGate permission={['courses.read', 'courses.assigned.read']}>
                   <CourseEditorPage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/teachers/:teacherId"
+              element={
+                <PermissionGate permission="teachers.read">
+                  <TeacherProfilePage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/students/:studentId"
+              element={
+                <PermissionGate permission="students.read">
+                  <StudentProfilePage />
                 </PermissionGate>
               }
             />

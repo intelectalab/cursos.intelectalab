@@ -36,6 +36,8 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-08 | Evaluaciones y aula · Entrega 1: plazo y devolución de tareas, intentos adicionales y detalle del intento | [2026-10-08-evaluaciones-y-aula-entrega-1.md](2026-10-08-evaluaciones-y-aula-entrega-1.md) |
 | 2026-10-08 | Evaluaciones y aula · Entrega 2: nota final del curso y libro de notas | [2026-10-08-evaluaciones-y-aula-entrega-2.md](2026-10-08-evaluaciones-y-aula-entrega-2.md) |
 | 2026-10-08 | Evaluaciones y aula · Entrega 3: avance secuencial y vista previa del aula | [2026-10-08-evaluaciones-y-aula-entrega-3.md](2026-10-08-evaluaciones-y-aula-entrega-3.md) |
+| 2026-10-08 | Alumnos y docentes · Entrega 1: listado de alumnos y ficha Alumno 360 | [2026-10-08-alumnos-y-docentes-entrega-1.md](2026-10-08-alumnos-y-docentes-entrega-1.md) |
+| 2026-10-08 | Alumnos y docentes · Entrega 2: listado de docentes y ficha del docente | [2026-10-08-alumnos-y-docentes-entrega-2.md](2026-10-08-alumnos-y-docentes-entrega-2.md) |
 
 Documentos relacionados:
 
@@ -47,7 +49,8 @@ Documentos relacionados:
 
 ## Qué sigue
 
-1. Evaluaciones y aula (del sprint 2 del backlog YC): las tres entregas están hechas. Sigue el bloque de alumnos y docentes (pantallas propias y ficha Alumno 360) y el buscador con filtros del catálogo público.
+1. Evaluaciones y aula (del sprint 2 del backlog YC): las tres entregas están hechas.
+1. Alumnos y docentes: las dos entregas están hechas. Sigue el buscador con filtros del catálogo público.
 1. Revisión de jefatura: las tres entregas están hechas. Falta que jefatura las revise.
 2. Moodle y horarios por disponibilidad docente: esperan las decisiones 14 y 15 de [pendientes](../pendientes.md).
 3. S6 — Pagos (decisión 8), S9 — SCORM (decisión 9) y S13 — salida a producción (decisiones 1 a 3).

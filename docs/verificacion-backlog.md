@@ -4,7 +4,7 @@ Comparación entre las historias del backlog que entrega jefatura (códigos `YC-
 
 El backlog llega por partes (un sprint por semana). Cada parte se agrega aquí.
 
-Última actualización: 2026-10-08, al cerrar la entrega 3 de "Evaluaciones y aula". El sprint 2 del backlog (12 épicas) se comparó el 2026-10-07. El sprint 1 se comparó el 2026-10-06, al cerrar S12.
+Última actualización: 2026-10-08, al cerrar la entrega 2 de "Alumnos y docentes". El sprint 2 del backlog (12 épicas) se comparó el 2026-10-07. El sprint 1 se comparó el 2026-10-06, al cerrar S12.
 
 **Estados:** Hecho · Parcial (existe, pero le falta algo de lo que pide la historia) · Falta · Distinto (se resolvió de otra forma por una decisión ya tomada).
 
@@ -147,7 +147,7 @@ Decisión ya tomada con jefatura: los videos se alojan en YouTube y el sistema s
 
 Recibido el 2026-10-07: 12 épicas y 83 historias (la épica B2C vino pegada dos veces; se cuenta una). Solo llegaron los títulos de las historias y el contexto de cada épica, sin criterios de aceptación ni el texto de las reglas. La comparación se hizo por título contra el código: una historia marcada "Hecho" puede tener criterios que todavía no conocemos.
 
-Resumen: 83 historias. 27 hechas, 21 parciales, 32 faltan y 3 se resolvieron distinto. Al compararlo eran 21, 25, 34 y 3: el bloque "Evaluaciones y aula" cerró seis (EVA-005, 006, 007 y 009; AULA-003 y 004). De las 32 que faltan, 16 son de Pagos y Facturación electrónica, que esperan la decisión 8.
+Resumen: 83 historias. 30 hechas, 20 parciales, 30 faltan y 3 se resolvieron distinto. Al compararlo eran 21, 25, 34 y 3: "Evaluaciones y aula" cerró seis (EVA-005, 006, 007 y 009; AULA-003 y 004) y "Alumnos y docentes", tres (ALU-001, ALU-002 y PRO-001), además de dejar PRO-002 a medias. De las 30 que faltan, 16 son de Pagos y Facturación electrónica, que esperan la decisión 8.
 
 | Épica | Historias | Hecho | Parcial | Falta | Distinto |
 | --- | --- | --- | --- | --- | --- |
@@ -159,10 +159,10 @@ Resumen: 83 historias. 27 hechas, 21 parciales, 32 faltan y 3 se resolvieron dis
 | FAC Facturación electrónica | 9 | 0 | 0 | 9 | 0 |
 | PRM Promociones | 16 | 4 | 3 | 7 | 2 |
 | APR Aprobaciones | 2 | 0 | 0 | 2 | 0 |
-| ALU Alumnos | 2 | 0 | 1 | 1 | 0 |
+| ALU Alumnos | 2 | 2 | 0 | 0 | 0 |
 | WEB Sitio público | 6 | 1 | 3 | 2 | 0 |
 | CAMPUS Portal del alumno | 7 | 5 | 2 | 0 | 0 |
-| PRO Docentes | 2 | 0 | 1 | 1 | 0 |
+| PRO Docentes | 2 | 1 | 1 | 0 | 0 |
 
 ### EVA — Evaluaciones
 
@@ -278,8 +278,8 @@ Depende de la decisión 8 (comprobantes, RUC, IGV) y de contratar un OSE o PSE. 
 
 | Historia | Estado | Qué hay y qué falta |
 | --- | --- | --- |
-| YC-ALU-001 Listado y alta de alumnos | Parcial | Los alumnos se crean e importan desde Usuarios, junto con el resto de cuentas. No hay pantalla propia de alumnos. |
-| YC-ALU-002 Alumno 360 | Falta | Sus matrículas, compras, certificados y tickets están cada uno en su módulo. |
+| YC-ALU-001 Listado y alta de alumnos | Hecho (2026-10-08) | Pantalla "Alumnos" con tarjetas que filtran, buscador y alta con el rol ya puesto. La importación masiva sigue en Usuarios. |
+| YC-ALU-002 Alumno 360 | Hecho (2026-10-08) | Ficha de solo lectura con sus datos, cursos (avance y nota), compras, certificados y consultas. No se actúa desde la ficha ni se limita por bloques según el rol. |
 
 ### WEB — Sitio público
 
@@ -308,8 +308,8 @@ Depende de la decisión 8 (comprobantes, RUC, IGV) y de contratar un OSE o PSE. 
 
 | Historia | Estado | Qué hay y qué falta |
 | --- | --- | --- |
-| YC-PRO-001 Listado y alta de docentes | Parcial | Son usuarios con rol Profesor y se asignan a cada curso. No hay pantalla propia de docentes. |
-| YC-PRO-002 Ficha con cursos, carga de calificación y valoraciones | Falta | Las tareas por calificar se ven por curso; las valoraciones no existen (tampoco las reseñas). |
+| YC-PRO-001 Listado y alta de docentes | Hecho (2026-10-08) | Pantalla "Docentes" con tarjetas que filtran, buscador, carga por calificar y alta con el rol ya puesto. La asignación a cursos sigue en cada curso. |
+| YC-PRO-002 Ficha con cursos, carga de calificación y valoraciones | Parcial (2026-10-08) | Ficha con sus cursos, alumnos, entregas por calificar (y desde cuándo esperan) y lo que calificó en 30 días. Faltan las valoraciones: dependen de las reseñas de cursos (CUR-008), que no existen. |
 
 ## Dudas para quien escribió el backlog
 

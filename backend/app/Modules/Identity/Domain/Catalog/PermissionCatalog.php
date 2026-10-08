@@ -72,6 +72,7 @@ class PermissionCatalog
                     'question_banks.manage' => 'Crear y editar bancos de preguntas',
                     'submissions.review' => 'Revisar entregas y ver el avance en todos los cursos',
                     'submissions.assigned.review' => 'Revisar entregas de los cursos asignados',
+                    'teachers.read' => 'Consultar los docentes, sus cursos y su carga de calificación',
                 ],
             ],
             'enrollments' => [
@@ -84,6 +85,7 @@ class PermissionCatalog
                     'enrollments.self.read' => 'Consultar las matrículas propias',
                     'enrollments.support.read' => 'Consultar matrículas para atención de soporte',
                     'student.portal' => 'Acceder al portal del alumno',
+                    'students.read' => 'Consultar los alumnos y la ficha completa de cada uno (matrículas, compras, certificados y tickets)',
                 ],
             ],
             'certificates' => [
