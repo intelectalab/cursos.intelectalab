@@ -1,34 +1,81 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Compass, ShieldCheck, ShoppingCart } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Compass, Search, ShieldCheck, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { useTenant } from '../../../shared/tenancy/TenantContext';
 import { apiError, apiErrorMessage } from '../../../shared/api/client';
 import { withNext } from '../../../shared/auth/next';
-import { Button, Card, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { Button, Card, EmptyState, ErrorState, INPUT_CLASS, LoadingState } from '../../../shared/ui';
+import { LEVEL_LABEL } from '../../courses/api';
 import type { AvailableCourse, AvailableCourseDetail } from '../../enrollments/api';
-import { COURSE_CARD_CLASS, salesApi, type CatalogPackage } from '../api';
+import { COURSE_CARD_CLASS, salesApi, type CatalogMeta, type CatalogPackage } from '../api';
 import { PackageCard } from './PackagePages';
 import { CourseCardBody, CourseCover, CourseFacts, CourseOverview, CoursePrice } from '../components/CourseCatalog';
 import { PublicShell } from '../components/PublicShell';
 
-// Catálogo público de la academia: los cursos en venta, sin iniciar sesión
+const SELECT_CLASS = `${INPUT_CLASS} sm:!w-auto sm:min-w-[9.5rem]`;
+
+// Sin mayúsculas ni tildes, como compara el servidor
+function plain(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+}
+
+// Catálogo público de la academia: los cursos en venta, sin iniciar sesión.
+// La búsqueda y los filtros viven en la dirección, para poder compartir el enlace.
 export const PublicCatalogPage: React.FC = () => {
   const { tenant } = useTenant();
+  const [params, setParams] = useSearchParams();
+  const search = params.get('q') ?? '';
+  const category = params.get('category') ?? '';
+  const level = params.get('level') ?? '';
+  const price = params.get('price') ?? '';
+
+  const [text, setText] = useState(search);
   const [courses, setCourses] = useState<AvailableCourse[]>([]);
+  const [meta, setMeta] = useState<CatalogMeta | null>(null);
   const [packages, setPackages] = useState<CatalogPackage[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
 
+  const setFilter = useCallback(
+    (key: string, value: string) => {
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (value) next.set(key, value);
+          else next.delete(key);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
+
+  // La búsqueda espera a que el visitante termine de escribir
+  useEffect(() => {
+    if (text.trim() === search) return;
+    const timer = setTimeout(() => setFilter('q', text.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [text, search, setFilter]);
+
   useEffect(() => {
     let active = true;
-    // Si los paquetes fallan, el catálogo de cursos se muestra igual
-    Promise.all([salesApi.catalog(), salesApi.catalogPackages().catch(() => [] as CatalogPackage[])])
-      .then(([result, bundles]) => {
+    salesApi
+      .catalog({
+        search: search || undefined,
+        category: category || undefined,
+        level: level || undefined,
+        price: price === 'free' || price === 'paid' ? price : undefined,
+      })
+      .then((result) => {
         if (!active) return;
-        setCourses(result);
-        setPackages(bundles);
+        setCourses(result.courses);
+        setMeta(result.meta);
         setState('ready');
       })
       .catch((err) => {
@@ -39,7 +86,35 @@ export const PublicCatalogPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [attempt]);
+  }, [search, category, level, price, attempt]);
+
+  // Si los paquetes fallan, el catálogo de cursos se muestra igual
+  useEffect(() => {
+    let active = true;
+    salesApi
+      .catalogPackages()
+      .then((bundles) => active && setPackages(bundles))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filtered = search !== '' || category !== '' || level !== '' || price !== '';
+  const clear = () => {
+    setText('');
+    setParams({}, { replace: true });
+  };
+
+  // Los paquetes no tienen categoría ni nivel: solo responden a la búsqueda por texto
+  const words = plain(search).split(' ').filter(Boolean);
+  const shownPackages =
+    category || level || price
+      ? []
+      : packages.filter((item) => words.every((word) => plain(`${item.title} ${item.summary ?? ''}`).includes(word)));
+
+  const total = meta?.total ?? 0;
+  const hasOptions = meta !== null && (meta.categories.length > 1 || meta.levels.length > 1 || (meta.has_free && meta.has_paid));
 
   return (
     <PublicShell
@@ -65,31 +140,100 @@ export const PublicCatalogPage: React.FC = () => {
           />
         </Card>
       )}
-      {state === 'ready' && courses.length === 0 && (
+      {state === 'ready' && total === 0 && (
         <Card>
           <EmptyState icon={Compass} title="Aún no hay cursos en venta" text="Vuelve pronto: la academia está preparando su catálogo." />
         </Card>
       )}
-      {state === 'ready' && packages.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Paquetes</h2>
-          <p className="text-[13px] text-slate-500 mb-4">Varios cursos juntos a mejor precio.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {packages.map((item) => (
-              <PackageCard key={item.id} item={item} />
-            ))}
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight mt-8">Cursos</h2>
-        </section>
-      )}
-      {state === 'ready' && courses.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          {courses.map((course) => (
-            <Link key={course.id} to={`/catalog/${course.id}`} className={COURSE_CARD_CLASS}>
-              <CourseCardBody course={course} action="Ver curso" />
-            </Link>
-          ))}
-        </div>
+
+      {state === 'ready' && total > 0 && meta && (
+        <>
+          {/* Buscador y filtros */}
+          <Card className="p-4 mb-6">
+            <form role="search" onSubmit={(event) => event.preventDefault()} className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="search"
+                  className={`${INPUT_CLASS} pl-9`}
+                  placeholder="Buscar un curso"
+                  aria-label="Buscar en el catálogo"
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                />
+              </div>
+              {meta.categories.length > 1 && (
+                <select className={SELECT_CLASS} aria-label="Filtrar por categoría" value={category} onChange={(event) => setFilter('category', event.target.value)}>
+                  <option value="">Todas las categorías</option>
+                  {meta.categories.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {meta.levels.length > 1 && (
+                <select className={SELECT_CLASS} aria-label="Filtrar por nivel" value={level} onChange={(event) => setFilter('level', event.target.value)}>
+                  <option value="">Todos los niveles</option>
+                  {meta.levels.map((option) => (
+                    <option key={option} value={option}>
+                      {LEVEL_LABEL[option]}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {meta.has_free && meta.has_paid && (
+                <select className={SELECT_CLASS} aria-label="Filtrar por precio" value={price} onChange={(event) => setFilter('price', event.target.value)}>
+                  <option value="">Cualquier precio</option>
+                  <option value="free">Gratis</option>
+                  <option value="paid">De pago</option>
+                </select>
+              )}
+              {filtered && <Button onClick={clear}>Quitar filtros</Button>}
+            </form>
+            {(filtered || hasOptions) && (
+              <p className="text-xs text-slate-500 mt-3" role="status">
+                {filtered
+                  ? `${courses.length} de ${total} ${total === 1 ? 'curso' : 'cursos'}`
+                  : `${total} ${total === 1 ? 'curso' : 'cursos'} en venta`}
+              </p>
+            )}
+          </Card>
+
+          {shownPackages.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-lg font-bold text-slate-900 tracking-tight">Paquetes</h2>
+              <p className="text-[13px] text-slate-500 mb-4">Varios cursos juntos a mejor precio.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {shownPackages.map((item) => (
+                  <PackageCard key={item.id} item={item} />
+                ))}
+              </div>
+              {courses.length > 0 && <h2 className="text-lg font-bold text-slate-900 tracking-tight mt-8">Cursos</h2>}
+            </section>
+          )}
+
+          {courses.length === 0 && shownPackages.length === 0 && (
+            <Card>
+              <EmptyState
+                icon={Compass}
+                title="Ningún curso coincide con tu búsqueda"
+                text="Prueba con otras palabras o quita los filtros."
+                action={<Button onClick={clear}>Quitar filtros</Button>}
+              />
+            </Card>
+          )}
+
+          {courses.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              {courses.map((course) => (
+                <Link key={course.id} to={`/catalog/${course.id}`} className={COURSE_CARD_CLASS}>
+                  <CourseCardBody course={course} action="Ver curso" />
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </PublicShell>
   );

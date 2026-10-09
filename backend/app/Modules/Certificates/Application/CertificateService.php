@@ -2,12 +2,14 @@
 
 namespace App\Modules\Certificates\Application;
 
+use App\Modules\Academic\Application\GradebookService;
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Certificates\Domain\Models\Certificate;
 use App\Modules\Certificates\Domain\Models\CertificateTemplate;
 use App\Modules\Certificates\Domain\Models\CertificateVerification;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
+use App\Modules\Enrollments\Http\ClassroomPresenter;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Http\ApiException;
@@ -18,14 +20,18 @@ use Illuminate\Support\Facades\DB;
 /**
  * Certificados (RF-CERT-001, FP-12): requisitos → emitir → código → verificar.
  * El requisito (RN-007, PD-006) es que el curso entregue certificado y el
- * alumno lo haya completado al 100 %.
+ * alumno lo haya completado al 100 %. Si el curso fija una nota mínima para
+ * aprobar, la nota final del alumno también debe alcanzarla (YC-CER-002).
  */
 class CertificateService
 {
     /** Sin caracteres que se confundan al leerlos o dictarlos (0/O, 1/I/L) */
     private const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly GradebookService $gradebook,
+    ) {}
 
     /**
      * Por qué una matrícula no puede recibir certificado, o null si cumple los requisitos.
@@ -36,6 +42,7 @@ class CertificateService
             ! $enrollment->isActive() => 'La matrícula está cancelada.',
             ! $enrollment->course->issues_certificate => 'Este curso no entrega certificado.',
             $enrollment->completed_at === null => 'El alumno aún no completa el curso.',
+            ! $this->meetsPassingGrade($enrollment) => 'El alumno no alcanza la nota mínima para aprobar el curso.',
             $this->valid($enrollment)->exists() => 'El alumno ya tiene un certificado vigente de este curso.',
             default => null,
         };
@@ -100,7 +107,7 @@ class CertificateService
      */
     public function syncFor(User $student): void
     {
-        $this->eligible()
+        $this->eligible($student->id)
             ->where('student_id', $student->id)
             ->whereNotIn('id', Certificate::query()->select('enrollment_id'))
             ->get()
@@ -183,14 +190,75 @@ class CertificateService
     }
 
     /**
+     * @param  string|null  $studentId  acota la comprobación de notas a un alumno
      * @return Builder<Enrollment>
      */
-    private function eligible(): Builder
+    private function eligible(?string $studentId = null): Builder
     {
         return Enrollment::query()
             ->where('status', Enrollment::STATUS_ACTIVE)
             ->whereNotNull('completed_at')
-            ->whereIn('course_id', Course::query()->where('issues_certificate', true)->select('id'));
+            ->whereIn('course_id', Course::query()->where('issues_certificate', true)->select('id'))
+            ->whereNotIn('id', $this->belowPassingGrade($studentId));
+    }
+
+    private function meetsPassingGrade(Enrollment $enrollment): bool
+    {
+        $minimum = $enrollment->course->passing_percent;
+
+        if ($minimum === null) {
+            return true;
+        }
+
+        $enrollment->course->loadMissing('currentVersion');
+
+        if ($enrollment->course->currentVersion === null) {
+            return true;
+        }
+
+        // Si nada cuenta para la nota, no hay nota que exigir
+        return GradebookService::passed($this->gradebook->forStudent($enrollment)['final_percent'], $minimum) ?? true;
+    }
+
+    /**
+     * Matrículas completadas que no alcanzan la nota mínima de su curso. Solo
+     * se calcula para los cursos que la exigen, un curso a la vez.
+     *
+     * @return list<string>
+     */
+    private function belowPassingGrade(?string $studentId): array
+    {
+        $courses = Course::query()
+            ->where('issues_certificate', true)
+            ->whereNotNull('passing_percent')
+            ->whereNotNull('current_version_id')
+            ->with('currentVersion')
+            ->get();
+
+        $below = [];
+
+        foreach ($courses as $course) {
+            $enrollments = Enrollment::query()
+                ->where('course_id', $course->id)
+                ->where('status', Enrollment::STATUS_ACTIVE)
+                ->whereNotNull('completed_at')
+                ->when($studentId, fn (Builder $query) => $query->where('student_id', $studentId))
+                ->get();
+
+            if ($enrollments->isEmpty()) {
+                continue;
+            }
+
+            $rows = $this->gradebook->rows($course->id, ClassroomPresenter::activitiesOf($course->currentVersion), $enrollments);
+
+            foreach ($rows as $enrollmentId => $row) {
+                if (GradebookService::passed($row['final_percent'], $course->passing_percent) === false) {
+                    $below[] = $enrollmentId;
+                }
+            }
+        }
+
+        return $below;
     }
 
     /**

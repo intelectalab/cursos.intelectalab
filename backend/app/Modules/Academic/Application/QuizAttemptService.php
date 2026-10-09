@@ -2,6 +2,7 @@
 
 namespace App\Modules\Academic\Application;
 
+use App\Modules\Academic\Domain\Events\GradeRecorded;
 use App\Modules\Academic\Domain\Models\QuizAttempt;
 use App\Modules\Academic\Domain\Models\QuizAttemptGrant;
 use App\Modules\Academic\Domain\QuestionConfig;
@@ -13,6 +14,7 @@ use App\Modules\Enrollments\Domain\Models\EnrollmentProgress;
 use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -101,48 +103,12 @@ class QuizAttemptService
         }
 
         if ($this->isOverdue($attempt)) {
-            $this->expire($attempt);
+            $this->expire($attempt, $enrollment);
 
             throw new ApiException(ErrorCode::AttemptClosed, 'Se acabó el tiempo de este intento.', 409);
         }
 
-        return DB::transaction(function () use ($attempt, $enrollment, $answers) {
-            $earned = 0.0;
-            $possible = 0.0;
-
-            foreach ($attempt->questions as $question) {
-                $answer = $answers[$question['id']] ?? null;
-                $score = QuestionGrader::score($question['type'], $question['config'], $answer);
-                $points = (float) $question['points'];
-
-                $attempt->answers()->create([
-                    'question_id' => $question['id'],
-                    'answer' => $answer,
-                    'score' => $score,
-                    'points_possible' => $points,
-                    'points_earned' => $score * $points,
-                ]);
-
-                $earned += $score * $points;
-                $possible += $points;
-            }
-
-            $percent = $possible > 0 ? round($earned * 100 / $possible, 2) : 0.0;
-
-            $attempt->update([
-                'status' => QuizAttempt::STATUS_SUBMITTED,
-                'draft_answers' => null,
-                'submitted_at' => now(),
-                'score_percent' => $percent,
-                'passed' => $percent >= $attempt->passing_percent,
-            ]);
-
-            if ($attempt->passed) {
-                $this->progress->complete($enrollment, EnrollmentProgress::TYPE_ACTIVITY, $attempt->activity_id);
-            }
-
-            return $attempt;
-        });
+        return DB::transaction(fn () => $this->close($attempt, $enrollment, $answers, QuizAttempt::STATUS_SUBMITTED, now()));
     }
 
     /**
@@ -295,13 +261,13 @@ class QuizAttemptService
     }
 
     /**
-     * Un intento con tiempo vencido y sin enviar cuenta como usado, con nota cero.
+     * Un intento con tiempo vencido y sin enviar cuenta como usado, con la nota de lo que dejó guardado.
      */
     private function closeExpired(Enrollment $enrollment, string $activityId): void
     {
         $this->attempts($enrollment, $activityId)
             ->filter(fn (QuizAttempt $attempt) => $attempt->isOpen() && $this->isOverdue($attempt))
-            ->each(fn (QuizAttempt $attempt) => $this->expire($attempt));
+            ->each(fn (QuizAttempt $attempt) => $this->expire($attempt, $enrollment));
     }
 
     private function isOverdue(QuizAttempt $attempt): bool
@@ -310,13 +276,60 @@ class QuizAttemptService
             && now()->greaterThan($attempt->expires_at->copy()->addSeconds(self::GRACE_SECONDS));
     }
 
-    private function expire(QuizAttempt $attempt): void
+    /**
+     * Cierra por tiempo un intento que nadie envió: se califica lo que el
+     * alumno dejó guardado mientras respondía (YC-EVA-004). Sin nada guardado,
+     * la nota es cero.
+     */
+    private function expire(QuizAttempt $attempt, Enrollment $enrollment): void
     {
+        DB::transaction(fn () => $this->close($attempt, $enrollment, $attempt->draft_answers ?? [], QuizAttempt::STATUS_EXPIRED, $attempt->expires_at));
+    }
+
+    /**
+     * Califica las respuestas, cierra el intento y, si aprobó, cuenta la
+     * actividad para el avance. Debe llamarse dentro de una transacción.
+     *
+     * @param  array<string, mixed>  $answers  id de pregunta => respuesta
+     */
+    private function close(QuizAttempt $attempt, Enrollment $enrollment, array $answers, string $status, CarbonInterface $closedAt): QuizAttempt
+    {
+        $earned = 0.0;
+        $possible = 0.0;
+
+        foreach ($attempt->questions as $question) {
+            $answer = $answers[$question['id']] ?? null;
+            $score = QuestionGrader::score($question['type'], $question['config'], $answer);
+            $points = (float) $question['points'];
+
+            $attempt->answers()->create([
+                'question_id' => $question['id'],
+                'answer' => $answer,
+                'score' => $score,
+                'points_possible' => $points,
+                'points_earned' => $score * $points,
+            ]);
+
+            $earned += $score * $points;
+            $possible += $points;
+        }
+
+        $percent = $possible > 0 ? round($earned * 100 / $possible, 2) : 0.0;
+
         $attempt->update([
-            'status' => QuizAttempt::STATUS_EXPIRED,
-            'submitted_at' => $attempt->expires_at,
-            'score_percent' => 0,
-            'passed' => false,
+            'status' => $status,
+            'draft_answers' => null,
+            'submitted_at' => $closedAt,
+            'score_percent' => $percent,
+            'passed' => $percent >= $attempt->passing_percent,
         ]);
+
+        if ($attempt->passed) {
+            $this->progress->complete($enrollment, EnrollmentProgress::TYPE_ACTIVITY, $attempt->activity_id);
+        }
+
+        GradeRecorded::dispatch($enrollment->id);
+
+        return $attempt;
     }
 }

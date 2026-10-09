@@ -1,5 +1,6 @@
 import React from 'react';
 import { CHECKBOX_CLASS, Field, INPUT_CLASS } from '../../../shared/ui';
+import { toPercent, toScale } from '../../academic/api';
 import { LANGUAGE_LABEL, LEVEL_LABEL, type CourseInput, type CourseLevel, type CourseOptions } from '../api';
 
 // Campos del curso, compartidos por el alta y la pestaña Información
@@ -11,6 +12,8 @@ export const CourseFields: React.FC<{
   onChange: (value: CourseInput) => void;
 }> = ({ value, options, disabled = false, withDescription = false, onChange }) => {
   const set = <K extends keyof CourseInput>(key: K, next: CourseInput[K]) => onChange({ ...value, [key]: next });
+  // La nota mínima se escribe en la escala de la academia y se guarda en porcentaje
+  const gradeScale = options?.grade_scale ?? 20;
   const text = (key: 'title' | 'summary' | 'description' | 'category') => ({
     className: INPUT_CLASS,
     disabled,
@@ -86,6 +89,22 @@ export const CourseFields: React.FC<{
             onChange={(event) => set('price', event.target.value !== '' ? Number(event.target.value) : null)}
           />
         </Field>
+        <Field
+          label={`Nota mínima para aprobar (de 0 a ${gradeScale}, opcional)`}
+          hint="Nota final que el alumno debe alcanzar. Si el curso entrega certificado, también se exige para emitirlo. Vacío: no se exige."
+        >
+          <input
+            className={INPUT_CLASS}
+            type="number"
+            min={0}
+            max={gradeScale}
+            step="any"
+            placeholder="Sin nota mínima"
+            disabled={disabled}
+            value={value.passing_percent === null ? '' : toScale(value.passing_percent, gradeScale)}
+            onChange={(event) => set('passing_percent', event.target.value !== '' ? toPercent(Number(event.target.value), gradeScale) : null)}
+          />
+        </Field>
         <Field label="Idioma">
           <select className={INPUT_CLASS} disabled={disabled} value={value.language} onChange={(event) => set('language', event.target.value)}>
             {(options?.languages ?? ['es']).map((language) => (
@@ -106,7 +125,9 @@ export const CourseFields: React.FC<{
         />
         <span>
           <span className="block text-[13px] font-medium text-slate-800">Este curso entrega certificado</span>
-          <span className="block text-xs text-slate-500">Se emite solo cuando el alumno completa el curso al 100 %, con código y QR de verificación.</span>
+          <span className="block text-xs text-slate-500">
+            Se emite solo cuando el alumno completa el curso al 100 % (y alcanza la nota mínima, si el curso la tiene), con código y QR de verificación.
+          </span>
         </span>
       </label>
       <label className="flex items-start gap-2.5 cursor-pointer select-none">

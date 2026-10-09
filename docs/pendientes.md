@@ -2,13 +2,13 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-08, al cerrar el bloque "Alumnos y docentes" (entrega 2).
+Última actualización: 2026-10-08, al cerrar la entrega 2 de los planes de la plataforma.
 
 ## Dónde estamos
 
 **Revisión de jefatura (12 puntos): las tres entregas acordadas están terminadas.** Nueve puntos hechos, uno a medias ("hacerlo más visual": falta saber si señalaron pantallas concretas) y dos esperan respuestas (Moodle y horarios). Los sprints del plan siguen igual: S12 terminado; S6 Pagos espera la decisión 8, S9 SCORM la decisión 9, y S13 necesita servidor, dominio y correo (decisiones 1 a 3).
 
-**Terminado:** el bloque "Evaluaciones y aula", que sale del sprint 2 del backlog YC (83 historias: 30 hechas, 20 a medias, 30 faltan y 3 resueltas distinto), en tres entregas; y el bloque "Alumnos y docentes", en dos. **Sigue** el buscador con filtros del catálogo público. Jefatura pidió además cobrar con PayPal y Mercado Pago: es el S6 y espera las respuestas de la decisión 8 que se listan abajo. Moodle y el horario por disponibilidad docente esperan respuestas (decisiones 14 y 15). El backlog de historias YC sigue llegando por semana (decisión 13).
+**Terminado:** el bloque "Evaluaciones y aula", que sale del sprint 2 del backlog YC (83 historias: 32 hechas, 18 a medias, 30 faltan y 3 resueltas distinto), en tres entregas; el bloque "Alumnos y docentes", en dos; y el buscador con filtros del catálogo público. **Con esto se terminó todo lo aprobado que no dependía de una respuesta: no queda trabajo que se pueda empezar sin una.** Jefatura pidió además cobrar con PayPal y Mercado Pago: es el S6 y espera las respuestas de la decisión 8 que se listan abajo. Moodle y el horario por disponibilidad docente esperan respuestas (decisiones 14 y 15). El backlog de historias YC sigue llegando por semana (decisión 13).
 
 | Sprint | Contenido | Estado |
 | --- | --- | --- |
@@ -48,11 +48,16 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Evaluaciones y aula · entrega 3 | Avance secuencial por secciones (interruptor por curso) y vista previa del aula para el personal, de lo publicado o del borrador | Hecho |
 | Alumnos y docentes · entrega 1 | Pantalla "Alumnos" (tarjetas que filtran, buscador, alta) y ficha Alumno 360 con cursos, compras, certificados y consultas | Hecho |
 | Alumnos y docentes · entrega 2 | Pantalla "Docentes" (tarjetas que filtran, buscador, alta) y ficha del docente con sus cursos, alumnos y carga de calificación | Hecho |
-| Catálogo público | Buscador y filtros | Pendiente |
+| Catálogo público | Buscador por texto y filtros por categoría, nivel y precio | Hecho |
+| Ajustes de evaluación | El cuestionario que vence califica lo guardado; nota mínima para aprobar el curso, que también exige el certificado | Hecho |
+| Planes de la plataforma · entrega 1 | Planes por tope de alumnos, prueba gratuita de 14 días y 10 alumnos para toda academia nueva, asignación de plan desde la ficha y tarjeta "Tu plan" en la academia | Hecho |
+| Planes de la plataforma · entrega 2 | "Mi plan": la academia elige plan, genera su orden de pago a IntelectaLab e informa su pago; el super administrador lo confirma en "Pagos" y el plan queda vigente | Hecho |
+| Planes de la plataforma · entrega 3 | Límites y vencimiento: cupo de alumnos, días de gracia y solo lectura | Pendiente |
+| Consola de plataforma · ficha por academia | Datos editables, cifras y ventas de seis meses, administradores con restablecimiento de contraseña, historial de la plataforma y motivo obligatorio al suspender | Hecho |
 
 - **Avance del plan:** 11 de 14 sprints completos (S0 a S5, S7, S8 y S10 a S12). Faltan S6 y S9, en espera de decisiones, y S13.
-- **Calidad:** 271 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia); la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
-- **Seguridad:** las pruebas revisan que las 259 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 63 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
+- **Calidad:** 280 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia); la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
+- **Seguridad:** las pruebas revisan que las 277 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 65 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
 - **Certificados:** el curso que lo indique entrega un certificado en PDF, con código y QR, a quien lo completa; cualquiera lo verifica en una página pública; el personal puede emitir a mano y anular.
@@ -64,6 +69,8 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
 El detalle de cada bloque terminado está en [avances/](avances/README.md).
+
+**En curso: el cobro de la plataforma a las academias.** Modelo descrito por el responsable del proyecto (falta confirmarlo con jefatura): la academia se registra en prueba gratuita, luego paga a IntelectaLab según su cantidad de alumnos, y sus alumnos le pagan los cursos a ella. Va en tres entregas: (1) planes y prueba gratuita, hecha; (2) "Mi plan" en la academia con orden de pago y confirmación en la consola, hecha; (3) límites y vencimiento, pendiente. Después siguen las pasarelas Mercado Pago y PayPal (S6), para los alumnos y para el pago de los planes.
 
 ## 1. Decisiones que necesitamos de jefatura
 
@@ -83,6 +90,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 | 13 | Backlog de historias YC | Jefatura entrega un backlog por partes (un sprint por semana). Los sprints 1 y 2 ya están comparados con el sistema: del sprint 1, 62 historias (18 faltan y 19 a medias); del sprint 2, 83 historias (34 faltan, 16 de ellas de pagos y facturación, y 25 a medias). Del sprint 2 solo llegaron los títulos, sin criterios de aceptación. Hay que decidir **qué se construye primero** (doble factor para el personal, correos con plantillas, campana de avisos, límites por plan, centro de reglas, reseñas y anuncios en los cursos…) y responder cinco dudas, entre ellas si se cambia la decisión de usar YouTube por un video protegido. Ver [verificacion-backlog.md](verificacion-backlog.md). | El orden del trabajo que viene |
 | 14 | Sincronizar con Moodle | Jefatura lo quiere en los dos sentidos. Para estimarlo y poder probarlo hace falta: qué versión de Moodle tienen; un acceso de administrador (o un Moodle de prueba) para activar sus servicios web y generar una clave; qué se sincroniza (cursos, usuarios, matrículas, notas, avance) y cuál de los dos sistemas manda cuando un dato difiere; y cada cuánto. | Sincronización con Moodle |
 | 15 | Horario por disponibilidad docente | Se pide generar un horario a partir de la disponibilidad que registre cada docente. Hoy los cursos son grabados y no tienen horarios. Hay que definir: horario de qué (clases en vivo, asesorías, sesiones de un curso); si se dictan por videollamada y con qué herramienta; duración y frecuencia de las sesiones; si el horario lo arma el sistema solo o propone y una persona confirma; y qué pasa con los alumnos (se inscriben a un horario o se les asigna). | Módulo de horarios |
+| 16 | Modelo de cobro a las academias | Confirmar con jefatura lo que se está construyendo: prueba gratuita de 14 días y hasta 10 alumnos; planes por tramos de alumnos con matrícula activa, de pago mensual o anual; 7 días de gracia y luego solo lectura; factura emitida por fuera del sistema; y que las academias actuales reciben su plan a mano. Y definir los planes reales y sus precios. | Que el cobro refleje lo que jefatura quiere |
 | 9 | SCORM | Si la academia ya tiene cursos en SCORM o clientes que los pidan, y en qué versiones. Si no hay ninguno, S9 se puede posponer. | S9 SCORM |
 
 ## 2. Limpieza del repositorio
@@ -150,7 +158,6 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 **De certificados (S7, entrega 1)**
 
-- Nota mínima para el certificado (la nota final del curso ya existe; falta la nota mínima).
 - Aviso por correo al emitir el certificado (depende de la decisión 3).
 - Más de una plantilla o un editor de diseño; plantilla por curso.
 - Que el alumno vea desde "Mis cursos" que ya tiene certificado, y que el profesor vea los de sus cursos.
@@ -244,6 +251,27 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 - Retirar un intento adicional ya dado.
 - Avisar por correo de la devolución y del intento adicional (depende de la decisión 3).
 
+**De los planes y pagos de las academias (2026-10-08)**
+
+- Cobro en línea del plan (con las pasarelas) y adjuntar la constancia de pago como archivo.
+- Avisar a la plataforma cuando llega una orden y a la academia cuando se confirma (depende del correo, decisión 3, o de avisos dentro del sistema).
+- Comprobante de IntelectaLab a la academia (hoy se emite por fuera).
+- Vencimiento automático de una orden pendiente; deshacer una confirmación; prorrateo al subir de plan.
+- Ingresos de la plataforma por planes en la consola.
+- Cambiar desde la consola los días y el tope de la prueba gratuita.
+
+**De la nota mínima y el certificado (2026-10-08)**
+
+- Decidir qué pasa con un certificado ya emitido si la nota baja después (hoy sigue vigente hasta anularlo a mano).
+- Emitir de inmediato los certificados que pasan a cumplir cuando se baja o se quita la nota mínima.
+- Mostrar la nota en el certificado; encuesta respondida y asistencia como requisitos.
+
+**Del catálogo público (2026-10-08)**
+
+- Buscador y filtros también en "Cursos disponibles", el catálogo del alumno con sesión.
+- Ordenar por precio, fecha o popularidad; buscar en el temario.
+- Catálogo de categorías (hoy es texto libre) y paginación para catálogos grandes.
+
 **De docentes (2026-10-08)**
 
 - Valoraciones del docente (dependen de las reseñas de cursos).
@@ -267,7 +295,6 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 **De la nota final y el libro de notas (entrega 2, 2026-10-08)**
 
-- Nota mínima para aprobar el curso, y usarla como requisito del certificado.
 - Ver la nota solo de lo ya calificado, además de la que cuenta lo pendiente como cero.
 - Categorías de peso (por ejemplo, tareas 40 % y exámenes 60 %).
 - Ajustar a mano la nota final de un alumno, con observación.
@@ -275,7 +302,6 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 **De rendir actividades (S3, entrega 3)**
 
-- Si el tiempo de un cuestionario se acaba con la pestaña cerrada, el intento vence con nota 0 aunque hubiera respuestas guardadas: falta decidir si se califica lo guardado.
 
 
 **De endurecimiento (S12)**
@@ -307,7 +333,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md).
 
 - Editor libre de la plantilla (arrastrar cada dato), tipografías y textos fijos editables; una plantilla por curso.
 - Decidir si el diseño debe congelarse al emitir cada certificado (hoy un cambio de diseño alcanza a los ya emitidos).
-- Consola: editar los datos de una academia, planes y límites, y un historial único de accesos de soporte.
+- Consola: planes y límites por academia y cobro a las academias (esperan que jefatura defina los planes); crear o desactivar administradores de una academia desde su ficha; gestionar otros administradores de plataforma; ventas por mes en la zona horaria de cada academia. Editar los datos y el historial único ya están hechos (ficha por academia).
 - Modo soporte que oculte datos personales.
 
 **Del backlog de historias YC**
@@ -328,17 +354,17 @@ Lista que jefatura envió el 2026-10-07 tras revisar el sistema.
 | 6 | Hacerlo más visual | Parcial: las tarjetas. Falta saber si señalaron pantallas concretas. |
 | 7 | Qué significa cada filtro | Hecho (entrega 1): ayuda en cada tarjeta y en cada filtro de esas pantallas. |
 | 8 | Plantilla propia para el certificado | Hecho (entrega 3): fondo propio, posiciones y colores a elegir, con vista previa. No es un editor libre de arrastrar; una plantilla por academia. |
-| 9 | Vista del super administrador de todas las academias | Hecho (entrega 3): cifras de la plataforma y por academia, alta de academias y acceso de soporte en solo lectura, auditado. |
+| 9 | Vista del super administrador de todas las academias | Hecho (entrega 3): cifras de la plataforma y por academia, alta de academias y acceso de soporte en solo lectura, auditado. Ampliado el 2026-10-08 con la ficha por academia. |
 | 10 | Sincronizar con Moodle | En espera de la decisión 14. |
 | 11 | Horario según la disponibilidad de los docentes | En espera de la decisión 15. Es un módulo nuevo. |
 | 12 | Alumnos y docentes son participantes | Hecho (entrega 1): una sola pestaña y un papel por curso. |
 
 ## 5. Orden propuesto
 
-1. Commit de las cinco entregas del 2026-10-08; limpieza del repositorio (sección 2).
-2. Buscador con filtros del catálogo público. Los criterios de aceptación del backlog YC se pedirán después.
-2. Responder lo que falta de la decisión 8 para empezar los cobros con PayPal y Mercado Pago (S6).
-3. Responder las decisiones 14 (Moodle) y 15 (horarios) para poder estimarlas.
-4. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging: con eso se puede hacer S13.
-5. Definir pasarela, Yape y facturación (decisión 8) para S6, y si hace falta SCORM (decisión 9) para S9.
-6. Seguir comparando el backlog YC (decisión 13) y hacer revisar lo legal (decisión 12).
+1. Commit del buscador del catálogo, de los ajustes de evaluación, de la ficha por academia y de las entregas 1 y 2 de planes (las cinco entregas anteriores del 2026-10-08 ya están commiteadas); limpieza del repositorio (sección 2).
+2. Seguir con la entrega 3 de los planes de la plataforma (límites y vencimiento) y confirmar el modelo con jefatura (decisión 16).
+2. Responder lo que falta de la decisión 8 (quién cobra, credenciales de prueba, moneda, Yape, carrito, reembolsos): es lo único que permite seguir construyendo, con los cobros por PayPal y Mercado Pago (S6).
+3. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging: con eso se puede hacer S13 y que jefatura pruebe el sistema.
+4. Responder las decisiones 14 (Moodle) y 15 (horarios) para poder estimarlas.
+5. Definir si hace falta SCORM (decisión 9) para S9.
+6. Pasar el sprint 3 del backlog YC (decisión 13), pedir los criterios de aceptación del sprint 2 y hacer revisar lo legal (decisión 12).

@@ -14,6 +14,9 @@ Route::prefix('platform')->middleware('central')->group(function () {
 
         Route::get('/tenants', [PlatformTenantController::class, 'index']);
         Route::post('/tenants', [PlatformTenantController::class, 'store']);
+        Route::get('/tenants/{tenant}', [PlatformTenantController::class, 'show'])->whereUuid('tenant');
+        Route::put('/tenants/{tenant}', [PlatformTenantController::class, 'update'])->whereUuid('tenant');
+        Route::post('/tenants/{tenant}/admins/{user}/reset-password', [PlatformTenantController::class, 'resetAdminPassword'])->whereUuid(['tenant', 'user']);
         Route::post('/tenants/{tenant}/support-session', [PlatformTenantController::class, 'supportSession']);
         Route::patch('/tenants/{tenant}/status', [PlatformTenantController::class, 'updateStatus']);
     });

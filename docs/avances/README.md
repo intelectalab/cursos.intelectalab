@@ -38,6 +38,11 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-08 | Evaluaciones y aula · Entrega 3: avance secuencial y vista previa del aula | [2026-10-08-evaluaciones-y-aula-entrega-3.md](2026-10-08-evaluaciones-y-aula-entrega-3.md) |
 | 2026-10-08 | Alumnos y docentes · Entrega 1: listado de alumnos y ficha Alumno 360 | [2026-10-08-alumnos-y-docentes-entrega-1.md](2026-10-08-alumnos-y-docentes-entrega-1.md) |
 | 2026-10-08 | Alumnos y docentes · Entrega 2: listado de docentes y ficha del docente | [2026-10-08-alumnos-y-docentes-entrega-2.md](2026-10-08-alumnos-y-docentes-entrega-2.md) |
+| 2026-10-08 | Catálogo público: buscador y filtros | [2026-10-08-catalogo-buscador-y-filtros.md](2026-10-08-catalogo-buscador-y-filtros.md) |
+| 2026-10-08 | Cierre por tiempo que califica lo guardado y nota mínima para aprobar el curso | [2026-10-08-cierre-por-tiempo-y-nota-minima.md](2026-10-08-cierre-por-tiempo-y-nota-minima.md) |
+| 2026-10-08 | Consola del super administrador: ficha por academia | [2026-10-08-consola-ficha-por-academia.md](2026-10-08-consola-ficha-por-academia.md) |
+| 2026-10-08 | Planes de la plataforma · Entrega 1: planes y prueba gratuita | [2026-10-08-planes-entrega-1-planes-y-prueba.md](2026-10-08-planes-entrega-1-planes-y-prueba.md) |
+| 2026-10-08 | Planes de la plataforma · Entrega 2: "Mi plan" y pagos de las academias | [2026-10-08-planes-entrega-2-mi-plan-y-pagos.md](2026-10-08-planes-entrega-2-mi-plan-y-pagos.md) |
 
 Documentos relacionados:
 
@@ -49,9 +54,12 @@ Documentos relacionados:
 
 ## Qué sigue
 
-1. Evaluaciones y aula (del sprint 2 del backlog YC): las tres entregas están hechas.
-1. Alumnos y docentes: las dos entregas están hechas. Sigue el buscador con filtros del catálogo público.
-1. Revisión de jefatura: las tres entregas están hechas. Falta que jefatura las revise.
-2. Moodle y horarios por disponibilidad docente: esperan las decisiones 14 y 15 de [pendientes](../pendientes.md).
-3. S6 — Pagos (decisión 8), S9 — SCORM (decisión 9) y S13 — salida a producción (decisiones 1 a 3).
-4. Backlog de historias YC: se compara por partes en [verificación](../verificacion-backlog.md).
+Lo aprobado que no dependía de una respuesta está terminado: la revisión de jefatura (tres entregas), "Evaluaciones y aula" (tres), "Alumnos y docentes" (dos), el buscador del catálogo, los ajustes de evaluación y la ficha por academia de la consola. **En curso:** el cobro de la plataforma a las academias (planes). Entregas 1 y 2 hechas (planes y prueba gratuita; "Mi plan" con orden de pago y confirmación en la consola); sigue la 3, límites y vencimiento. Después, las pasarelas Mercado Pago y PayPal.
+
+Lo que espera una respuesta:
+
+1. S6 — Pagos con PayPal y Mercado Pago: faltan respuestas de la decisión 8 de [pendientes](../pendientes.md).
+2. S13 — salida a producción: servidor, dominio y correo (decisiones 1 a 3).
+3. Moodle y horarios por disponibilidad docente: decisiones 14 y 15.
+4. S9 — SCORM: decisión 9.
+5. Backlog de historias YC: se compara por partes en [verificación](../verificacion-backlog.md); falta el sprint 3.

@@ -71,6 +71,7 @@ class ReviewController extends Controller
                     array_flip(['percent', 'completed', 'total'])
                 ),
                 'final_percent' => $rows[$enrollment->id]['final_percent'],
+                'passed' => GradebookService::passed($rows[$enrollment->id]['final_percent'], $course->passing_percent),
                 // Por actividad: mejor nota del cuestionario, estado y nota de la tarea, o si respondió la encuesta
                 'grades' => collect($activities)->mapWithKeys(fn (array $activity) => [
                     $activity['id'] => $rows[$enrollment->id]['grades'][$activity['id']]
@@ -79,6 +80,8 @@ class ReviewController extends Controller
             ])->values(),
         ], [
             'grade_scale' => $settings->gradeScale(),
+            // Nota mínima para aprobar el curso; null = no la exige
+            'passing_percent' => $course->passing_percent,
             'pending_submissions' => TaskSubmission::query()
                 ->where('course_id', $course->id)
                 ->where('status', TaskSubmission::STATUS_SUBMITTED)

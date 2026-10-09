@@ -77,6 +77,7 @@ function toInput(course: CourseDetail): CourseInput {
     price: course.price !== null ? Number(course.price) : null,
     issues_certificate: course.issues_certificate,
     sequential: course.sequential,
+    passing_percent: course.passing_percent,
     language: course.language,
   };
 }

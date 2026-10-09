@@ -192,6 +192,48 @@ class CertificateTest extends TestCase
         app(TenantContext::class)->runForTenant($this->tenant->id, fn () => $this->assertSame(1, Certificate::query()->count()));
     }
 
+    public function test_a_course_with_a_passing_grade_only_certifies_students_who_reach_it(): void
+    {
+        $admin = fn () => $this->withToken($this->admin);
+
+        // Curso con certificado y nota mínima de 60 %, cuya única nota es una tarea
+        $course = $admin()->postJson($this->api('/courses'), [
+            'title' => 'Excel para finanzas', 'language' => 'es', 'issues_certificate' => true, 'passing_percent' => 60,
+        ])->assertCreated()->assertJsonPath('data.passing_percent', 60)->json('data.id');
+        $section = $admin()->postJson($this->api("/courses/{$course}/sections"), ['title' => 'Módulo 1'])->json('data.id');
+        $task = $admin()->postJson($this->api("/courses/{$course}/sections/{$section}/activities"), [
+            'type' => 'TASK', 'title' => 'Presupuesto', 'description' => 'Arma un presupuesto.', 'allow_text' => true, 'allow_file' => false,
+        ])->json('data.id');
+        $admin()->postJson($this->api("/courses/{$course}/publish"))->assertOk();
+        $admin()->postJson($this->api('/courses'), ['title' => 'Otro', 'language' => 'es', 'passing_percent' => 101])->assertStatus(422);
+
+        ['enrollment' => $enrollment, 'token' => $token] = $this->enroll($this->student(), $course);
+
+        // Entregar la tarea completa el curso, pero sin nota todavía no hay certificado
+        $this->withToken($token)->postJson($this->api("/me/courses/{$course}/activities/{$task}/submission"), ['body' => 'Mi presupuesto.'])->assertOk();
+        $this->assertSame(0, Certificate::query()->withoutGlobalScopes()->count());
+        $admin()->getJson($this->api('/certificates/candidates'))->assertJsonCount(0, 'data');
+        $admin()->postJson($this->api('/certificates/issue'), ['enrollment_id' => $enrollment])
+            ->assertStatus(409)->assertJsonPath('code', 'CERTIFICATE_NOT_ELIGIBLE');
+        $this->withToken($token)->getJson($this->api("/me/courses/{$course}/grades"))
+            ->assertJsonPath('data.passing_percent', 60)
+            ->assertJsonPath('data.passed', false);
+
+        // Con una nota por debajo de la mínima, tampoco
+        $submission = $admin()->getJson($this->api("/courses/{$course}/submissions"))->json('data.0.id');
+        $admin()->postJson($this->api("/courses/{$course}/submissions/{$submission}/grade"), ['grade_percent' => 50])->assertOk();
+        $this->assertSame(0, Certificate::query()->withoutGlobalScopes()->count());
+        $admin()->getJson($this->api("/courses/{$course}/tracking"))
+            ->assertJsonPath('meta.passing_percent', 60)
+            ->assertJsonPath('data.students.0.passed', false);
+
+        // Al alcanzarla, el certificado se emite solo
+        $admin()->postJson($this->api("/courses/{$course}/submissions/{$submission}/grade"), ['grade_percent' => 80])->assertOk();
+        $this->assertSame(1, Certificate::query()->withoutGlobalScopes()->where('enrollment_id', $enrollment)->count());
+        $this->withToken($token)->getJson($this->api("/me/courses/{$course}/grades"))->assertJsonPath('data.passed', true);
+        $admin()->getJson($this->api("/courses/{$course}/tracking"))->assertJsonPath('data.students.0.passed', true);
+    }
+
     public function test_courses_completed_before_the_switch_get_their_certificate_later(): void
     {
         ['course' => $course, 'resources' => $resources] = $this->publishedCourse(['issues_certificate' => false]);

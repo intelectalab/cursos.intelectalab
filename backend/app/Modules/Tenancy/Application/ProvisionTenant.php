@@ -8,6 +8,7 @@ use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\Permission;
 use App\Modules\Identity\Domain\Models\Role;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Domain\Events\TenantProvisioned;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -77,6 +78,9 @@ class ProvisionTenant
                     'slug' => $tenant->slug,
                     'admin_user_id' => $admin->id,
                 ], $admin->id);
+
+                // Otros módulos crean aquí lo suyo para la organización nueva (p. ej. su prueba gratuita)
+                TenantProvisioned::dispatch($tenant);
             });
 
             return $tenant;

@@ -4,7 +4,7 @@ Comparación entre las historias del backlog que entrega jefatura (códigos `YC-
 
 El backlog llega por partes (un sprint por semana). Cada parte se agrega aquí.
 
-Última actualización: 2026-10-08, al cerrar la entrega 2 de "Alumnos y docentes". El sprint 2 del backlog (12 épicas) se comparó el 2026-10-07. El sprint 1 se comparó el 2026-10-06, al cerrar S12.
+Última actualización: 2026-10-08, al cerrar el cierre por tiempo y la nota mínima del curso. El sprint 2 del backlog (12 épicas) se comparó el 2026-10-07. El sprint 1 se comparó el 2026-10-06, al cerrar S12.
 
 **Estados:** Hecho · Parcial (existe, pero le falta algo de lo que pide la historia) · Falta · Distinto (se resolvió de otra forma por una decisión ya tomada).
 
@@ -147,11 +147,11 @@ Decisión ya tomada con jefatura: los videos se alojan en YouTube y el sistema s
 
 Recibido el 2026-10-07: 12 épicas y 83 historias (la épica B2C vino pegada dos veces; se cuenta una). Solo llegaron los títulos de las historias y el contexto de cada épica, sin criterios de aceptación ni el texto de las reglas. La comparación se hizo por título contra el código: una historia marcada "Hecho" puede tener criterios que todavía no conocemos.
 
-Resumen: 83 historias. 30 hechas, 20 parciales, 30 faltan y 3 se resolvieron distinto. Al compararlo eran 21, 25, 34 y 3: "Evaluaciones y aula" cerró seis (EVA-005, 006, 007 y 009; AULA-003 y 004) y "Alumnos y docentes", tres (ALU-001, ALU-002 y PRO-001), además de dejar PRO-002 a medias. De las 30 que faltan, 16 son de Pagos y Facturación electrónica, que esperan la decisión 8.
+Resumen: 83 historias. 32 hechas, 18 parciales, 30 faltan y 3 se resolvieron distinto. Al compararlo eran 21, 25, 34 y 3: "Evaluaciones y aula" cerró seis (EVA-005, 006, 007 y 009; AULA-003 y 004) y "Alumnos y docentes", tres (ALU-001, ALU-002 y PRO-001), además de dejar PRO-002 a medias; el buscador del catálogo, una (WEB-002); y el cierre por tiempo, otra (EVA-004), con lo que Evaluaciones queda completa. De las 30 que faltan, 16 son de Pagos y Facturación electrónica, que esperan la decisión 8.
 
 | Épica | Historias | Hecho | Parcial | Falta | Distinto |
 | --- | --- | --- | --- | --- | --- |
-| EVA Evaluaciones | 9 | 8 | 1 | 0 | 0 |
+| EVA Evaluaciones | 9 | 9 | 0 | 0 | 0 |
 | CER Certificados | 7 | 3 | 3 | 1 | 0 |
 | AULA | 4 | 3 | 1 | 0 | 0 |
 | B2C Venta a personas | 9 | 3 | 3 | 2 | 1 |
@@ -160,7 +160,7 @@ Resumen: 83 historias. 30 hechas, 20 parciales, 30 faltan y 3 se resolvieron dis
 | PRM Promociones | 16 | 4 | 3 | 7 | 2 |
 | APR Aprobaciones | 2 | 0 | 0 | 2 | 0 |
 | ALU Alumnos | 2 | 2 | 0 | 0 | 0 |
-| WEB Sitio público | 6 | 1 | 3 | 2 | 0 |
+| WEB Sitio público | 6 | 2 | 2 | 2 | 0 |
 | CAMPUS Portal del alumno | 7 | 5 | 2 | 0 | 0 |
 | PRO Docentes | 2 | 1 | 1 | 0 | 0 |
 
@@ -171,7 +171,7 @@ Resumen: 83 historias. 30 hechas, 20 parciales, 30 faltan y 3 se resolvieron dis
 | YC-EVA-001 Bancos con editor por tipo | Hecho | Bancos por academia y siete tipos de pregunta, cada uno con su editor, más importación desde Excel. Falta la pregunta de respuesta abierta. |
 | YC-EVA-002 Configuración del cuestionario | Hecho | Nota mínima, intentos, tiempo límite, orden al azar y puntos por pregunta. Sin fechas de apertura y cierre. |
 | YC-EVA-003 Rendir con calificación en el servidor | Hecho | El servidor arma el intento, guarda el borrador y califica; las respuestas correctas no viajan al navegador. |
-| YC-EVA-004 Cierre automático al agotarse el tiempo | Parcial | El intento vence solo, pero queda en nota 0 aunque hubiera respuestas guardadas. Falta decidir si se califica lo guardado. |
+| YC-EVA-004 Cierre automático al agotarse el tiempo | Hecho (2026-10-08) | El intento vence solo y se califica lo que el alumno dejó guardado; si aprueba, cuenta para el avance. Sin nada guardado, vale cero. |
 | YC-EVA-005 Intentos, intentos adicionales y revisión | Hecho (2026-10-08) | Tope de intentos y cuenta el mejor; el alumno revisa su intento. Quien revisa ve cada intento con sus respuestas y da intentos adicionales con motivo. No se pueden retirar una vez dados. |
 | YC-EVA-006 Entrega de tareas, a tiempo o tardía | Hecho (2026-10-08) | Entrega con texto o archivo. Plazo opcional en días desde la matrícula; fuera de plazo se marca como tardía o se rechaza, según la tarea. No es una fecha de calendario ni hay prórroga por alumno. |
 | YC-EVA-007 Calificar y devolver tareas | Hecho (2026-10-08) | Se califica con nota y comentario, o se devuelve con comentario para que el alumno la rehaga. No se guarda el historial de entregas anteriores. |
@@ -183,7 +183,7 @@ Resumen: 83 historias. 30 hechas, 20 parciales, 30 faltan y 3 se resolvieron dis
 | Historia | Estado | Qué hay y qué falta |
 | --- | --- | --- |
 | YC-CER-001 Plantillas de certificado | Parcial | Una plantilla por academia con fondo propio, posiciones, colores y vista previa. No hay varias plantillas ni una por curso. |
-| YC-CER-002 Requisitos generales y por curso | Parcial | Cada curso decide si entrega certificado, y se exige el 100 % completado. No hay nota mínima, encuesta obligatoria ni requisitos generales de la academia. |
+| YC-CER-002 Requisitos generales y por curso | Parcial | Cada curso decide si entrega certificado; se exige el 100 % completado y, desde el 2026-10-08, la nota mínima del curso si la tiene. Faltan la encuesta obligatoria y los requisitos generales de la academia. |
 | YC-CER-003 Emisión automática con código y QR | Hecho | — |
 | YC-CER-004 Emitidos y emisión manual o forzada | Hecho | Listado, emisión manual de uno o de varios pendientes. La manual exige que el curso esté completado: no hay emisión "forzada" sin cumplir requisitos. |
 | YC-CER-005 Detalle, descarga y revocación | Parcial | Descarga del PDF y anulación con motivo desde el listado. No hay pantalla de detalle por certificado. |
@@ -286,7 +286,7 @@ Depende de la decisión 8 (comprobantes, RUC, IGV) y de contratar un OSE o PSE. 
 | Historia | Estado | Qué hay y qué falta |
 | --- | --- | --- |
 | YC-WEB-001 Portada del sitio | Falta | La cara pública es el catálogo; no hay portada editable. |
-| YC-WEB-002 Catálogo con filtros | Parcial | Catálogo público de cursos y paquetes, sin buscador ni filtros. |
+| YC-WEB-002 Catálogo con filtros | Hecho (2026-10-08) | Buscador por texto y filtros por categoría, nivel y precio, combinables y guardados en la dirección. Sin orden por precio o fecha ni paginación. |
 | YC-WEB-003 Ficha pública del curso | Hecho | — |
 | YC-WEB-004 Rutas de aprendizaje y ficha del paquete (F2) | Parcial | Paquetes con ficha pública. No existe la "ruta" como concepto aparte. |
 | YC-WEB-005 Landing para empresas con formulario (F3) | Falta | Los prospectos los registra o importa el personal. |

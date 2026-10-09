@@ -1,3 +1,4 @@
+import type { CourseLevel } from '../courses/api';
 import { api, postIdempotent } from '../../shared/api/client';
 import type { Tone } from '../../shared/ui';
 import type { PageMeta } from '../identity/api';
@@ -93,6 +94,22 @@ export interface CouponCheck {
 }
 
 // Paquete del catálogo: varios cursos a un precio
+export interface CatalogFilters {
+  search?: string;
+  category?: string;
+  level?: string;
+  price?: 'free' | 'paid';
+}
+
+// Con qué se puede filtrar el catálogo: lo que hay en todos los cursos en venta
+export interface CatalogMeta {
+  categories: string[];
+  levels: CourseLevel[];
+  has_free: boolean;
+  has_paid: boolean;
+  total: number;
+}
+
 export interface CatalogPackage {
   id: string;
   title: string;
@@ -148,8 +165,9 @@ export function formatDateTime(value: string | null): string {
 
 export const salesApi = {
   // Catálogo público: no requiere sesión
-  async catalog() {
-    return (await api.get('/catalog/courses')).data.data as AvailableCourse[];
+  async catalog(filters: CatalogFilters = {}) {
+    const response = await api.get('/catalog/courses', { params: filters });
+    return { courses: response.data.data as AvailableCourse[], meta: response.data.meta as CatalogMeta };
   },
   async catalogCourse(course: string) {
     return (await api.get(`/catalog/courses/${course}`)).data.data as AvailableCourseDetail;

@@ -55,6 +55,8 @@ export interface CourseSummary {
   issues_certificate: boolean;
   // Avance secuencial: una sección se abre al completar la anterior
   sequential: boolean;
+  // Nota final mínima para aprobar el curso, en porcentaje; null = no se exige
+  passing_percent: number | null;
   language: string;
   status: CourseStatus;
   cover_url: string | null;
@@ -110,6 +112,8 @@ export interface CourseOptions {
   languages: string[];
   categories: string[];
   resource_types: ResourceType[];
+  // Escala en que la academia escribe las notas (20, 100…)
+  grade_scale: number;
   cover: FileRules;
   material: FileRules;
   // Solo para quien puede asignar profesores
@@ -127,6 +131,7 @@ export interface CourseInput {
   price: number | null;
   issues_certificate: boolean;
   sequential: boolean;
+  passing_percent: number | null;
   language: string;
 }
 
@@ -141,6 +146,7 @@ export const EMPTY_COURSE: CourseInput = {
   price: null,
   issues_certificate: false,
   sequential: false,
+  passing_percent: null,
   language: 'es',
 };
 

@@ -11,6 +11,10 @@ use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * Catálogo público de la organización (FP-02): los cursos en venta, visibles
@@ -20,15 +24,38 @@ class CatalogController extends Controller
 {
     public function __construct(private readonly TenantSettingsService $settings) {}
 
-    public function index(): JsonResponse
-    {
-        $currency = $this->settings->currency();
-        $courses = $this->query()->orderBy('title')->get();
+    public const PRICE_FREE = 'free';
 
-        return ApiResponse::success(
-            $courses->map(fn (Course $course) => CatalogPresenter::card($course, $currency))->values(),
-            ['currency' => $currency]
-        );
+    public const PRICE_PAID = 'paid';
+
+    /**
+     * Cursos en venta, con buscador y filtros (YC-WEB-002). Se filtra sobre
+     * la versión publicada, que es lo que el visitante ve, no sobre el borrador.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string', 'max:80'],
+            'level' => ['nullable', Rule::in(Course::LEVELS)],
+            'price' => ['nullable', Rule::in([self::PRICE_FREE, self::PRICE_PAID])],
+        ]);
+
+        $currency = $this->settings->currency();
+        $all = $this->query()->get()
+            ->map(fn (Course $course) => CatalogPresenter::card($course, $currency))
+            ->sortBy(fn (array $card) => self::plain($card['title']))
+            ->values();
+
+        return ApiResponse::success($this->filtered($all, $filters)->values(), [
+            'currency' => $currency,
+            // Con qué se puede filtrar: lo que hay en todo el catálogo, no solo en el resultado
+            'categories' => $all->pluck('category')->filter()->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->values(),
+            'levels' => array_values(array_intersect(Course::LEVELS, $all->pluck('level')->all())),
+            'has_free' => $all->contains(fn (array $card) => (float) $card['price'] === 0.0),
+            'has_paid' => $all->contains(fn (array $card) => (float) $card['price'] > 0),
+            'total' => $all->count(),
+        ]);
     }
 
     public function show(string $course): JsonResponse
@@ -40,6 +67,39 @@ class CatalogController extends Controller
         }
 
         return ApiResponse::success(CatalogPresenter::detail($record, $this->settings->currency()));
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $cards
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function filtered(Collection $cards, array $filters): Collection
+    {
+        // Cada palabra buscada debe aparecer en el título, el resumen o la categoría
+        $words = array_filter(explode(' ', self::plain($filters['search'] ?? '')));
+
+        return $cards
+            ->when($words !== [], fn (Collection $list) => $list->filter(function (array $card) use ($words) {
+                $text = self::plain("{$card['title']} {$card['summary']} {$card['category']}");
+
+                return collect($words)->every(fn (string $word) => str_contains($text, $word));
+            }))
+            ->when($filters['category'] ?? null, fn (Collection $list, string $category) => $list->filter(
+                fn (array $card) => self::plain((string) $card['category']) === self::plain($category)
+            ))
+            ->when($filters['level'] ?? null, fn (Collection $list, string $level) => $list->where('level', $level))
+            ->when($filters['price'] ?? null, fn (Collection $list, string $price) => $list->filter(
+                fn (array $card) => ((float) $card['price'] === 0.0) === ($price === self::PRICE_FREE)
+            ));
+    }
+
+    /**
+     * Texto sin mayúsculas ni tildes, para comparar como escribe la gente.
+     */
+    private static function plain(string $text): string
+    {
+        return Str::lower(Str::ascii(trim($text)));
     }
 
     /**

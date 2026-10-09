@@ -286,11 +286,9 @@ const AttemptsModal: React.FC<{
                         {toScale(attempt.score_percent, gradeScale)} / {gradeScale}
                       </span>
                       <span className="text-slate-500 flex-1 min-w-0">{formatDate(attempt.submitted_at)}</span>
-                      {attempt.status !== 'EXPIRED' && (
-                        <Button size="sm" aria-expanded={open === attempt.id} onClick={() => setOpen(open === attempt.id ? null : attempt.id)}>
-                          {open === attempt.id ? 'Ocultar' : 'Ver respuestas'}
-                        </Button>
-                      )}
+                      <Button size="sm" aria-expanded={open === attempt.id} onClick={() => setOpen(open === attempt.id ? null : attempt.id)}>
+                        {open === attempt.id ? 'Ocultar' : 'Ver respuestas'}
+                      </Button>
                     </div>
                     {open === attempt.id && (
                       <div className="px-3.5 pb-3.5">
@@ -425,6 +423,7 @@ export const TrackingTab: React.FC<{ courseId: string }> = ({ courseId }) => {
   const [students, setStudents] = useState<TrackedStudent[]>([]);
   const [submissions, setSubmissions] = useState<ReviewSubmission[]>([]);
   const [gradeScale, setGradeScale] = useState(20);
+  const [passingPercent, setPassingPercent] = useState<number | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -442,6 +441,7 @@ export const TrackingTab: React.FC<{ courseId: string }> = ({ courseId }) => {
       setActivities(tracking.activities);
       setStudents(tracking.students);
       setGradeScale(tracking.gradeScale);
+      setPassingPercent(tracking.passingPercent);
       setSubmissions(list.data);
       setState('ready');
     } catch (err) {
@@ -551,7 +551,7 @@ export const TrackingTab: React.FC<{ courseId: string }> = ({ courseId }) => {
       <Card>
         <CardHeader
           title="Avance y notas"
-          text={`Notas de 0 a ${gradeScale}. En los cuestionarios cuenta el mejor intento; toca la nota para ver cada intento. La nota final promedia cuestionarios y tareas según su peso; lo que no tiene nota cuenta como cero.`}
+          text={`Notas de 0 a ${gradeScale}. En los cuestionarios cuenta el mejor intento; toca la nota para ver cada intento. La nota final promedia cuestionarios y tareas según su peso; lo que no tiene nota cuenta como cero.${passingPercent !== null ? ` El curso se aprueba con ${toScale(passingPercent, gradeScale)}.` : ''}`}
           action={
             students.length > 0 ? (
               <Button size="sm" icon={<Download className="w-3.5 h-3.5" />} processing={exporting} onClick={exportGrades}>
@@ -618,7 +618,12 @@ export const TrackingTab: React.FC<{ courseId: string }> = ({ courseId }) => {
                     {student.final_percent === null ? (
                       <span className="text-slate-300">—</span>
                     ) : (
-                      <span className="font-bold text-slate-900 tnum">{toScale(student.final_percent, gradeScale)}</span>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="font-bold text-slate-900 tnum">{toScale(student.final_percent, gradeScale)}</span>
+                        {student.passed !== null && (
+                          <Badge tone={student.passed ? 'success' : 'neutral'}>{student.passed ? 'Aprobado' : 'No aprobado'}</Badge>
+                        )}
+                      </span>
                     )}
                   </Td>
                 </Tr>

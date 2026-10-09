@@ -10,6 +10,7 @@ use App\Modules\Courses\Domain\Models\CourseResource;
 use App\Modules\Courses\Http\CoursePresenter;
 use App\Modules\Files\Application\FileStorage;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
@@ -55,7 +56,7 @@ class CourseController extends Controller
     /**
      * Catálogos que usan los formularios de cursos.
      */
-    public function options(Request $request): JsonResponse
+    public function options(Request $request, TenantSettingsService $settings): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -66,6 +67,8 @@ class CourseController extends Controller
             'categories' => $this->access->scope(Course::query(), $user)
                 ->whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
             'resource_types' => CourseResource::TYPES,
+            // Escala en la que la academia escribe las notas (la nota mínima del curso)
+            'grade_scale' => $settings->gradeScale(),
             'cover' => [
                 'max_kb' => config('files.limits.image'),
                 'extensions' => config('files.purposes.'.CourseService::COVER_PURPOSE.'.extensions'),
@@ -193,6 +196,8 @@ class CourseController extends Controller
             'issues_certificate' => ['nullable', 'boolean'],
             // Una sección se abre al completar la anterior
             'sequential' => ['nullable', 'boolean'],
+            // Nota final mínima para aprobar, en porcentaje; vacío = no se exige
+            'passing_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'language' => ['required', Rule::in(Course::LANGUAGES)],
         ]);
     }

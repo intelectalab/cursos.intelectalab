@@ -38,6 +38,7 @@ export const StudentGrades: React.FC<{ courseId: string; gradeScale: number; wat
           <span className="font-semibold text-slate-900 tnum">
             {toScale(grades.final_percent, gradeScale)} de {gradeScale}
           </span>
+          {grades.passed !== null && <Badge tone={grades.passed ? 'success' : 'neutral'}>{grades.passed ? 'Aprobado' : 'Aún no aprobado'}</Badge>}
           <Button size="sm" onClick={() => setOpen(true)}>
             Ver notas
           </Button>
@@ -47,7 +48,9 @@ export const StudentGrades: React.FC<{ courseId: string; gradeScale: number; wat
       {open && (
         <Modal
           title="Mis notas"
-          subtitle="Lo que aún no tiene nota cuenta como cero en la nota del curso."
+          subtitle={`Lo que aún no tiene nota cuenta como cero en la nota del curso.${
+            grades.passing_percent !== null ? ` El curso se aprueba con ${toScale(grades.passing_percent, gradeScale)} de ${gradeScale}.` : ''
+          }`}
           onClose={() => setOpen(false)}
           footer={<Button onClick={() => setOpen(false)}>Cerrar</Button>}
         >

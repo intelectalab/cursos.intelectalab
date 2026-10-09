@@ -35,6 +35,7 @@ import {
   type Tone,
 } from '../../../shared/ui';
 import { HolidaysSection } from '../components/HolidaysSection';
+import { PlanCard } from '../components/PlanCard';
 
 interface Settings {
   name: string;
@@ -442,6 +443,8 @@ export const SettingsPage: React.FC = () => {
         />
 
         {error && <Alert>{error}</Alert>}
+
+        <PlanCard />
 
         <Section icon={Building2} tone="brand" title="Organización" text="Identidad de la academia en la plataforma y en sus documentos.">
           <LogoField

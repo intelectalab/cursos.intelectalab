@@ -2,6 +2,7 @@
 
 namespace App\Modules\Academic\Application;
 
+use App\Modules\Academic\Domain\Events\GradeRecorded;
 use App\Modules\Academic\Domain\Models\TaskSubmission;
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Enrollments\Application\ProgressService;
@@ -114,6 +115,8 @@ class TaskSubmissionService
             ]);
 
             $this->audit->record('submissions.graded', $submission, $before, $submission->only(['status', 'grade_percent']));
+
+            GradeRecorded::dispatch($submission->enrollment_id);
 
             return $submission;
         });

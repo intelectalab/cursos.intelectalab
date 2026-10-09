@@ -99,6 +99,15 @@ class GradebookService
     }
 
     /**
+     * Si la nota final alcanza la mínima del curso. null cuando el curso no
+     * exige nota mínima o nada cuenta para la nota.
+     */
+    public static function passed(?float $finalPercent, ?float $passingPercent): ?bool
+    {
+        return $finalPercent === null || $passingPercent === null ? null : $finalPercent >= $passingPercent;
+    }
+
+    /**
      * Las versiones publicadas antes de existir el peso valen 1 por actividad.
      *
      * @param  array<string, mixed>  $activity
@@ -119,8 +128,13 @@ class GradebookService
         $activities = $version ? ClassroomPresenter::activitiesOf($version) : [];
         $row = $this->rows($enrollment->course_id, $activities, collect([$enrollment]))[$enrollment->id];
 
+        $minimum = $enrollment->course->passing_percent;
+
         return [
             'final_percent' => $row['final_percent'],
+            // Nota mínima para aprobar el curso; null = el curso no la exige
+            'passing_percent' => $minimum,
+            'passed' => self::passed($row['final_percent'], $minimum),
             'items' => array_map(fn (array $activity) => [
                 'id' => $activity['id'],
                 'type' => $activity['type'],

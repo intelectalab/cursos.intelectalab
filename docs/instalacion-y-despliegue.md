@@ -4,7 +4,7 @@ Guía de respaldo para instalar el sistema en un servidor. Se actualiza cada vez
 
 > **Estado:** todavía no se ha hecho un despliegue real. Los pasos de instalación local están probados; los de servidor (sección 5 en adelante) describen lo que el sistema necesita, pero no se han ejecutado en un servidor. Los puntos sin resolver están en la sección 9.
 
-Última actualización: 2026-10-08 (Evaluaciones y aula: tres migraciones nuevas; Alumnos y docentes: dos permisos nuevos. Sin dependencias ni variables de entorno. Al actualizar: `php artisan migrate --force` y `php artisan access:sync`).
+Última actualización: 2026-10-08 (Planes de la plataforma: dos migraciones, la primera de las cuales crea la suscripción de las academias existentes, y dos variables opcionales, `BILLING_TRIAL_DAYS` y `BILLING_TRIAL_MAX_STUDENTS`. Antes: Evaluaciones y aula y nota mínima del curso: cuatro migraciones nuevas; Alumnos y docentes: dos permisos nuevos. Sin dependencias ni variables de entorno. Al actualizar: `php artisan migrate --force` y `php artisan access:sync`).
 
 ## 1. Componentes
 
@@ -148,6 +148,8 @@ CREATE SCHEMA erp AUTHORIZATION erp_app;
 | `QUEUE_CONNECTION` | `database` | Todavía no hay trabajos en cola |
 | `MAIL_MAILER` y `MAIL_*` | pendiente | Sin proveedor definido; con `log` los correos se escriben en `storage/logs/laravel.log` |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | remitente real | |
+| `BILLING_TRIAL_DAYS` | `14` | Días de la prueba gratuita de una academia nueva (opcional) |
+| `BILLING_TRIAL_MAX_STUDENTS` | `10` | Tope de alumnos con matrícula activa durante la prueba (opcional) |
 | `AUTH_SESSION_LIFETIME` | `30` | Minutos de inactividad por defecto; cada academia puede cambiarlo en Configuración |
 | `AUTH_PASSWORD_RESET_MINUTES` | `60` | Vigencia del enlace de recuperación |
 | `AUTH_LOGIN_LOCK_ATTEMPTS` | `10` | Intentos fallidos seguidos que bloquean una cuenta (S12) |

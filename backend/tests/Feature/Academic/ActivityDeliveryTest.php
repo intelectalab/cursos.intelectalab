@@ -239,6 +239,36 @@ class ActivityDeliveryTest extends TestCase
             ->assertJsonPath("data.{$this->quiz}.attempts_left", 1);
     }
 
+    public function test_a_timed_out_attempt_is_graded_from_what_the_student_had_saved(): void
+    {
+        $this->withToken($this->admin)->putJson($this->api("/courses/{$this->course}/activities/{$this->quiz}"), [
+            'title' => 'Evaluación', 'passing_percent' => 55, 'max_attempts' => 2, 'time_limit_minutes' => 10,
+        ])->assertOk();
+        $this->withToken($this->admin)->postJson($this->api("/courses/{$this->course}/publish"))->assertOk();
+
+        [$attempt, $ids] = $this->startAttempt();
+
+        // Marca la pregunta de 3 puntos y se le acaba el tiempo sin enviar
+        $this->withToken($this->token)->putJson($this->api("/me/attempts/{$attempt}/draft"), ['answers' => [$ids['SINGLE'] => 'b']])->assertOk();
+        $this->travel(12)->minutes();
+
+        // Se califica lo guardado: 3 de 4 puntos, con lo que aprueba y avanza
+        $this->withToken($this->token)->getJson($this->me('/activities'))
+            ->assertJsonPath("data.{$this->quiz}.attempts.0.status", 'EXPIRED')
+            ->assertJsonPath("data.{$this->quiz}.attempts.0.score_percent", 75)
+            ->assertJsonPath("data.{$this->quiz}.passed", true)
+            ->assertJsonPath("data.{$this->quiz}.open_attempt_id", null);
+
+        // El detalle muestra qué quedó respondido y qué no
+        $this->withToken($this->token)->getJson($this->api("/me/attempts/{$attempt}"))
+            ->assertOk()
+            ->assertJsonPath('data.status', 'EXPIRED')
+            ->assertJsonPath('data.score_percent', 75)
+            ->assertJsonCount(2, 'data.questions');
+
+        $this->assertContains($this->quiz, $this->withToken($this->token)->getJson($this->me())->json('data.progress.activity_ids'));
+    }
+
     public function test_answers_marked_so_far_are_recovered_when_the_attempt_is_resumed(): void
     {
         [$attempt, $ids] = $this->startAttempt();

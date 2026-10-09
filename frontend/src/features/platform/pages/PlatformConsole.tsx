@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { NavLink, useLocation, useParams } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { api, apiErrorMessage, UNAUTHORIZED_EVENT } from '../../../shared/api/client';
 import {
@@ -9,6 +10,9 @@ import {
 } from '../../../shared/auth/sessionStorage';
 import { Alert, Avatar, Button, Field, INPUT_CLASS } from '../../../shared/ui';
 import { AuthShell, BrandMark } from '../../../shared/ui/AuthShell';
+import { PaymentsPanel } from '../components/PaymentsPanel';
+import { PlansPanel } from '../components/PlansPanel';
+import { TenantProfile } from '../components/TenantProfile';
 import { TenantsPanel } from '../components/TenantsPanel';
 
 
@@ -64,6 +68,11 @@ const PlatformLogin: React.FC<{ onLogin: (session: PlatformSession) => void }> =
 
 // Consola del administrador de plataforma: solo existe en el dominio central.
 export const PlatformConsole: React.FC = () => {
+  // Con una academia en la dirección se muestra su ficha; sin ella, la lista
+  const { tenantId } = useParams();
+  const { pathname } = useLocation();
+  const onPlans = pathname === '/platform/plans';
+  const onPayments = pathname === '/platform/payments';
   const [session, setSession] = useState<PlatformSession | null>(loadPlatformSession);
 
   const clear = useCallback(() => {
@@ -122,7 +131,26 @@ export const PlatformConsole: React.FC = () => {
         </div>
       </header>
       <main className="max-w-6xl mx-auto p-6 sm:p-8 animate-rise">
-        <TenantsPanel />
+        <nav aria-label="Secciones de la consola" className="inline-flex gap-1 p-1 mb-6 rounded-xl bg-slate-100 border border-slate-200/70">
+          {[
+            { to: '/platform', label: 'Academias', active: !onPlans && !onPayments },
+            { to: '/platform/plans', label: 'Planes', active: onPlans },
+            { to: '/platform/payments', label: 'Pagos', active: onPayments },
+          ].map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end
+              aria-current={item.active ? 'page' : undefined}
+              className={`inline-flex items-center h-9 px-3.5 rounded-lg text-[13px] font-semibold transition-all ${
+                item.active ? 'bg-white text-brand-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        {onPayments ? <PaymentsPanel /> : onPlans ? <PlansPanel /> : tenantId ? <TenantProfile key={tenantId} tenantId={tenantId} /> : <TenantsPanel />}
       </main>
     </div>
   );

@@ -56,6 +56,9 @@ export type ActivityState = QuizState | TaskState | SurveyState;
 export interface StudentGrades {
   // null: ninguna actividad cuenta para la nota
   final_percent: number | null;
+  // Nota mínima para aprobar el curso; null = no se exige
+  passing_percent: number | null;
+  passed: boolean | null;
   items: {
     id: string;
     type: ActivityType;
@@ -182,6 +185,8 @@ export interface TrackedStudent {
   progress: { percent: number; completed: number; total: number };
   // Promedio ponderado; lo que no tiene nota cuenta como cero. null: nada cuenta para la nota
   final_percent: number | null;
+  // null: el curso no exige nota mínima
+  passed: boolean | null;
   grades: Record<string, { grade_percent?: number | null; status?: Submission['status'] | null; is_late?: boolean; done?: boolean }>;
 }
 
@@ -232,6 +237,7 @@ export const reviewApi = {
       activities: response.data.data.activities as TrackedActivity[],
       students: response.data.data.students as TrackedStudent[],
       gradeScale: response.data.meta.grade_scale as number,
+      passingPercent: response.data.meta.passing_percent as number | null,
       pendingSubmissions: response.data.meta.pending_submissions as number,
     };
   },

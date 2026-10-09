@@ -27,7 +27,7 @@ class CourseService
     private const EDITABLE = ['title', 'summary', 'description', 'category', 'level', 'duration_hours', 'language'];
 
     /** Se aplican al guardar, sin pasar por una publicación */
-    private const COMMERCIAL = ['access_days', 'price', 'issues_certificate', 'sequential'];
+    private const COMMERCIAL = ['access_days', 'price', 'issues_certificate', 'sequential', 'passing_percent'];
 
     public function __construct(
         private readonly FileStorage $storage,
@@ -45,6 +45,7 @@ class CourseService
                 'price' => $data['price'] ?? null,
                 'issues_certificate' => $data['issues_certificate'] ?? false,
                 'sequential' => $data['sequential'] ?? false,
+                'passing_percent' => $data['passing_percent'] ?? null,
                 'status' => Course::STATUS_DRAFT,
                 'created_by' => $actor->id,
             ]);
@@ -78,6 +79,7 @@ class CourseService
             $course->price = $data['price'] ?? null;
             $course->issues_certificate = $data['issues_certificate'] ?? false;
             $course->sequential = $data['sequential'] ?? false;
+            $course->passing_percent = $data['passing_percent'] ?? null;
 
             if ($course->isDirty(self::COMMERCIAL)) {
                 $previous = array_intersect_key($course->getOriginal(), $course->getDirty());

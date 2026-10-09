@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BookOpen, Building2, ExternalLink, Eye, GraduationCap, Plus, Search, Users } from 'lucide-react';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { tenantUrl } from '../../../shared/tenancy/hosts';
@@ -27,20 +28,9 @@ import {
 } from '../../../shared/ui';
 import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filters';
 import { formatMoney } from '../../sales/api';
-
-interface TenantRow {
-  id: string;
-  name: string;
-  slug: string;
-  status: 'ACTIVE' | 'SUSPENDED';
-  created_at: string | null;
-  users_count: number;
-  students_count: number;
-  published_courses_count: number;
-  sales_this_month: string;
-  currency: string;
-  last_login_at: string | null;
-}
+import { platformApi, type TenantRow } from '../api';
+import { SubscriptionBadge } from './SubscriptionBadge';
+import { SuspendTenantModal } from './SuspendTenantModal';
 
 interface Totals {
   tenants: number;
@@ -170,24 +160,21 @@ export const TenantsPanel: React.FC = () => {
     setPage(1);
   };
 
-  const setTenantStatus = async (tenant: TenantRow, next: TenantRow['status']) => {
+  const reactivate = async (tenant: TenantRow) => {
     setProcessing(tenant.id);
     setNotice(null);
     try {
-      await api.patch(`/platform/tenants/${tenant.id}/status`, { status: next });
+      await platformApi.setStatus(tenant.id, 'ACTIVE');
       await load();
     } catch (err) {
-      setNotice({ tone: 'danger', text: apiErrorMessage(err, 'No se pudo cambiar el estado de la academia.') });
+      setNotice({ tone: 'danger', text: apiErrorMessage(err, 'No se pudo reactivar la academia.') });
     } finally {
       setProcessing(null);
     }
   };
 
   const openSupport = async (tenant: TenantRow) => {
-    const response = await api.post(`/platform/tenants/${tenant.id}/support-session`);
-    const { token, slug, as_user: asUser } = response.data.data as { token: string; slug: string; as_user: string };
-    // El acceso viaja en el fragmento de la dirección: no llega a ningún servidor ni queda en sus registros
-    window.open(`${tenantUrl(slug, centralDomain, '/support-access')}#token=${encodeURIComponent(token)}`, '_blank', 'noopener');
+    const asUser = await platformApi.openSupport(tenant, centralDomain);
     setNotice({ tone: 'success', text: `Se abrió «${tenant.name}» en otra pestaña, en solo lectura, con la vista de ${asUser}. El acceso dura 30 minutos y quedó en la auditoría de la academia.` });
     setDialog(null);
   };
@@ -275,6 +262,7 @@ export const TenantsPanel: React.FC = () => {
                   <HelpTip text="Suma de las órdenes pagadas desde el día 1 de este mes, en la moneda de cada academia." label="Qué son las ventas del mes" />
                 </span>
               </Th>
+              <Th>Plan</Th>
               <Th>Último acceso</Th>
               <Th>Estado</Th>
               <Th />
@@ -286,7 +274,9 @@ export const TenantsPanel: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <Avatar name={tenant.name} />
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-900 whitespace-nowrap">{tenant.name}</p>
+                        <Link to={`/platform/tenants/${tenant.id}`} className="block font-semibold text-slate-900 hover:text-brand-700 whitespace-nowrap">
+                          {tenant.name}
+                        </Link>
                         <a
                           href={tenantUrl(tenant.slug, centralDomain, '/login')}
                           target="_blank"
@@ -303,6 +293,9 @@ export const TenantsPanel: React.FC = () => {
                   <Td className="text-slate-700 tnum">{tenant.students_count}</Td>
                   <Td className="text-slate-700 tnum">{tenant.published_courses_count}</Td>
                   <Td className="whitespace-nowrap font-medium text-slate-900 tnum">{formatMoney(tenant.sales_this_month, tenant.currency)}</Td>
+                  <Td className="whitespace-nowrap">
+                    <SubscriptionBadge subscription={tenant.subscription} />
+                  </Td>
                   <Td className="whitespace-nowrap text-slate-600 tnum">{formatWhen(tenant.last_login_at)}</Td>
                   <Td>
                     <Badge tone={tenant.status === 'ACTIVE' ? 'success' : 'warning'} dot>
@@ -311,6 +304,13 @@ export const TenantsPanel: React.FC = () => {
                   </Td>
                   <Td className="text-right whitespace-nowrap">
                     <div className="inline-flex gap-1.5">
+                      <Link
+                        to={`/platform/tenants/${tenant.id}`}
+                        aria-label={`Ver la ficha de ${tenant.name}`}
+                        className="inline-flex items-center h-8 px-3 rounded-lg border border-slate-300 bg-white text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Ficha
+                      </Link>
                       {tenant.status === 'ACTIVE' ? (
                         <>
                           <Button size="sm" icon={<Eye className="w-3.5 h-3.5" />} onClick={() => setDialog({ kind: 'support', tenant })}>
@@ -321,7 +321,7 @@ export const TenantsPanel: React.FC = () => {
                           </Button>
                         </>
                       ) : (
-                        <Button size="sm" processing={processing === tenant.id} disabled={processing !== null} onClick={() => setTenantStatus(tenant, 'ACTIVE')}>
+                        <Button size="sm" processing={processing === tenant.id} disabled={processing !== null} onClick={() => reactivate(tenant)}>
                           Reactivar
                         </Button>
                       )}
@@ -348,13 +348,11 @@ export const TenantsPanel: React.FC = () => {
         />
       )}
       {dialog?.kind === 'suspend' && (
-        <ConfirmModal
-          title="Suspender academia"
-          text={`Nadie de «${dialog.tenant.name}» podrá entrar hasta que la reactives: ni su personal ni sus alumnos. Sus datos se conservan.`}
-          confirmLabel="Suspender"
+        <SuspendTenantModal
+          tenant={dialog.tenant}
           onClose={() => setDialog(null)}
-          onConfirm={async () => {
-            await setTenantStatus(dialog.tenant, 'SUSPENDED');
+          onDone={async () => {
+            await load();
             setDialog(null);
           }}
         />

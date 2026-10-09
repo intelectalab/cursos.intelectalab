@@ -255,10 +255,17 @@ const ResultView: React.FC<{ result: AttemptResult; gradeScale: number; onBack: 
       {result.passed ? <CheckCircle2 className="w-9 h-9 text-emerald-600 shrink-0" /> : <XCircle className="w-9 h-9 text-rose-600 shrink-0" />}
       <div className="flex-1 min-w-0">
         <p className={`text-sm font-semibold ${result.passed ? 'text-emerald-900' : 'text-rose-900'}`}>
-          {result.status === 'EXPIRED' ? 'Se acabó el tiempo' : result.passed ? 'Aprobaste' : 'No alcanzaste la nota mínima'}
+          {result.status === 'EXPIRED'
+            ? result.passed
+              ? 'Se acabó el tiempo, pero aprobaste'
+              : 'Se acabó el tiempo'
+            : result.passed
+              ? 'Aprobaste'
+              : 'No alcanzaste la nota mínima'}
         </p>
         <p className={`text-[13px] ${result.passed ? 'text-emerald-800' : 'text-rose-800'}`}>
           Intento {result.number} · se aprueba con {toScale(result.passing_percent, gradeScale)}
+          {result.status === 'EXPIRED' && ' · se calificó lo que habías guardado'}
         </p>
       </div>
       <p className={`text-3xl font-bold tnum ${result.passed ? 'text-emerald-700' : 'text-rose-700'}`}>
@@ -267,11 +274,11 @@ const ResultView: React.FC<{ result: AttemptResult; gradeScale: number; onBack: 
       </p>
     </div>
 
-    {!result.answers_revealed && result.status !== 'EXPIRED' && (
+    {!result.answers_revealed && (
       <Alert tone="info">Las respuestas correctas se muestran cuando apruebas o cuando ya no te quedan intentos.</Alert>
     )}
 
-    {result.status !== 'EXPIRED' && <AttemptQuestions result={result} />}
+    <AttemptQuestions result={result} />
 
     <Button onClick={onBack}>Volver al cuestionario</Button>
   </div>
@@ -537,11 +544,9 @@ export const QuizPanel: React.FC<{
                   {toScale(item.score_percent, gradeScale)} / {gradeScale}
                 </span>
                 <span className="text-slate-500 flex-1 min-w-0">{formatDate(item.submitted_at)}</span>
-                {item.status !== 'EXPIRED' && (
-                  <Button size="sm" onClick={() => review(item.id)}>
-                    Ver detalle
-                  </Button>
-                )}
+                <Button size="sm" onClick={() => review(item.id)}>
+                  Ver detalle
+                </Button>
               </li>
             ))}
           </ul>
