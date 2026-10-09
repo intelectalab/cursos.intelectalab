@@ -5,7 +5,9 @@ import type { PageMeta } from '../identity/api';
 import type { AvailableCourse, AvailableCourseDetail } from '../enrollments/api';
 
 export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
-export type PaymentMethod = 'TRANSFER' | 'YAPE' | 'CASH' | 'OTHER';
+// CARD y WALLET solo llegan por una pasarela en línea
+export type PaymentMethod = 'TRANSFER' | 'YAPE' | 'CASH' | 'OTHER' | 'CARD' | 'WALLET';
+export type PaymentGatewayCode = 'MANUAL' | 'MERCADOPAGO';
 
 export const ORDER_STATUSES: OrderStatus[] = ['PENDING', 'PAID', 'CANCELLED', 'EXPIRED'];
 export const PAYMENT_METHODS: PaymentMethod[] = ['TRANSFER', 'YAPE', 'CASH', 'OTHER'];
@@ -29,6 +31,12 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   YAPE: 'Yape',
   CASH: 'Efectivo',
   OTHER: 'Otro',
+  CARD: 'Tarjeta',
+  WALLET: 'Saldo en la pasarela',
+};
+
+export const PAYMENT_GATEWAY_LABEL: Record<string, string> = {
+  MERCADOPAGO: 'Mercado Pago',
 };
 
 export interface OrderItem {
@@ -43,6 +51,8 @@ export interface OrderItem {
 
 export interface OrderPayment {
   method: PaymentMethod;
+  // MANUAL = lo confirmó el personal; si no, la pasarela que lo cobró
+  gateway: PaymentGatewayCode;
   reference: string | null;
   notes: string | null;
   amount: string;
@@ -74,11 +84,15 @@ export interface Order {
   licenses_release_reason: string | null;
   items: OrderItem[];
   payment: OrderPayment | null;
+  // Cobros que una pasarela hizo y no se aplicaron a la orden: los resuelve una persona
+  payment_reviews: { gateway: string; payment_id: string | null; reason: string | null; at: string }[];
 }
 
 // Lo que ve el comprador: mientras la orden espera su pago, cómo pagarla
 export interface MyOrder extends Order {
   payment_instructions: { type: string; text: string | null; methods: PaymentMethod[] } | null;
+  // Pasarelas con las que puede pagarla en línea ahora mismo
+  online_gateways: { code: string; label: string }[];
 }
 
 // Resultado de probar un cupón: cuánto descuenta y cuánto se pagaría
@@ -199,6 +213,14 @@ export const salesApi = {
   },
   async cancelMyOrder(order: string) {
     return (await api.post(`/me/orders/${order}/cancel`)).data.data as MyOrder;
+  },
+  // Prepara el cobro en la pasarela y devuelve a dónde enviar al comprador
+  async payOnline(order: string, gateway: string, returnUrl: string) {
+    return (await api.post(`/me/orders/${order}/pay`, { gateway, return_url: returnUrl })).data.data as { checkout_url: string };
+  },
+  // Le pregunta a la pasarela si la orden ya se pagó
+  async syncPayment(order: string) {
+    return (await api.post(`/me/orders/${order}/pay/sync`)).data.data as MyOrder;
   },
   async orders(params: { search?: string; status?: string; page?: number }) {
     const response = await api.get('/orders', { params });

@@ -8,6 +8,10 @@ import { formatMoney } from '../../sales/api';
 // Lo que la academia ve de su plan en la plataforma
 export interface AcademySubscription {
   state: 'TRIAL' | 'TRIAL_EXPIRED' | 'ACTIVE' | 'EXPIRED' | 'UNLIMITED';
+  // GRACE: vencido, opera con aviso; READ_ONLY: vencido y sin días de gracia
+  access: 'FULL' | 'GRACE' | 'READ_ONLY';
+  grace_ends_at: string | null;
+  grace_days_left: number | null;
   plan: { id: string; name: string; price: string; currency: string; billing_months: number } | null;
   ends_at: string | null;
   days_left: number | null;
@@ -20,6 +24,22 @@ const formatDay = (value: string | null) => (value ? new Date(value).toLocaleDat
 
 function describe(subscription: AcademySubscription): { title: string; text: string; warning: boolean } {
   const until = formatDay(subscription.ends_at);
+  const next = subscription.state === 'TRIAL_EXPIRED' ? 'Elige un plan' : 'Renueva tu plan';
+
+  if (subscription.access === 'READ_ONLY') {
+    return {
+      title: 'Academia en solo lectura',
+      text: `${subscription.state === 'TRIAL_EXPIRED' ? 'Tu prueba gratuita' : 'Tu plan'} venció el ${until} y los días de gracia terminaron el ${formatDay(subscription.grace_ends_at)}. Se puede consultar todo y tus alumnos siguen estudiando, pero no registrar cambios. ${next} para volver a operar.`,
+      warning: true,
+    };
+  }
+  if (subscription.access === 'GRACE') {
+    return {
+      title: subscription.state === 'TRIAL_EXPIRED' ? 'Tu prueba gratuita terminó' : `${subscription.plan?.name ?? 'Plan'} · vencido`,
+      text: `Venció el ${until}. ${next} hasta el ${formatDay(subscription.grace_ends_at)}: después la academia quedará en solo lectura.`,
+      warning: true,
+    };
+  }
 
   switch (subscription.state) {
     case 'TRIAL':
@@ -107,7 +127,7 @@ export const PlanCard: React.FC<{ subscription?: AcademySubscription | null }> =
             <div className={`h-full rounded-full ${full ? 'bg-amber-500' : 'bg-brand-500'}`} style={{ width: `${used ?? 0}%` }} />
           </div>
           <p className="text-xs text-slate-500 mt-1.5">
-            Cuenta cada persona con al menos una matrícula activa.{full && ' Ya usas todo el cupo de tu plan.'}
+            Cuenta cada persona con al menos una matrícula activa.{full && ' Ya usas todo el cupo: no podrás matricular ni vender a personas nuevas hasta pasar a un plan mayor.'}
           </p>
         </div>
       )}

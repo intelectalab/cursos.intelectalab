@@ -124,4 +124,12 @@ class Order extends Model
     {
         return $this->hasOne(Payment::class)->where('status', Payment::STATUS_CONFIRMED);
     }
+
+    /**
+     * Cobros en línea que la pasarela hizo y no se pudieron aplicar a la orden.
+     */
+    public function attemptsToReview(): HasMany
+    {
+        return $this->hasMany(PaymentAttempt::class)->where('status', PaymentAttempt::STATUS_NEEDS_REVIEW);
+    }
 }

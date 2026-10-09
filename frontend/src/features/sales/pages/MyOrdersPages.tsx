@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Clock, Compass, Receipt, Wallet } from 'lucide-react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, CheckCircle2, Clock, Compass, CreditCard, Receipt, Wallet } from 'lucide-react';
 import { apiError, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, Card, ConfirmModal, EmptyState, ErrorState, LoadingState, PageHeader } from '../../../shared/ui';
 import { formatDateTime, formatMoney, orderCode, salesApi, type MyOrder, type Order } from '../api';
@@ -99,16 +99,23 @@ export const MyOrderPage: React.FC = () => {
   const [state, setState] = useState<'loading' | 'ready' | 'not_found' | 'error'>('loading');
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [searchParams] = useSearchParams();
+  // Vuelve de la pasarela: en vez de esperar su aviso, se le pregunta si ya pagó
+  const [returned] = useState(() => ['payment_id', 'collection_status', 'status'].some((key) => searchParams.has(key)));
+  const [paying, setPaying] = useState<string | null>(null);
+  const [payError, setPayError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setOrder(await salesApi.myOrder(orderId));
+      // Si la pasarela no responde, la orden se muestra igual
+      setOrder(returned ? await salesApi.syncPayment(orderId).catch(() => salesApi.myOrder(orderId)) : await salesApi.myOrder(orderId));
       setState('ready');
     } catch (err) {
       setError(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState(apiError(err)?.code === 'NOT_FOUND' ? 'not_found' : 'error');
     }
-  }, [orderId]);
+  }, [orderId, returned]);
 
   useEffect(() => {
     const timer = setTimeout(load, 0);
@@ -116,6 +123,32 @@ export const MyOrderPage: React.FC = () => {
   }, [load]);
 
   const instructions = order?.payment_instructions;
+  const gateways = order?.status === 'PENDING' ? order.online_gateways : [];
+
+  const payWith = async (gateway: string) => {
+    if (!order) return;
+    setPaying(gateway);
+    setPayError(null);
+    try {
+      const { checkout_url } = await salesApi.payOnline(order.id, gateway, `${window.location.origin}/my-orders/${order.id}`);
+      window.location.assign(checkout_url);
+    } catch (err) {
+      setPayError(apiErrorMessage(err, 'No se pudo abrir el pago en línea. Inténtalo de nuevo.'));
+      setPaying(null);
+    }
+  };
+
+  const checkAgain = async () => {
+    setChecking(true);
+    setPayError(null);
+    try {
+      setOrder(await salesApi.syncPayment(orderId));
+    } catch (err) {
+      setPayError(apiErrorMessage(err, 'No se pudo comprobar el pago. Inténtalo de nuevo.'));
+    } finally {
+      setChecking(false);
+    }
+  };
 
   return (
     <div className="max-w-3xl">
@@ -169,6 +202,40 @@ export const MyOrderPage: React.FC = () => {
             </Card>
           )}
 
+          {order.status === 'PENDING' && returned && (
+            <Alert tone="info">
+              Todavía no vemos tu pago. Si acabas de pagar, puede tardar unos minutos en confirmarse; si lo dejaste a medias, puedes intentarlo otra vez.{' '}
+              <button type="button" className="font-semibold underline cursor-pointer disabled:opacity-60" disabled={checking} onClick={checkAgain}>
+                {checking ? 'Comprobando…' : 'Volver a comprobar'}
+              </button>
+            </Alert>
+          )}
+
+          {gateways.length > 0 && (
+            <Card className="p-5 sm:p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="w-9 h-9 shrink-0 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center">
+                  <CreditCard className="w-4.5 h-4.5" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">Paga en línea</h2>
+                  <p className="text-[13px] text-slate-500">
+                    Paga <strong className="text-slate-900 tnum">{formatMoney(order.total_amount, order.currency)}</strong> ahora y tu acceso se activa al momento. Te llevamos a la
+                    página segura del medio de pago y vuelves aquí.
+                  </p>
+                </div>
+              </div>
+              {payError && <Alert>{payError}</Alert>}
+              <div className="flex flex-wrap gap-2">
+                {gateways.map((gateway) => (
+                  <Button key={gateway.code} variant="primary" processing={paying === gateway.code} disabled={paying !== null} onClick={() => payWith(gateway.code)}>
+                    Pagar con {gateway.label}
+                  </Button>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {order.status === 'PENDING' && instructions && (
             <Card className="p-5 sm:p-6 space-y-4">
               <div className="flex items-start gap-3">
@@ -176,7 +243,7 @@ export const MyOrderPage: React.FC = () => {
                   <Wallet className="w-4.5 h-4.5" />
                 </span>
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-900">Cómo pagar</h2>
+                  <h2 className="text-sm font-semibold text-slate-900">{gateways.length > 0 ? 'O paga por fuera' : 'Cómo pagar'}</h2>
                   <p className="text-[13px] text-slate-500">
                     Paga <strong className="text-slate-900 tnum">{formatMoney(order.total_amount, order.currency)}</strong> e indica el número de orden.
                     Tu acceso se activa cuando la academia confirma el pago.

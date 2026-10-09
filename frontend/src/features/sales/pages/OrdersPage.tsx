@@ -31,6 +31,7 @@ import {
   ORDER_STATUSES,
   orderBuyer,
   orderCode,
+  PAYMENT_GATEWAY_LABEL,
   PAYMENT_METHOD_LABEL,
   PAYMENT_METHODS,
   salesApi,
@@ -140,6 +141,12 @@ const OrderModal: React.FC<{
             <OrderSummary order={order} />
             {pending && order.expires_at && <p className="text-xs text-slate-500">Espera su pago hasta el {formatDateTime(order.expires_at)}.</p>}
             {order.status === 'CANCELLED' && <p className="text-xs text-slate-500">Cancelada el {formatDateTime(order.cancelled_at)}.</p>}
+            {order.payment_reviews.map((review) => (
+              <Alert key={`${review.gateway}-${review.payment_id}`}>
+                {PAYMENT_GATEWAY_LABEL[review.gateway] ?? review.gateway} cobró un pago (n.º {review.payment_id}) que no se aplicó a esta orden. {review.reason} Revísalo en tu
+                cuenta de la pasarela y devuélvelo o confirma el pago a mano.
+              </Alert>
+            ))}
             {order.licenses_released_at && (
               <Alert tone="info">
                 Las licencias se entregaron el {formatDateTime(order.licenses_released_at)}, antes del pago. Motivo: {order.licenses_release_reason}

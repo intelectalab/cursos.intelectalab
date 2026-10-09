@@ -48,12 +48,18 @@ enum ErrorCode: string
     case EnrollmentNotStarted = 'ENROLLMENT_NOT_STARTED';
     case SectionLocked = 'SECTION_LOCKED';
 
+    case StudentLimitReached = 'STUDENT_LIMIT_REACHED';
+    case PlanReadOnly = 'PLAN_READ_ONLY';
+    case PlanOrderNotRevertible = 'PLAN_ORDER_NOT_REVERTIBLE';
+
     case CourseNotForSale = 'COURSE_NOT_FOR_SALE';
     case PriceChanged = 'PRICE_CHANGED';
     case AlreadyEnrolled = 'ALREADY_ENROLLED';
     case OrderAlreadyPending = 'ORDER_ALREADY_PENDING';
     case OrderNotPending = 'ORDER_NOT_PENDING';
     case CouponInvalid = 'COUPON_INVALID';
+    case GatewayNotAvailable = 'GATEWAY_NOT_AVAILABLE';
+    case GatewayError = 'GATEWAY_ERROR';
 
     case CertificateNotEligible = 'CERTIFICATE_NOT_ELIGIBLE';
     case CertificateRevoked = 'CERTIFICATE_REVOKED';

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, CheckCircle2, Hourglass, Receipt } from 'lucide-react';
+import { Ban, CheckCircle2, Clock, FileCheck2, Hourglass, Receipt } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
   Alert,
@@ -34,13 +34,22 @@ const STATUS: Record<PlatformPlanOrder['status'], { label: string; tone: Tone }>
   PENDING: { label: 'Por confirmar', tone: 'warning' },
   PAID: { label: 'Pagada', tone: 'success' },
   CANCELLED: { label: 'Cancelada', tone: 'neutral' },
+  EXPIRED: { label: 'Vencida sin pago', tone: 'danger' },
 };
 
-const METHOD_LABEL: Record<string, string> = { TRANSFER: 'Transferencia', YAPE: 'Yape o Plin', CASH: 'Efectivo', OTHER: 'Otro' };
+const METHOD_LABEL: Record<string, string> = { TRANSFER: 'Transferencia', YAPE: 'Yape o Plin', CASH: 'Efectivo', OTHER: 'Otro', CARD: 'Tarjeta', WALLET: 'Saldo en la pasarela' };
+
+type ResolveMode = 'confirm' | 'cancel' | 'revert';
+
+const MODE: Record<ResolveMode, { title: string; action: string; failed: string }> = {
+  confirm: { title: 'Confirmar pago recibido', action: 'Confirmar pago', failed: 'No se pudo confirmar el pago.' },
+  cancel: { title: 'Cancelar orden', action: 'Cancelar orden', failed: 'No se pudo cancelar la orden.' },
+  revert: { title: 'Deshacer la confirmación', action: 'Deshacer confirmación', failed: 'No se pudo deshacer la confirmación.' },
+};
 
 /* ───────────────────────────── Confirmar o cancelar ───────────────────────────── */
 
-const ResolveModal: React.FC<{ order: PlatformPlanOrder; mode: 'confirm' | 'cancel'; methods: string[]; onClose: () => void; onDone: () => Promise<void> }> = ({
+const ResolveModal: React.FC<{ order: PlatformPlanOrder; mode: ResolveMode; methods: string[]; onClose: () => void; onDone: () => Promise<void> }> = ({
   order,
   mode,
   methods,
@@ -60,24 +69,25 @@ const ResolveModal: React.FC<{ order: PlatformPlanOrder; mode: 'confirm' | 'canc
     setError(null);
     try {
       if (confirming) await platformApi.confirmPlanOrder(order.id, method, reference.trim() || null, notes.trim() || null);
+      else if (mode === 'revert') await platformApi.revertPlanOrder(order.id, notes.trim());
       else await platformApi.cancelPlanOrder(order.id, notes.trim());
       await onDone();
     } catch (err) {
-      setError(apiErrorMessage(err, confirming ? 'No se pudo confirmar el pago.' : 'No se pudo cancelar la orden.'));
+      setError(apiErrorMessage(err, MODE[mode].failed));
       setProcessing(false);
     }
   };
 
   return (
     <Modal
-      title={confirming ? 'Confirmar pago recibido' : 'Cancelar orden'}
+      title={MODE[mode].title}
       subtitle={`${order.tenant.name} · ${order.plan_name} · ${formatMoney(order.amount, order.currency)}`}
       onClose={onClose}
       footer={
         <>
           <Button onClick={onClose}>Volver</Button>
           <Button variant={confirming ? 'primary' : 'danger'} type="submit" form="resolve-order-form" processing={processing}>
-            {confirming ? 'Confirmar pago' : 'Cancelar orden'}
+            {MODE[mode].action}
           </Button>
         </>
       }
@@ -88,12 +98,18 @@ const ResolveModal: React.FC<{ order: PlatformPlanOrder; mode: 'confirm' | 'canc
           <>
             <Alert tone="info">
               Al confirmar, el plan de la academia queda vigente de inmediato ({order.billing_months === 12 ? 'un año' : 'un mes'}
-              {order.max_students ? `, hasta ${order.max_students} alumnos` : ', sin tope de alumnos'}). No se puede deshacer desde aquí.
+              {order.max_students ? `, hasta ${order.max_students} alumnos` : ', sin tope de alumnos'}) y se le avisa. Si te equivocas, podrás deshacerlo mientras su plan no cambie
+              después.
             </Alert>
             {order.payer_reference && (
               <p className="text-[13px] text-slate-600">
                 <span className="font-medium text-slate-800">La academia informó:</span> {order.payer_reference}
               </p>
+            )}
+            {order.proof && (
+              <button type="button" onClick={() => void platformApi.openPlanOrderProof(order.id)} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-700 underline cursor-pointer">
+                <FileCheck2 className="w-4 h-4" /> Ver la constancia adjunta ({order.proof.name})
+              </button>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Medio de pago">
@@ -113,8 +129,18 @@ const ResolveModal: React.FC<{ order: PlatformPlanOrder; mode: 'confirm' | 'canc
               <input className={INPUT_CLASS} maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)} />
             </Field>
           </>
+        ) : mode === 'revert' ? (
+          <>
+            <Alert tone="info">
+              El plan de la academia vuelve a como estaba antes de esta confirmación y la orden queda otra vez pendiente, para confirmarla bien o cancelarla. La academia recibe el aviso con el
+              motivo.
+            </Alert>
+            <Field label="Motivo" hint="Lo verá la academia. Ejemplo: «El pago era de otra academia».">
+              <textarea className={INPUT_CLASS} rows={3} required minLength={5} maxLength={300} autoFocus value={notes} onChange={(event) => setNotes(event.target.value)} />
+            </Field>
+          </>
         ) : (
-          <Field label="Motivo" hint="La academia podrá pedir otro plan después.">
+          <Field label="Motivo" hint="La academia lo verá y podrá pedir otro plan después.">
             <textarea className={INPUT_CLASS} rows={3} required maxLength={500} autoFocus value={notes} onChange={(event) => setNotes(event.target.value)} />
           </Field>
         )}
@@ -133,7 +159,7 @@ export const PaymentsPanel: React.FC = () => {
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
-  const [dialog, setDialog] = useState<{ order: PlatformPlanOrder; mode: 'confirm' | 'cancel' } | null>(null);
+  const [dialog, setDialog] = useState<{ order: PlatformPlanOrder; mode: ResolveMode } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -159,11 +185,12 @@ export const PaymentsPanel: React.FC = () => {
     { key: 'PENDING', label: 'Por confirmar', value: counts.PENDING ?? null, icon: Hourglass, tone: 'warning', help: 'La academia pidió el plan y espera que confirmes su pago. Hasta entonces su plan no cambia.' },
     { key: 'PAID', label: 'Pagadas', value: counts.PAID ?? null, icon: CheckCircle2, tone: 'success', help: 'Pago confirmado: el plan quedó vigente en ese momento.' },
     { key: 'CANCELLED', label: 'Canceladas', value: counts.CANCELLED ?? null, icon: Ban, tone: 'neutral', help: 'Las canceló la academia o la plataforma. No cambiaron ningún plan.' },
+    { key: 'EXPIRED', label: 'Vencidas', value: counts.EXPIRED ?? null, icon: Clock, tone: 'danger', help: 'Pasaron su plazo sin que la academia pagara ni informara un pago. No cambiaron ningún plan.' },
   ];
 
   return (
     <>
-      <PageHeader icon={Receipt} title="Pagos de academias" subtitle="Cada academia pide su plan y paga por fuera; aquí confirmas los pagos que recibiste." />
+      <PageHeader icon={Receipt} title="Pagos de academias" subtitle="Cada academia pide su plan y lo paga en línea o por fuera; aquí confirmas los pagos que recibiste por fuera." />
 
       {notice && (
         <div className="mb-4">
@@ -211,6 +238,16 @@ export const PaymentsPanel: React.FC = () => {
                       {order.tenant.name}
                     </Link>
                     {order.payer_reference && <p className="text-xs text-slate-500 break-words">Informó: {order.payer_reference}</p>}
+                    {order.proof && (
+                      <button
+                        type="button"
+                        onClick={() => void platformApi.openPlanOrderProof(order.id)}
+                        className="inline-flex items-center gap-1 mt-0.5 text-xs font-semibold text-brand-700 underline cursor-pointer"
+                      >
+                        <FileCheck2 className="w-3.5 h-3.5" /> Ver constancia
+                      </button>
+                    )}
+                    {order.review_reason && <p className="mt-1 text-xs font-medium text-rose-700 break-words whitespace-normal">Cobro por revisar: {order.review_reason}</p>}
                   </Td>
                   <Td className="whitespace-nowrap text-slate-700">
                     {order.plan_name}
@@ -219,12 +256,13 @@ export const PaymentsPanel: React.FC = () => {
                   <Td className="whitespace-nowrap font-medium text-slate-900 tnum">{formatMoney(order.amount, order.currency)}</Td>
                   <Td className="whitespace-nowrap text-slate-600 tnum">{formatWhen(order.created_at)}</Td>
                   <Td className="whitespace-nowrap">
-                    <Badge tone={STATUS[order.status].tone} dot>
-                      {STATUS[order.status].label}
+                    <Badge tone={order.status === 'PENDING' && (order.payer_reference || order.proof) ? 'info' : STATUS[order.status].tone} dot>
+                      {order.status === 'PENDING' && (order.payer_reference || order.proof) ? 'Pago informado' : STATUS[order.status].label}
                     </Badge>
                     {order.status === 'PAID' && (
                       <span className="block text-xs text-slate-500 mt-0.5">
-                        {METHOD_LABEL[order.payment_method ?? ''] ?? ''} · {formatWhen(order.paid_at)}
+                        {METHOD_LABEL[order.payment_method ?? ''] ?? ''}
+                        {order.paid_online ? ' en línea' : ''} · {formatWhen(order.paid_at)}
                       </span>
                     )}
                     {order.status === 'CANCELLED' && order.notes && <span className="block text-xs text-slate-500 mt-0.5 whitespace-normal">{order.notes}</span>}
@@ -239,6 +277,11 @@ export const PaymentsPanel: React.FC = () => {
                           Cancelar
                         </Button>
                       </div>
+                    )}
+                    {order.can_revert && (
+                      <Button size="sm" onClick={() => setDialog({ order, mode: 'revert' })}>
+                        Deshacer
+                      </Button>
                     )}
                   </Td>
                 </Tr>
@@ -259,7 +302,9 @@ export const PaymentsPanel: React.FC = () => {
             setNotice(
               dialog.mode === 'confirm'
                 ? `Pago confirmado: «${dialog.order.tenant.name}» ya tiene vigente el plan «${dialog.order.plan_name}».`
-                : `Orden de «${dialog.order.tenant.name}» cancelada.`,
+                : dialog.mode === 'revert'
+                  ? `Confirmación deshecha: el plan de «${dialog.order.tenant.name}» volvió a como estaba y su orden quedó pendiente.`
+                  : `Orden de «${dialog.order.tenant.name}» cancelada.`,
             );
             setDialog(null);
             await load();

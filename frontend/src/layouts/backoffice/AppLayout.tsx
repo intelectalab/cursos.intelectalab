@@ -2,6 +2,7 @@ import React, { Suspense, useCallback, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
+import { PlanBanner } from '../../features/settings/components/PlanBanner';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { LoadingState } from '../../shared/ui';
@@ -12,7 +13,7 @@ export const AppLayout: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const { pathname } = useLocation();
-  const { session, logout } = useAuth();
+  const { session, logout, hasPermission } = useAuth();
 
   // Al pasar a escritorio el panel deja de existir: no debe reabrirse al volver a móvil
   if (isDesktop && isDrawerOpen) setIsDrawerOpen(false);
@@ -53,6 +54,7 @@ export const AppLayout: React.FC = () => {
             </button>
           </div>
         )}
+        {!session?.support_mode && hasPermission('tenant_settings.read') && <PlanBanner />}
         <Header onToggleSidebar={toggleSidebar} isMenuOpen={isDesktop ? !isCollapsed : isDrawerOpen} />
         <main id="contenido" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-none">
           {/* La clave reinicia la animación de entrada al cambiar de pantalla */}

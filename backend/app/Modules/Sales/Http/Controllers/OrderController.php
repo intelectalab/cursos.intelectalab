@@ -5,12 +5,15 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Sales\Application\OrderService;
+use App\Modules\Sales\Application\Payments\Online\OnlinePaymentService;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Sales\Http\OrderPresenter;
+use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\ErrorCode;
 use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,11 +28,12 @@ use Illuminate\Validation\Rule;
  */
 class OrderController extends Controller
 {
-    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer'];
+    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer', 'attemptsToReview'];
 
     public function __construct(
         private readonly OrderService $orders,
         private readonly PaymentGateway $gateway,
+        private readonly OnlinePaymentService $online,
     ) {}
 
     /**
@@ -75,6 +79,41 @@ class OrderController extends Controller
     public function cancelMine(Request $request, string $order): JsonResponse
     {
         return $this->respondToCustomer($this->orders->cancel($this->own($request, $order), $request->user()));
+    }
+
+    /**
+     * El comprador va a pagar en línea: devuelve a dónde enviarlo. La orden
+     * sigue pendiente hasta que la pasarela confirme el pago.
+     */
+    public function pay(Request $request, string $order): JsonResponse
+    {
+        $data = $request->validate([
+            'gateway' => ['required', Rule::in($this->online->codes())],
+            // A dónde vuelve el comprador: la página de su orden, en esta misma organización
+            'return_url' => ['required', 'url:http,https', 'max:500'],
+        ]);
+
+        $host = $request->attributes->get('tenant')->slug.'.'.config('tenancy.central_domain');
+
+        if (parse_url($data['return_url'], PHP_URL_HOST) !== $host) {
+            throw new ApiException(ErrorCode::ValidationError, 'Los datos no son válidos.', 422, ['return_url' => ['La dirección de retorno no es de esta academia.']]);
+        }
+
+        $attempt = $this->online->start($this->own($request, $order), $data['gateway'], [
+            'return' => $data['return_url'],
+            // Los avisos solo llegan a una dirección pública con HTTPS
+            'webhook' => str_starts_with($data['return_url'], 'https://') ? "https://{$host}/api/v1/payments/webhooks/".strtolower($data['gateway']) : null,
+        ]);
+
+        return ApiResponse::success(['checkout_url' => $attempt->checkout_url], null, 201);
+    }
+
+    /**
+     * El comprador volvió de la pasarela: se le pregunta a ella si pagó.
+     */
+    public function syncPayment(Request $request, string $order): JsonResponse
+    {
+        return $this->respondToCustomer($this->online->sync($this->own($request, $order)));
     }
 
     public function index(Request $request): JsonResponse
@@ -172,6 +211,8 @@ class OrderController extends Controller
         return ApiResponse::success(
             OrderPresenter::make($order) + [
                 'payment_instructions' => $order->isPayable() ? $this->gateway->instructions($order) : null,
+                // Pasarelas con las que puede pagarla en línea ahora mismo
+                'online_gateways' => $this->online->availableFor($order),
             ],
             null,
             $status

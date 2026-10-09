@@ -3,6 +3,7 @@
 namespace Tests\Feature\Promotions;
 
 use App\Modules\Audit\Domain\Models\AuditEvent;
+use App\Modules\Billing\Domain\Models\TenantSubscription;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Tenancy\TenantContext;
@@ -241,6 +242,9 @@ class CouponTest extends TestCase
             ->assertJsonPath('data.ends_at', '2026-12-02T04:59:59+00:00')
             ->assertJsonPath('data.starts_on', '2026-12-01')
             ->assertJsonPath('data.ends_on', '2026-12-01');
+
+        // Los saltos pasan el fin de la prueba gratuita: la organización tiene su plan al día
+        app(TenantContext::class)->runForTenant($this->tenant->id, fn () => TenantSubscription::query()->update(['trial_ends_at' => '2027-12-31']));
 
         // Cada salto supera el tiempo de inactividad: la alumna vuelve a entrar
         $checkAt = function (string $moment) use ($course): TestResponse {

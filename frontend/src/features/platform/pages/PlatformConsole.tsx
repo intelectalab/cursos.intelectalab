@@ -14,6 +14,7 @@ import { PaymentsPanel } from '../components/PaymentsPanel';
 import { PlansPanel } from '../components/PlansPanel';
 import { TenantProfile } from '../components/TenantProfile';
 import { TenantsPanel } from '../components/TenantsPanel';
+import { platformApi } from '../api';
 
 
 
@@ -74,6 +75,8 @@ export const PlatformConsole: React.FC = () => {
   const onPlans = pathname === '/platform/plans';
   const onPayments = pathname === '/platform/payments';
   const [session, setSession] = useState<PlatformSession | null>(loadPlatformSession);
+  // Órdenes de plan que esperan a la plataforma: el contador de la pestaña Pagos
+  const [waiting, setWaiting] = useState<{ pending: number; informed: number; review: number } | null>(null);
 
   const clear = useCallback(() => {
     clearPlatformSession();
@@ -84,6 +87,20 @@ export const PlatformConsole: React.FC = () => {
     window.addEventListener(UNAUTHORIZED_EVENT, clear);
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, clear);
   }, [clear]);
+
+  // Se vuelve a contar al cambiar de sección: confirmar o cancelar una orden cambia el número
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    platformApi
+      .planOrdersSummary()
+      .then((summary) => active && setWaiting(summary))
+      // Sin el contador la consola funciona igual
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [session, pathname]);
 
   if (!session) {
     return (
@@ -133,9 +150,16 @@ export const PlatformConsole: React.FC = () => {
       <main className="max-w-6xl mx-auto p-6 sm:p-8 animate-rise">
         <nav aria-label="Secciones de la consola" className="inline-flex gap-1 p-1 mb-6 rounded-xl bg-slate-100 border border-slate-200/70">
           {[
-            { to: '/platform', label: 'Academias', active: !onPlans && !onPayments },
-            { to: '/platform/plans', label: 'Planes', active: onPlans },
-            { to: '/platform/payments', label: 'Pagos', active: onPayments },
+            { to: '/platform', label: 'Academias', active: !onPlans && !onPayments, count: 0, urgent: false },
+            { to: '/platform/plans', label: 'Planes', active: onPlans, count: 0, urgent: false },
+            {
+              to: '/platform/payments',
+              label: 'Pagos',
+              active: onPayments,
+              count: (waiting?.pending ?? 0) + (waiting?.review ?? 0),
+              // Hay pagos que la academia ya informó, o cobros de la pasarela por revisar
+              urgent: (waiting?.informed ?? 0) + (waiting?.review ?? 0) > 0,
+            },
           ].map((item) => (
             <NavLink
               key={item.to}
@@ -147,6 +171,17 @@ export const PlatformConsole: React.FC = () => {
               }`}
             >
               {item.label}
+              {item.count > 0 && (
+                <span
+                  className={`ml-1.5 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold tnum ${
+                    item.urgent ? 'bg-amber-500 text-white' : 'bg-slate-300 text-slate-700'
+                  }`}
+                  title={`${waiting?.pending ?? 0} por confirmar, ${waiting?.informed ?? 0} con pago informado, ${waiting?.review ?? 0} cobros por revisar`}
+                >
+                  {item.count}
+                  <span className="sr-only"> órdenes esperan</span>
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

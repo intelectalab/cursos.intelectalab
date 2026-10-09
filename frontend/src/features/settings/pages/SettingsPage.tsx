@@ -35,6 +35,7 @@ import {
   type Tone,
 } from '../../../shared/ui';
 import { HolidaysSection } from '../components/HolidaysSection';
+import { PaymentGatewaysSection } from '../components/PaymentGatewaysSection';
 import { PlanCard } from '../components/PlanCard';
 
 interface Settings {
@@ -696,6 +697,10 @@ export const SettingsPage: React.FC = () => {
           </p>
         </Section>
       </form>
+
+      <div className="mt-5">
+        <PaymentGatewaysSection editable={editable} />
+      </div>
 
       <div className="mt-5">
         <HolidaysSection editable={editable} />

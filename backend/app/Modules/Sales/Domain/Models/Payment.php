@@ -14,8 +14,21 @@ class Payment extends Model
 
     public const STATUS_CONFIRMED = 'CONFIRMED';
 
-    /** Medios con los que el comprador puede pagar mientras no haya pasarela (PD-001, PD-002) */
-    public const METHODS = ['TRANSFER', 'YAPE', 'CASH', 'OTHER'];
+    public const METHOD_TRANSFER = 'TRANSFER';
+
+    public const METHOD_YAPE = 'YAPE';
+
+    public const METHOD_CASH = 'CASH';
+
+    public const METHOD_OTHER = 'OTHER';
+
+    /** Solo llegan por una pasarela: tarjeta y saldo de la cuenta del comprador en ella */
+    public const METHOD_CARD = 'CARD';
+
+    public const METHOD_WALLET = 'WALLET';
+
+    /** Medios que el personal puede registrar al confirmar un pago recibido por fuera */
+    public const METHODS = [self::METHOD_TRANSFER, self::METHOD_YAPE, self::METHOD_CASH, self::METHOD_OTHER];
 
     protected $fillable = [
         'tenant_id',

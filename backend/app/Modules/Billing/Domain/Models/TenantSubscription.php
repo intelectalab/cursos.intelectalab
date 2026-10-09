@@ -2,6 +2,7 @@
 
 namespace App\Modules\Billing\Domain\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,13 @@ class TenantSubscription extends Model
 
     /** Sin plan y sin vencimiento: organización anterior a los planes o de cortesía */
     public const STATE_UNLIMITED = 'UNLIMITED';
+
+    /** Lo que la organización puede hacer hoy, según su vencimiento */
+    public const ACCESS_FULL = 'FULL';
+
+    public const ACCESS_GRACE = 'GRACE';
+
+    public const ACCESS_READ_ONLY = 'READ_ONLY';
 
     protected $fillable = [
         'tenant_id',
@@ -59,6 +67,35 @@ class TenantSubscription extends Model
         }
 
         return $this->current_period_ends_at?->isPast() ? self::STATE_EXPIRED : self::STATE_ACTIVE;
+    }
+
+    /**
+     * Fin de la prueba o del periodo pagado; null = sin vencimiento.
+     */
+    public function endsAt(): ?CarbonInterface
+    {
+        return $this->status === self::STATUS_TRIAL ? $this->trial_ends_at : $this->current_period_ends_at;
+    }
+
+    /**
+     * Hasta cuándo sigue operando después de vencer.
+     */
+    public function graceEndsAt(): ?CarbonInterface
+    {
+        return $this->endsAt()?->copy()->addDays(config('billing.grace_days'));
+    }
+
+    /**
+     * Qué puede hacer hoy la organización: todo, todo con aviso (días de
+     * gracia) o solo consultar.
+     */
+    public function access(): string
+    {
+        if (! in_array($this->state(), [self::STATE_TRIAL_EXPIRED, self::STATE_EXPIRED], true)) {
+            return self::ACCESS_FULL;
+        }
+
+        return $this->graceEndsAt()->isPast() ? self::ACCESS_READ_ONLY : self::ACCESS_GRACE;
     }
 
     public function plan(): BelongsTo

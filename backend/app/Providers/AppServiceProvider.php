@@ -6,12 +6,18 @@ use App\Modules\Academic\Application\ActivityContent;
 use App\Modules\Academic\Domain\Events\GradeRecorded;
 use App\Modules\B2b\Application\CancelLicensesOnOrderCancelled;
 use App\Modules\B2b\Application\IssueLicensesOnOrderPaid;
+use App\Modules\Billing\Application\PlanQuota;
+use App\Modules\Billing\Application\PlatformGateways;
 use App\Modules\Billing\Application\StartTrialOnProvision;
 use App\Modules\Certificates\Application\IssueCertificateOnCompletion;
 use App\Modules\Certificates\Application\IssueCertificateOnGrade;
 use App\Modules\Courses\Application\CourseContentExtension;
+use App\Modules\Enrollments\Application\EnrollmentQuota;
 use App\Modules\Enrollments\Domain\Events\EnrollmentCompleted;
 use App\Modules\Sales\Application\Payments\ManualPaymentGateway;
+use App\Modules\Sales\Application\Payments\Online\MercadoPagoGateway;
+use App\Modules\Sales\Application\Payments\Online\OnlineGateway;
+use App\Modules\Sales\Application\Payments\Online\OnlinePaymentService;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
@@ -40,6 +46,15 @@ class AppServiceProvider extends ServiceProvider
 
         // Cobro de las órdenes: manual mientras no haya proveedor de pagos (PD-001)
         $this->app->bind(PaymentGateway::class, ManualPaymentGateway::class);
+
+        // Pasarelas de cobro en línea: cada organización conecta su cuenta en las que quiera
+        $this->app->tag([MercadoPagoGateway::class], OnlineGateway::TAG);
+        $this->app->when(OnlinePaymentService::class)->needs('$gateways')->giveTagged(OnlineGateway::TAG);
+        // La plataforma cobra los planes con las mismas pasarelas, con su propia cuenta
+        $this->app->when(PlatformGateways::class)->needs('$gateways')->giveTagged(OnlineGateway::TAG);
+
+        // Cupo de alumnos: lo pone el plan de la organización en la plataforma
+        $this->app->bind(EnrollmentQuota::class, PlanQuota::class);
     }
 
     /**

@@ -21,6 +21,7 @@ import {
   Tr,
 } from '../../../shared/ui';
 import { formatMoney } from '../../sales/api';
+import { PaymentGatewaysSection } from '../../settings/components/PaymentGatewaysSection';
 import { platformApi, type Plan, type PlanInput } from '../api';
 
 /* ───────────────────────────── Crear o editar un plan ───────────────────────────── */
@@ -303,6 +304,10 @@ export const PlansPanel: React.FC = () => {
       </Card>
 
       <PaymentInstructions />
+
+      <div className="mt-5">
+        <PaymentGatewaysSection editable audience="platform" />
+      </div>
 
       {dialog && (
         <PlanModal

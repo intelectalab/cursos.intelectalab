@@ -4,6 +4,7 @@ namespace App\Modules\Sales\Http;
 
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderItem;
+use App\Modules\Sales\Domain\Models\PaymentAttempt;
 
 class OrderPresenter
 {
@@ -53,12 +54,21 @@ class OrderPresenter
             ])->values(),
             'payment' => $payment ? [
                 'method' => $payment->method,
+                // MANUAL = lo confirmó el personal; si no, la pasarela que lo cobró
+                'gateway' => $payment->gateway,
                 'reference' => $payment->reference,
                 'notes' => $payment->notes,
                 'amount' => $payment->amount,
                 'paid_at' => $payment->paid_at->toIso8601String(),
                 'confirmed_by' => $payment->confirmer ? trim("{$payment->confirmer->first_name} {$payment->confirmer->last_name}") : null,
             ] : null,
+            // Cobros que la pasarela hizo y no se aplicaron a la orden: hay que resolverlos a mano
+            'payment_reviews' => $order->relationLoaded('attemptsToReview') ? $order->attemptsToReview->map(fn (PaymentAttempt $attempt) => [
+                'gateway' => $attempt->gateway,
+                'payment_id' => $attempt->external_payment_id,
+                'reason' => $attempt->review_reason,
+                'at' => $attempt->updated_at->toIso8601String(),
+            ])->values() : [],
         ];
     }
 }

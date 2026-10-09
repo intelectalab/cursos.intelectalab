@@ -6,18 +6,21 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Billing\Domain\Models\Plan;
 use App\Modules\Billing\Domain\Models\PlanOrder;
 use App\Modules\Billing\Domain\Models\TenantSubscription;
+use App\Modules\Files\Application\FileStorage;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Tenancy\TenantContext;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Cómo paga una organización su plan: pide el plan (orden pendiente), paga
- * por fuera con las instrucciones de la plataforma y el administrador de
- * plataforma confirma el pago recibido; al confirmar, el plan queda vigente.
- * Es el mismo recorrido con el que un alumno le paga un curso a su academia.
+ * Cómo paga una organización su plan: pide el plan (orden pendiente) y la
+ * paga en línea o por fuera. Por fuera, informa su pago (un texto o la
+ * constancia adjunta) y el administrador de plataforma lo confirma; en
+ * línea, lo confirma la pasarela. Al confirmar, el plan queda vigente. Es
+ * el mismo recorrido con el que un alumno le paga un curso a su academia.
  */
 class PlanOrderService
 {
@@ -25,6 +28,8 @@ class PlanOrderService
 
     public function __construct(
         private readonly SubscriptionService $subscriptions,
+        private readonly PlanOrderNotifier $notifier,
+        private readonly FileStorage $storage,
         private readonly TenantContext $context,
         private readonly AuditLogger $audit,
     ) {}
@@ -38,7 +43,10 @@ class PlanOrderService
             throw new ApiException(ErrorCode::ValidationError, 'Ese plan ya no se ofrece.', 422, ['plan_id' => ['Elige un plan vigente.']]);
         }
 
-        return DB::transaction(function () use ($tenant, $plan, $requester) {
+        // Una orden que ya pasó su plazo no debe impedir pedir otra
+        $this->expireOverdue($tenant->id);
+
+        $order = DB::transaction(function () use ($tenant, $plan, $requester) {
             // Serializa las solicitudes de la misma organización
             Tenant::query()->whereKey($tenant->id)->lockForUpdate()->first();
 
@@ -57,12 +65,17 @@ class PlanOrderService
                 'currency' => $plan->currency,
                 'status' => PlanOrder::STATUS_PENDING,
                 'requested_by' => $requester->id,
+                'expires_at' => now()->addDays(config('billing.order_expiration_days')),
             ]);
 
             $this->audit->record('subscription.order_created', $tenant, null, ['number' => $order->number, 'plan' => $order->plan_name, 'amount' => $order->amount]);
 
             return $order;
         });
+
+        $this->notifier->orderRequested($order->setRelation('tenant', $tenant));
+
+        return $order;
     }
 
     /**
@@ -71,9 +84,44 @@ class PlanOrderService
     public function informPayment(PlanOrder $order, ?string $reference): PlanOrder
     {
         $this->assertPending($order);
+        $wasInformed = $order->isInformed();
+
         $order->update(['payer_reference' => $reference]);
+        $this->notifyIfJustInformed($order, $wasInformed);
 
         return $order;
+    }
+
+    /**
+     * La organización adjunta la constancia de su pago (reemplaza la anterior).
+     */
+    public function attachProof(PlanOrder $order, UploadedFile $upload): PlanOrder
+    {
+        $this->assertPending($order);
+        $wasInformed = $order->isInformed();
+        $previous = $order->proof;
+
+        $order->update(['proof_file_id' => $this->storage->store($upload, PlanOrder::PROOF_PURPOSE)->id]);
+
+        if ($previous !== null) {
+            $this->storage->delete($previous);
+        }
+
+        $this->notifyIfJustInformed($order, $wasInformed);
+
+        return $order->load('proof');
+    }
+
+    public function removeProof(PlanOrder $order): PlanOrder
+    {
+        $this->assertPending($order);
+
+        if (($proof = $order->proof) !== null) {
+            $order->update(['proof_file_id' => null]);
+            $this->storage->delete($proof);
+        }
+
+        return $order->unsetRelation('proof');
     }
 
     /**
@@ -84,12 +132,14 @@ class PlanOrderService
         $this->assertPending($order);
         $order->loadMissing('tenant');
 
-        return $this->context->runForTenant($order->tenant_id, fn () => DB::transaction(function () use ($order, $platformAdmin, $reason) {
+        $this->context->runForTenant($order->tenant_id, fn () => DB::transaction(function () use ($order, $platformAdmin, $reason) {
             $order->update([
                 'status' => PlanOrder::STATUS_CANCELLED,
                 'cancelled_at' => now(),
                 'resolved_by' => $platformAdmin,
                 'notes' => $reason ?? $order->notes,
+                // Si la canceló ella misma, no hay nada que avisarle
+                'outcome_seen_at' => $platformAdmin === null ? now() : null,
             ]);
 
             $this->audit->record(
@@ -98,25 +148,33 @@ class PlanOrderService
                 null,
                 array_filter(['number' => $order->number, 'reason' => $reason, 'platform_admin' => $platformAdmin])
             );
-
-            return $order;
         }));
+
+        if ($platformAdmin !== null) {
+            $this->notifier->cancelledByPlatform($order);
+        }
+
+        return $order;
     }
 
     /**
-     * La plataforma confirma que recibió el pago: la orden queda pagada y el
-     * plan, vigente. Renovar el mismo plan antes de que venza suma el periodo
+     * El pago llegó: la orden queda pagada y el plan, vigente. Lo confirma el
+     * administrador de plataforma (pago por fuera) o la pasarela que lo cobró
+     * (`gateway`). Renovar el mismo plan antes de que venza suma el periodo
      * al vencimiento actual; en cualquier otro caso el periodo empieza hoy.
      *
-     * @param  array{method: string, reference?: ?string, notes?: ?string}  $payment
+     * @param  array{method: string, reference?: ?string, notes?: ?string, gateway?: string}  $payment
+     * @param  string  $resolvedBy  correo del administrador de plataforma o nombre de la pasarela
      */
-    public function confirm(PlanOrder $order, array $payment, string $platformAdmin): PlanOrder
+    public function confirm(PlanOrder $order, array $payment, string $resolvedBy): PlanOrder
     {
-        $this->assertPending($order);
-
-        return DB::transaction(function () use ($order, $payment, $platformAdmin) {
+        $order = DB::transaction(function () use ($order, $payment, $resolvedBy) {
             $order = PlanOrder::query()->lockForUpdate()->with(['plan', 'tenant'])->findOrFail($order->id);
-            $this->assertPending($order);
+
+            // Un pago en línea vale aunque el plazo de la orden haya pasado: ya se cobró
+            if (! (isset($payment['gateway']) && $order->status === PlanOrder::STATUS_EXPIRED)) {
+                $this->assertPending($order);
+            }
 
             $current = TenantSubscription::query()->where('tenant_id', $order->tenant_id)->first();
             $renewing = $current?->plan_id === $order->plan_id && $current->state() === TenantSubscription::STATE_ACTIVE && $current->current_period_ends_at !== null;
@@ -128,22 +186,158 @@ class PlanOrderService
                 'payment_method' => $payment['method'],
                 'payment_reference' => $payment['reference'] ?? null,
                 'notes' => $payment['notes'] ?? null,
-                'resolved_by' => $platformAdmin,
+                'resolved_by' => $resolvedBy,
+                'gateway_payment_id' => isset($payment['gateway']) ? ($payment['reference'] ?? null) : null,
+                'review_reason' => null,
+                // Para poder deshacer: cómo estaba la suscripción y hasta cuándo queda
+                'previous_subscription' => $current ? $this->subscriptions->raw($current) : null,
+                'applied_period_ends_at' => $endsAt,
+                'outcome_seen_at' => null,
             ]);
 
             // Vale el tope que se compró, aunque el plan haya cambiado después
-            $this->subscriptions->assign($order->tenant, $order->plan, $endsAt, $platformAdmin, ['max_students' => $order->max_students]);
+            $this->subscriptions->assign($order->tenant, $order->plan, $endsAt, $resolvedBy, ['max_students' => $order->max_students]);
 
             $this->context->runForTenant($order->tenant_id, fn () => $this->audit->record('platform.plan_order_confirmed', $order->tenant, null, [
                 'number' => $order->number,
                 'plan' => $order->plan_name,
                 'amount' => $order->amount,
                 'method' => $order->payment_method,
+                'platform_admin' => $resolvedBy,
+            ]));
+
+            return $order;
+        });
+
+        $this->notifier->confirmed($order);
+
+        return $order;
+    }
+
+    /**
+     * Deshace una confirmación hecha por error: la suscripción vuelve a como
+     * estaba y la orden, a pendiente. Solo si nada cambió el plan después y
+     * si el pago no lo cobró una pasarela (eso sería una devolución).
+     */
+    public function revert(PlanOrder $order, string $reason, string $platformAdmin): PlanOrder
+    {
+        $order = DB::transaction(function () use ($order, $reason, $platformAdmin) {
+            $order = PlanOrder::query()->lockForUpdate()->with('tenant')->findOrFail($order->id);
+
+            $blocker = match (true) {
+                $order->status !== PlanOrder::STATUS_PAID => 'Solo se puede deshacer la confirmación de una orden pagada.',
+                $order->wasPaidOnline() => 'Esta orden la cobró la pasarela: el dinero ya se movió. Para anularla hay que devolver el pago desde la cuenta de la pasarela y ajustar el plan en la ficha de la academia.',
+                $order->applied_period_ends_at === null => 'Esta orden se confirmó antes de que existiera esta opción. Ajusta el plan desde la ficha de la academia.',
+                PlanOrder::query()->where('tenant_id', $order->tenant_id)->where('status', PlanOrder::STATUS_PENDING)->exists() => 'La academia ya tiene otra orden pendiente. Cancélala antes de reabrir esta.',
+                default => null,
+            };
+
+            $subscription = TenantSubscription::query()->where('tenant_id', $order->tenant_id)->first();
+
+            // Otra orden o un cambio a mano en la ficha vinieron después: deshacer pisaría ese cambio
+            if ($blocker === null && ! ($subscription?->plan_id === $order->plan_id && $subscription->current_period_ends_at?->equalTo($order->applied_period_ends_at))) {
+                $blocker = 'El plan de la academia cambió después de esta confirmación. Ajústalo desde su ficha.';
+            }
+
+            if ($blocker !== null) {
+                throw new ApiException(ErrorCode::PlanOrderNotRevertible, $blocker, 409);
+            }
+
+            $this->subscriptions->restore($order->tenant, $order->previous_subscription, $platformAdmin);
+
+            $order->update([
+                'status' => PlanOrder::STATUS_PENDING,
+                'paid_at' => null,
+                'payment_method' => null,
+                'payment_reference' => null,
+                'resolved_by' => null,
+                'previous_subscription' => null,
+                'applied_period_ends_at' => null,
+                // La academia lo ve en su orden, que vuelve a esperar su pago
+                'notes' => "Confirmación anulada: {$reason}",
+                'expires_at' => now()->addDays(config('billing.order_expiration_days')),
+                'outcome_seen_at' => null,
+            ]);
+
+            $this->context->runForTenant($order->tenant_id, fn () => $this->audit->record('platform.plan_order_reverted', $order->tenant, null, [
+                'number' => $order->number,
+                'plan' => $order->plan_name,
+                'reason' => $reason,
                 'platform_admin' => $platformAdmin,
             ]));
 
             return $order;
         });
+
+        $this->notifier->confirmationReverted($order, $reason);
+
+        return $order;
+    }
+
+    /**
+     * Vence las órdenes pendientes cuyo plazo pasó. Las que ya informaron un
+     * pago no vencen: esperan a que la plataforma las confirme o las cancele.
+     * Debe correr con acceso a todas las organizaciones, o acotado a una.
+     *
+     * @return int cantidad de órdenes vencidas
+     */
+    public function expireOverdue(?string $tenantId = null): int
+    {
+        $overdue = PlanOrder::query()
+            ->when($tenantId, fn ($query, $id) => $query->where('tenant_id', $id))
+            ->where('status', PlanOrder::STATUS_PENDING)
+            ->where('expires_at', '<', now())
+            ->whereNull('payer_reference')
+            ->whereNull('proof_file_id')
+            ->with('tenant')
+            ->get();
+
+        foreach ($overdue as $order) {
+            $this->context->runForTenant($order->tenant_id, function () use ($order) {
+                $order->update(['status' => PlanOrder::STATUS_EXPIRED, 'outcome_seen_at' => null]);
+                $this->audit->record('subscription.order_expired', $order->tenant, null, ['number' => $order->number, 'plan' => $order->plan_name]);
+            });
+
+            $this->notifier->expired($order);
+        }
+
+        return $overdue->count();
+    }
+
+    /**
+     * La pasarela cobró algo que no se pudo aplicar a la orden: queda anotado
+     * para que la plataforma lo resuelva.
+     */
+    public function flagForReview(PlanOrder $order, string $reason): void
+    {
+        if ($order->review_reason === $reason) {
+            return;
+        }
+
+        $order->loadMissing('tenant')->update(['review_reason' => $reason]);
+
+        $this->context->runForTenant($order->tenant_id, fn () => $this->audit->record('platform.plan_order_needs_review', $order->tenant, null, ['number' => $order->number, 'reason' => $reason]));
+        $this->notifier->needsReview($order);
+    }
+
+    /**
+     * Orden resuelta por alguien más (confirmada, cancelada por la plataforma
+     * o vencida) que la organización todavía no vio.
+     */
+    public function unseenOutcome(string $tenantId): ?PlanOrder
+    {
+        return PlanOrder::query()
+            ->where('tenant_id', $tenantId)
+            ->where('status', '!=', PlanOrder::STATUS_PENDING)
+            ->whereNull('outcome_seen_at')
+            ->latest('updated_at')
+            ->orderByDesc('number')
+            ->first();
+    }
+
+    public function markOutcomeSeen(string $tenantId): void
+    {
+        PlanOrder::query()->where('tenant_id', $tenantId)->where('status', '!=', PlanOrder::STATUS_PENDING)->whereNull('outcome_seen_at')->update(['outcome_seen_at' => now()]);
     }
 
     public function paymentInstructions(): ?string
@@ -162,6 +356,8 @@ class PlanOrderService
     }
 
     /**
+     * Espera la relación proof cargada.
+     *
      * @return array<string, mixed>
      */
     public function present(PlanOrder $order): array
@@ -176,13 +372,27 @@ class PlanOrderService
             'currency' => $order->currency,
             'status' => $order->status,
             'payer_reference' => $order->payer_reference,
+            // Constancia que adjuntó la organización
+            'proof' => $order->proof ? ['name' => $order->proof->original_name, 'size_bytes' => $order->proof->size_bytes] : null,
             'payment_method' => $order->payment_method,
             'payment_reference' => $order->payment_reference,
+            // La cobró una pasarela (no la confirmó una persona)
+            'paid_online' => $order->wasPaidOnline(),
+            'gateway' => $order->gateway,
             'notes' => $order->notes,
             'created_at' => $order->created_at->toIso8601String(),
+            // Hasta cuándo espera su pago; si ya se informó un pago, no vence sola
+            'expires_at' => $order->expires_at?->toIso8601String(),
             'paid_at' => $order->paid_at?->toIso8601String(),
             'cancelled_at' => $order->cancelled_at?->toIso8601String(),
         ];
+    }
+
+    private function notifyIfJustInformed(PlanOrder $order, bool $wasInformed): void
+    {
+        if (! $wasInformed && $order->isInformed()) {
+            $this->notifier->paymentInformed($order->loadMissing('tenant'));
+        }
     }
 
     private function assertPending(PlanOrder $order): void

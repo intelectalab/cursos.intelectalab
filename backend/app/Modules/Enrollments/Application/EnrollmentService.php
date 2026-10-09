@@ -23,7 +23,10 @@ class EnrollmentService
     /** Permiso que hace de un usuario alguien matriculable */
     public const STUDENT_PERMISSION = 'student.portal';
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly EnrollmentQuota $quota,
+    ) {}
 
     /**
      * Usuarios activos que pueden ser alumnos y aún no tienen matrícula en el curso.
@@ -102,9 +105,14 @@ class EnrollmentService
                 ->where('status', Enrollment::STATUS_ACTIVE)
                 ->lockForUpdate()
                 ->pluck('student_id');
+            $students = $students->reject(fn (User $student) => $already->contains($student->id));
+
+            // Una compra ya pagada se matricula aunque el cupo se haya llenado después: el cupo se revisó al comprar
+            if ($source !== Enrollment::SOURCE_PURCHASE) {
+                $this->quota->assertRoomFor($students->pluck('id')->all());
+            }
 
             return $students
-                ->reject(fn (User $student) => $already->contains($student->id))
                 ->map(function (User $student) use ($course, $actor, $startsAt, $endsAt, $source) {
                     $enrollment = Enrollment::create([
                         'course_id' => $course->id,

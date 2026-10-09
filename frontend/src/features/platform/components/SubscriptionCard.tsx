@@ -18,6 +18,22 @@ function dayFromNow(days: number): string {
 
 function summary(subscription: Subscription): { title: string; text: string; warning: boolean } {
   const until = formatDay(subscription.ends_at);
+  const what = subscription.state === 'TRIAL_EXPIRED' ? 'La prueba gratuita' : `El plan «${subscription.plan?.name ?? ''}»`;
+
+  if (subscription.access === 'READ_ONLY') {
+    return {
+      title: 'En solo lectura',
+      text: `${what} venció el ${until} y la gracia terminó el ${formatDay(subscription.grace_ends_at)}. La academia consulta y sus alumnos estudian, pero no registra cambios hasta tener un plan vigente.`,
+      warning: true,
+    };
+  }
+  if (subscription.access === 'GRACE') {
+    return {
+      title: subscription.state === 'TRIAL_EXPIRED' ? 'Prueba gratuita vencida' : `${subscription.plan?.name ?? 'Plan'} · vencido`,
+      text: `${what} venció el ${until}. Sigue operando hasta el ${formatDay(subscription.grace_ends_at)}; después pasa a solo lectura.`,
+      warning: true,
+    };
+  }
 
   switch (subscription.state) {
     case 'TRIAL':

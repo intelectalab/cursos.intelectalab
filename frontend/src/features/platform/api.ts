@@ -22,6 +22,10 @@ export type PlanInput = Omit<Plan, 'id' | 'tenants_count'>;
 export interface Subscription {
   // UNLIMITED: sin plan ni vencimiento (academias anteriores a los planes, o de cortesía)
   state: 'TRIAL' | 'TRIAL_EXPIRED' | 'ACTIVE' | 'EXPIRED' | 'UNLIMITED';
+  // GRACE: vencida, opera con aviso; READ_ONLY: vencida y sin días de gracia
+  access: 'FULL' | 'GRACE' | 'READ_ONLY';
+  grace_ends_at: string | null;
+  grace_days_left: number | null;
   plan: Plan | null;
   ends_at: string | null;
   days_left: number | null;
@@ -41,9 +45,18 @@ export interface PlatformPlanOrder {
   max_students: number | null;
   amount: string;
   currency: string;
-  status: 'PENDING' | 'PAID' | 'CANCELLED';
+  status: 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
   // Lo que la academia informó de su pago
   payer_reference: string | null;
+  // Constancia que adjuntó
+  proof: { name: string; size_bytes: number } | null;
+  // La cobró una pasarela (no la confirmó una persona): no se deshace desde la consola
+  paid_online: boolean;
+  // La pasarela cobró algo que no se aplicó a la orden: hay que resolverlo a mano
+  review_reason: string | null;
+  // Confirmada a mano: se puede deshacer mientras el plan no haya cambiado después
+  can_revert: boolean;
+  expires_at: string | null;
   payment_method: string | null;
   payment_reference: string | null;
   notes: string | null;
@@ -131,6 +144,17 @@ export const platformApi = {
   confirmPlanOrder: (id: string, method: string, reference: string | null, notes: string | null) =>
     api.post(`/platform/plan-orders/${id}/confirm`, { method, reference, notes }),
   cancelPlanOrder: (id: string, reason: string) => api.post(`/platform/plan-orders/${id}/cancel`, { reason }),
+  // Deshace una confirmación hecha por error: el plan vuelve a como estaba y la orden, a pendiente
+  revertPlanOrder: (id: string, reason: string) => api.post(`/platform/plan-orders/${id}/revert`, { reason }),
+  // Abre en otra pestaña la constancia que adjuntó la academia
+  async openPlanOrderProof(id: string) {
+    const response = await api.get(`/platform/plan-orders/${id}/proof`, { responseType: 'blob' });
+    window.open(URL.createObjectURL(response.data), '_blank', 'noopener');
+  },
+  // Lo que espera a la plataforma: órdenes pendientes, con pago informado y cobros por revisar
+  async planOrdersSummary() {
+    return (await api.get('/platform/plan-orders/summary')).data.data as { pending: number; informed: number; review: number };
+  },
   // Cómo deben pagarle las academias a la plataforma
   async paymentInstructions() {
     return ((await api.get('/platform/billing-settings')).data.data.payment_instructions as string | null) ?? '';

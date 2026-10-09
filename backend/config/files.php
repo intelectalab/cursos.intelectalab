@@ -63,6 +63,12 @@ return [
             'limit' => 'image',
             'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
         ],
+        // Constancia con la que la organización demuestra que pagó su plan a la plataforma
+        'plan_payment_proof' => [
+            'visibility' => 'private',
+            'limit' => 'image',
+            'extensions' => ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
+        ],
         'course_material' => [
             'visibility' => 'private',
             'limit' => 'document',

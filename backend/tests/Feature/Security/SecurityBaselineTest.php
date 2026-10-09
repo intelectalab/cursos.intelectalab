@@ -41,6 +41,8 @@ class SecurityBaselineTest extends TestCase
         'GET api/v1/claims/form',
         'POST api/v1/claims',
         'POST api/v1/claims/lookup',
+        'POST api/v1/payments/webhooks/{gateway}',
+        'POST api/v1/platform/payments/webhooks/{gateway}',
         'GET api/v1/site/pages',
         'GET api/v1/site/pages/{slug}',
     ];

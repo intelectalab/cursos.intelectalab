@@ -2,6 +2,7 @@
 
 namespace App\Modules\Billing\Domain\Models;
 
+use App\Modules\Files\Domain\Models\File;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -21,10 +22,16 @@ class PlanOrder extends Model
 
     public const STATUS_CANCELLED = 'CANCELLED';
 
-    public const STATUSES = [self::STATUS_PENDING, self::STATUS_PAID, self::STATUS_CANCELLED];
+    /** Pasó su plazo sin que la organización pagara ni informara un pago */
+    public const STATUS_EXPIRED = 'EXPIRED';
+
+    public const STATUSES = [self::STATUS_PENDING, self::STATUS_PAID, self::STATUS_CANCELLED, self::STATUS_EXPIRED];
 
     /** Medios con los que la plataforma registra haber recibido el pago */
     public const METHODS = ['TRANSFER', 'YAPE', 'CASH', 'OTHER'];
+
+    /** Uso de archivo de la constancia de pago (config/files.php) */
+    public const PROOF_PURPOSE = 'plan_payment_proof';
 
     protected $fillable = [
         'tenant_id',
@@ -38,12 +45,21 @@ class PlanOrder extends Model
         'status',
         'requested_by',
         'payer_reference',
+        'proof_file_id',
         'payment_method',
         'payment_reference',
         'notes',
         'resolved_by',
         'paid_at',
         'cancelled_at',
+        'expires_at',
+        'previous_subscription',
+        'applied_period_ends_at',
+        'outcome_seen_at',
+        'gateway',
+        'gateway_checkout_id',
+        'gateway_payment_id',
+        'review_reason',
     ];
 
     protected function casts(): array
@@ -55,12 +71,37 @@ class PlanOrder extends Model
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'expires_at' => 'datetime',
+            'applied_period_ends_at' => 'datetime',
+            'outcome_seen_at' => 'datetime',
+            'previous_subscription' => 'array',
         ];
     }
 
     public function isPending(): bool
     {
         return $this->status === self::STATUS_PENDING;
+    }
+
+    /**
+     * La organización dijo que ya pagó: escribió cómo ubicar su pago o adjuntó la constancia.
+     */
+    public function isInformed(): bool
+    {
+        return filled($this->payer_reference) || $this->proof_file_id !== null;
+    }
+
+    /**
+     * La cobró una pasarela, no la confirmó una persona.
+     */
+    public function wasPaidOnline(): bool
+    {
+        return $this->status === self::STATUS_PAID && $this->gateway_payment_id !== null;
+    }
+
+    public function code(): string
+    {
+        return 'P-'.str_pad((string) $this->number, 4, '0', STR_PAD_LEFT);
     }
 
     public function plan(): BelongsTo
@@ -71,5 +112,10 @@ class PlanOrder extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function proof(): BelongsTo
+    {
+        return $this->belongsTo(File::class, 'proof_file_id');
     }
 }

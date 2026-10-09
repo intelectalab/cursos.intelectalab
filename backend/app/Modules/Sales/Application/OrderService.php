@@ -4,6 +4,7 @@ namespace App\Modules\Sales\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Courses\Domain\Models\Course;
+use App\Modules\Enrollments\Application\EnrollmentQuota;
 use App\Modules\Enrollments\Application\EnrollmentService;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Models\User;
@@ -33,6 +34,7 @@ class OrderService
 {
     public function __construct(
         private readonly EnrollmentService $enrollments,
+        private readonly EnrollmentQuota $quota,
         private readonly TenantSettingsService $settings,
         private readonly PaymentGateway $gateway,
         private readonly CouponService $coupons,
@@ -139,6 +141,15 @@ class OrderService
 
             $this->assertCanBuy($customer, $productType, $productId, array_column($items, 'course_id'));
 
+            // Sin cupo de alumnos no se vende: la orden pagada sí se respeta, por eso se revisa aquí
+            if (! $this->quota->hasRoomFor([$customer->id])) {
+                throw new ApiException(
+                    ErrorCode::StudentLimitReached,
+                    'Por ahora la academia no está recibiendo nuevos alumnos. Comunícate con ella para inscribirte.',
+                    409
+                );
+            }
+
             // Un solo cupón por orden; el servidor decide si aplica y cuánto descuenta
             $applied = $couponCode !== null && trim($couponCode) !== ''
                 ? $this->coupons->evaluate($couponCode, $customer, $productType, $productId, $subtotal, lock: true)
@@ -231,30 +242,38 @@ class OrderService
      * comprador. Es el punto de entrada de cualquier pasarela. Idempotente
      * (RN-009): una orden que ya no está pendiente no recibe otro pago.
      *
-     * @param  array{method: string, reference?: ?string, notes?: ?string, paid_at?: ?CarbonInterface}  $data
+     * Con `gateway` el pago lo cobró una pasarela en línea: nadie lo confirma
+     * a mano y vale aunque el plazo de la orden haya pasado entretanto,
+     * porque el comprador ya pagó.
+     *
+     * @param  array{method: string, reference?: ?string, notes?: ?string, paid_at?: ?CarbonInterface, gateway?: string}  $data
      */
     public function applyPayment(Order $order, User $actor, array $data): Order
     {
         return DB::transaction(function () use ($order, $actor, $data) {
             $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+            $online = isset($data['gateway']);
 
-            $this->assertPending($order);
+            if (! ($online && $order->status === Order::STATUS_PENDING)) {
+                $this->assertPending($order);
+            }
 
             $payment = Payment::create([
                 'order_id' => $order->id,
                 'currency_id' => $order->currency_id,
                 'amount' => $order->total_amount,
                 'method' => $data['method'],
-                'gateway' => $this->gateway->code(),
+                'gateway' => $data['gateway'] ?? $this->gateway->code(),
                 'status' => Payment::STATUS_CONFIRMED,
                 'reference' => $data['reference'] ?? null,
                 'notes' => $data['notes'] ?? null,
-                'confirmed_by' => $actor->id,
+                'confirmed_by' => $online ? null : $actor->id,
                 'paid_at' => $data['paid_at'] ?? now(),
             ]);
 
             $this->audit->record('payments.confirmed', $payment, null, [
                 'order' => $order->number,
+                'gateway' => $payment->gateway,
                 'amount' => $payment->amount,
                 'method' => $payment->method,
                 'reference' => $payment->reference,

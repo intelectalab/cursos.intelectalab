@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Billing\Http\Middleware\EnforcePlanAccess;
 use App\Modules\Identity\Http\Middleware\EnsureTenantUser;
 use App\Modules\Identity\Http\Middleware\RequirePermission;
 use App\Modules\Platform\Http\Middleware\EnsurePlatformAdmin;
@@ -29,7 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
             AssignRequestId::class,
             ResolveTenant::class,
         ]);
-        $middleware->api(append: [SecurityHeaders::class]);
+        // Con el plan vencido y sin días de gracia, la organización queda en solo lectura
+        $middleware->api(append: [SecurityHeaders::class, EnforcePlanAccess::class]);
         // Tope general por usuario o dirección (AppServiceProvider); las rutas sensibles tienen el suyo
         $middleware->throttleApi();
 

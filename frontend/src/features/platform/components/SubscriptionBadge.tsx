@@ -15,12 +15,18 @@ export const SubscriptionBadge: React.FC<{ subscription: Subscription | null }> 
   if (!subscription) return <span className="text-slate-300">—</span>;
 
   const { label, tone } = STATE[subscription.state];
+  const readOnly = subscription.access === 'READ_ONLY';
 
   return (
     <span className="inline-flex flex-col items-start gap-0.5">
-      <Badge tone={tone} dot>
-        {subscription.plan && subscription.state === 'ACTIVE' ? subscription.plan.name : label}
+      <Badge tone={readOnly ? 'danger' : tone} dot>
+        {readOnly ? 'Solo lectura' : subscription.plan && subscription.state === 'ACTIVE' ? subscription.plan.name : label}
       </Badge>
+      {subscription.access === 'GRACE' && (
+        <span className="text-xs text-amber-700">
+          Gracia: {subscription.grace_days_left === 1 ? 'queda 1 día' : `quedan ${subscription.grace_days_left} días`}
+        </span>
+      )}
       {subscription.max_students !== null && (
         <span className="text-xs text-slate-500 tnum">
           {subscription.students} de {subscription.max_students} alumnos

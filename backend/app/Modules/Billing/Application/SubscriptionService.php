@@ -78,6 +78,45 @@ class SubscriptionService
     }
 
     /**
+     * La suscripción tal como está guardada, para poder volver a ella.
+     *
+     * @return array{plan_id: ?string, status: string, trial_ends_at: ?string, current_period_ends_at: ?string, max_students: ?int}
+     */
+    public function raw(TenantSubscription $subscription): array
+    {
+        return [
+            'plan_id' => $subscription->plan_id,
+            'status' => $subscription->status,
+            'trial_ends_at' => $subscription->trial_ends_at?->toIso8601String(),
+            'current_period_ends_at' => $subscription->current_period_ends_at?->toIso8601String(),
+            'max_students' => $subscription->max_students,
+        ];
+    }
+
+    /**
+     * Devuelve la suscripción a un estado anterior (ver raw()), al deshacer
+     * la confirmación de un pago.
+     *
+     * @param  array{plan_id: ?string, status: string, trial_ends_at: ?string, current_period_ends_at: ?string, max_students: ?int}|null  $previous  null = no tenía suscripción
+     */
+    public function restore(Tenant $tenant, ?array $previous, string $platformAdmin): void
+    {
+        $this->context->runForTenant($tenant->id, fn () => DB::transaction(function () use ($tenant, $previous, $platformAdmin) {
+            $subscription = TenantSubscription::query()->where('tenant_id', $tenant->id)->with('plan')->firstOrFail();
+            $before = $this->snapshot($subscription);
+
+            if ($previous === null) {
+                $subscription->delete();
+            } else {
+                $subscription->fill($previous)->save();
+                $subscription->unsetRelation('plan')->load('plan');
+            }
+
+            $this->audit->record('platform.subscription_changed', $tenant, $before, ($previous === null ? [] : $this->snapshot($subscription)) + ['platform_admin' => $platformAdmin, 'reverted' => true]);
+        }));
+    }
+
+    /**
      * Cambia hasta cuándo dura la prueba de una organización que sigue en ella.
      */
     public function extendTrial(Tenant $tenant, CarbonInterface $until, string $platformAdmin): TenantSubscription
@@ -104,10 +143,17 @@ class SubscriptionService
         }
 
         $state = $subscription->state();
-        $endsAt = $subscription->status === TenantSubscription::STATUS_TRIAL ? $subscription->trial_ends_at : $subscription->current_period_ends_at;
+        $endsAt = $subscription->endsAt();
+        $access = $subscription->access();
+        $graceEndsAt = $access === TenantSubscription::ACCESS_FULL ? null : $subscription->graceEndsAt();
 
         return [
             'state' => $state,
+            // FULL, GRACE (vencido, aún opera con aviso) o READ_ONLY (solo consulta)
+            'access' => $access,
+            // Desde cuándo queda (o quedó) en solo lectura; null mientras no haya vencido
+            'grace_ends_at' => $graceEndsAt?->toIso8601String(),
+            'grace_days_left' => $graceEndsAt === null ? null : (int) max(0, now()->startOfDay()->diffInDays($graceEndsAt->copy()->startOfDay(), false)),
             'plan' => $subscription->plan ? PlanPresenter::plan($subscription->plan) : null,
             // Fin de la prueba o del periodo pagado; null = sin vencimiento
             'ends_at' => $endsAt?->toIso8601String(),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from '../../../shared/ui';
-import { formatDateTime, formatMoney, ORDER_STATUS_LABEL, ORDER_STATUS_TONE, PAYMENT_METHOD_LABEL, type Order, type OrderStatus } from '../api';
+import { formatDateTime, formatMoney, ORDER_STATUS_LABEL, ORDER_STATUS_TONE, PAYMENT_GATEWAY_LABEL, PAYMENT_METHOD_LABEL, type Order, type OrderStatus } from '../api';
 
 export const OrderStatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => (
   <Badge tone={ORDER_STATUS_TONE[status]} dot>
@@ -51,7 +51,10 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[13px] pt-4 border-t border-slate-200/80">
         <div>
           <dt className="text-xs font-semibold text-slate-500">Medio de pago</dt>
-          <dd className="text-slate-800">{PAYMENT_METHOD_LABEL[order.payment.method]}</dd>
+          <dd className="text-slate-800">
+            {PAYMENT_METHOD_LABEL[order.payment.method]}
+            {PAYMENT_GATEWAY_LABEL[order.payment.gateway] ? ` · ${PAYMENT_GATEWAY_LABEL[order.payment.gateway]}` : ''}
+          </dd>
         </div>
         <div>
           <dt className="text-xs font-semibold text-slate-500">Fecha del pago</dt>

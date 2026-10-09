@@ -4,7 +4,7 @@ Guía de respaldo para instalar el sistema en un servidor. Se actualiza cada vez
 
 > **Estado:** todavía no se ha hecho un despliegue real. Los pasos de instalación local están probados; los de servidor (sección 5 en adelante) describen lo que el sistema necesita, pero no se han ejecutado en un servidor. Los puntos sin resolver están en la sección 9.
 
-Última actualización: 2026-10-08 (Planes de la plataforma: dos migraciones, la primera de las cuales crea la suscripción de las academias existentes, y dos variables opcionales, `BILLING_TRIAL_DAYS` y `BILLING_TRIAL_MAX_STUDENTS`. Antes: Evaluaciones y aula y nota mínima del curso: cuatro migraciones nuevas; Alumnos y docentes: dos permisos nuevos. Sin dependencias ni variables de entorno. Al actualizar: `php artisan migrate --force` y `php artisan access:sync`).
+Última actualización: 2026-10-08 (Pagos de plan: una migración; tarea programada nueva `plan-orders:expire`, que corre con el programador de Laravel como las demás; variable opcional `BILLING_ORDER_EXPIRATION_DAYS`; Mercado Pago avisa los pagos de plan a `https://{dominio central}/api/v1/platform/payments/webhooks/mercadopago`; la cuenta de cobro de la plataforma se conecta en la consola, sección Planes, y también se guarda cifrada con `APP_KEY`. Antes: Pagos en línea, entrega 1: una migración; variables opcionales `PAYMENTS_TIMEOUT`, `PAYMENTS_CA_BUNDLE` y `MERCADOPAGO_BASE_URL`; el servidor debe poder salir por HTTPS a `api.mercadopago.com` y recibir avisos en `https://{academia}.{dominio}/api/v1/payments/webhooks/mercadopago`; **no cambiar `APP_KEY` después de que las academias conecten sus cuentas**, porque sus claves se guardan cifradas con ella. Antes: Planes, entrega 3: sin migraciones; una variable opcional, `BILLING_GRACE_DAYS`. **Desde esta versión el plan limita:** al desplegar, una academia con la prueba o el plan vencido hace más de los días de gracia queda en solo lectura, y una con el cupo lleno deja de matricular; antes de actualizar conviene revisar en la consola el plan de cada academia. Las academias "Sin plan" no cambian. Antes: Planes de la plataforma: dos migraciones, la primera de las cuales crea la suscripción de las academias existentes, y dos variables opcionales, `BILLING_TRIAL_DAYS` y `BILLING_TRIAL_MAX_STUDENTS`. Antes: Evaluaciones y aula y nota mínima del curso: cuatro migraciones nuevas; Alumnos y docentes: dos permisos nuevos. Sin dependencias ni variables de entorno. Al actualizar: `php artisan migrate --force` y `php artisan access:sync`).
 
 ## 1. Componentes
 
@@ -150,6 +150,10 @@ CREATE SCHEMA erp AUTHORIZATION erp_app;
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | remitente real | |
 | `BILLING_TRIAL_DAYS` | `14` | Días de la prueba gratuita de una academia nueva (opcional) |
 | `BILLING_TRIAL_MAX_STUDENTS` | `10` | Tope de alumnos con matrícula activa durante la prueba (opcional) |
+| `PAYMENTS_TIMEOUT` | `15` | Segundos que se espera a una pasarela de pago (opcional) |
+| `PAYMENTS_CA_BUNDLE` | vacío | Archivo de certificados raíz para el HTTPS de las pasarelas. Solo donde PHP no tiene uno configurado (en Windows da «cURL error 60»); en Linux se deja vacío |
+| `BILLING_ORDER_EXPIRATION_DAYS` | `7` | Días que una orden de plan espera su pago antes de vencer sola (opcional) |
+| `BILLING_GRACE_DAYS` | `7` | Días que una academia sigue operando tras vencer su prueba o su plan; después queda en solo lectura (opcional) |
 | `AUTH_SESSION_LIFETIME` | `30` | Minutos de inactividad por defecto; cada academia puede cambiarlo en Configuración |
 | `AUTH_PASSWORD_RESET_MINUTES` | `60` | Vigencia del enlace de recuperación |
 | `AUTH_LOGIN_LOCK_ATTEMPTS` | `10` | Intentos fallidos seguidos que bloquean una cuenta (S12) |
