@@ -59,4 +59,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         ->whereUuid('order')->middleware(['permission:payments.confirm', 'idempotent']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])
         ->whereUuid('order')->middleware('permission:orders.cancel');
+    // Reembolso total de una compra pagada: devuelve el dinero y retira la matrícula
+    Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])
+        ->whereUuid('order')->middleware(['permission:payments.refund', 'idempotent']);
 });

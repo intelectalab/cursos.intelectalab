@@ -3,6 +3,7 @@
 namespace App\Modules\Billing\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Billing\Application\PlanOnlinePayments;
 use App\Modules\Billing\Application\PlanOrderService;
 use App\Modules\Billing\Domain\Models\PlanOrder;
 use App\Modules\Files\Application\FileStorage;
@@ -22,6 +23,7 @@ class PlatformPlanOrderController extends Controller
 {
     public function __construct(
         private readonly PlanOrderService $orders,
+        private readonly PlanOnlinePayments $online,
         private readonly FileStorage $storage,
     ) {}
 
@@ -78,6 +80,20 @@ class PlatformPlanOrderController extends Controller
         $data = $request->validate(['reason' => ['required', 'string', 'min:5', 'max:300']]);
 
         return ApiResponse::success($this->present($this->orders->revert($order, $data['reason'], $request->user()->email)->load('tenant')));
+    }
+
+    /**
+     * Devuelve el pago de una orden cobrada en línea: el dinero vuelve por la
+     * pasarela, el plan de la organización vuelve a como estaba y la orden
+     * queda cancelada.
+     */
+    public function refund(Request $request, string $order): JsonResponse
+    {
+        $order = $this->find($order);
+
+        $data = $request->validate(['reason' => ['required', 'string', 'min:5', 'max:300']]);
+
+        return ApiResponse::success($this->present($this->online->refund($order, $data['reason'], $request->user()->email)->load('tenant')));
     }
 
     /**
@@ -150,6 +166,8 @@ class PlatformPlanOrderController extends Controller
             'review_reason' => $order->review_reason,
             // Confirmada a mano y con lo necesario para volver atrás (el servidor aún comprueba que el plan no cambió después)
             'can_revert' => $order->status === PlanOrder::STATUS_PAID && ! $order->wasPaidOnline() && $order->applied_period_ends_at !== null,
+            // Cobrada en línea: se puede devolver el dinero por la pasarela (con la misma comprobación)
+            'can_refund' => $order->wasPaidOnline() && $order->applied_period_ends_at !== null,
         ];
     }
 }

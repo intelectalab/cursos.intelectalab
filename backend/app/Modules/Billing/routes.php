@@ -19,6 +19,7 @@ Route::prefix('platform')->middleware(['central', 'auth:sanctum', 'platform.admi
     Route::post('/plan-orders/{order}/confirm', [PlatformPlanOrderController::class, 'confirm'])->whereUuid('order');
     Route::post('/plan-orders/{order}/cancel', [PlatformPlanOrderController::class, 'cancel'])->whereUuid('order');
     Route::post('/plan-orders/{order}/revert', [PlatformPlanOrderController::class, 'revert'])->whereUuid('order');
+    Route::post('/plan-orders/{order}/refund', [PlatformPlanOrderController::class, 'refund'])->whereUuid('order');
     Route::get('/plan-orders/{order}/proof', [PlatformPlanOrderController::class, 'proof'])->whereUuid('order');
     Route::get('/plan-orders/summary', [PlatformPlanOrderController::class, 'summary']);
     Route::get('/billing-settings', [PlatformPlanOrderController::class, 'settings']);

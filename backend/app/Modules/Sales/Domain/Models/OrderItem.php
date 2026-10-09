@@ -3,6 +3,7 @@
 namespace App\Modules\Sales\Domain\Models;
 
 use App\Modules\Courses\Domain\Models\Course;
+use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +36,14 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * Matrícula que generó el pago de la orden.
+     */
+    public function enrollment(): BelongsTo
+    {
+        return $this->belongsTo(Enrollment::class);
     }
 
     public function course(): BelongsTo

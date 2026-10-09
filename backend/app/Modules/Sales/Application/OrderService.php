@@ -285,6 +285,68 @@ class OrderService
         });
     }
 
+    /**
+     * Deja reembolsada una orden pagada: el dinero ya se devolvió (por la
+     * pasarela o por fuera). Las matrículas que dio la compra se cancelan.
+     * Solo compras personales con importe: una venta a empresa o una
+     * inscripción gratuita no pasan por aquí.
+     *
+     * @param  string|null  $reference  devolución en la pasarela, o cómo se devolvió el dinero
+     */
+    public function markRefunded(Order $order, User $actor, string $reason, ?string $reference): Order
+    {
+        return DB::transaction(function () use ($order, $actor, $reason, $reference) {
+            $order = Order::query()->lockForUpdate()->with('payment')->findOrFail($order->id);
+
+            $this->assertRefundable($order);
+
+            $order->payment->update([
+                'status' => Payment::STATUS_REFUNDED,
+                'refunded_at' => now(),
+                'refunded_by' => $actor->id,
+                'refund_reason' => $reason,
+                'refund_reference' => $reference,
+            ]);
+            $order->update(['status' => Order::STATUS_REFUNDED, 'refunded_at' => now()]);
+
+            // Devuelto el dinero, se retira el acceso que dio esta compra
+            $order->items()->with('enrollment.student')->get()->each(function (OrderItem $item) {
+                if ($item->enrollment?->isActive()) {
+                    $this->enrollments->cancel($item->enrollment);
+                }
+            });
+
+            $this->audit->record('orders.refunded', $order, ['status' => Order::STATUS_PAID], [
+                'status' => Order::STATUS_REFUNDED,
+                'number' => $order->number,
+                'total' => $order->total_amount,
+                'gateway' => $order->payment->gateway,
+                'reason' => $reason,
+                'reference' => $reference,
+            ]);
+
+            return $order;
+        });
+    }
+
+    /**
+     * Solo se reembolsa una compra personal pagada y con importe.
+     */
+    public function assertRefundable(Order $order): void
+    {
+        $message = match (true) {
+            $order->status === Order::STATUS_REFUNDED => 'Esta orden ya fue reembolsada.',
+            $order->status !== Order::STATUS_PAID || $order->payment === null => 'Solo se reembolsa una orden pagada.',
+            $order->customer_id === null => 'Las ventas a empresas no se reembolsan desde aquí: tienen licencias entregadas y se resuelven con la empresa.',
+            (float) $order->total_amount <= 0 => 'Esta inscripción fue gratuita: no hay dinero que devolver. Para retirar el acceso, cancela la matrícula.',
+            default => null,
+        };
+
+        if ($message !== null) {
+            throw new ApiException(ErrorCode::OrderNotRefundable, $message, 409, ['status' => $order->status]);
+        }
+    }
+
     public function cancel(Order $order, User $actor): Order
     {
         return DB::transaction(function () use ($order, $actor) {

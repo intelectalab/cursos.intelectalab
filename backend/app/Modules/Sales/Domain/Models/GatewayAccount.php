@@ -23,6 +23,7 @@ class GatewayAccount extends Model
         'enabled',
         'credentials',
         'display',
+        'settings',
     ];
 
     protected $hidden = ['credentials'];
@@ -33,12 +34,23 @@ class GatewayAccount extends Model
             'enabled' => 'boolean',
             'credentials' => 'encrypted:array',
             'display' => 'array',
+            'settings' => 'array',
         ];
     }
 
     public function credential(string $key): ?string
     {
         return $this->credentials[$key] ?? null;
+    }
+
+    /**
+     * Soles por dólar con los que la organización cobra en dólares; null si no lo definió.
+     */
+    public function exchangeRate(): ?float
+    {
+        $rate = $this->settings['exchange_rate'] ?? null;
+
+        return $rate === null ? null : (float) $rate;
     }
 
     /**

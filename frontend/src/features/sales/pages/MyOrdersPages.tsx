@@ -101,7 +101,7 @@ export const MyOrderPage: React.FC = () => {
   const [cancelling, setCancelling] = useState(false);
   const [searchParams] = useSearchParams();
   // Vuelve de la pasarela: en vez de esperar su aviso, se le pregunta si ya pagó
-  const [returned] = useState(() => ['payment_id', 'collection_status', 'status'].some((key) => searchParams.has(key)));
+  const [returned] = useState(() => ['payment_id', 'collection_status', 'status', 'token', 'PayerID'].some((key) => searchParams.has(key)));
   const [paying, setPaying] = useState<string | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
@@ -233,6 +233,14 @@ export const MyOrderPage: React.FC = () => {
                   </Button>
                 ))}
               </div>
+              {gateways
+                .filter((gateway) => gateway.charge)
+                .map((gateway) => (
+                  <p key={gateway.code} className="text-xs text-slate-500">
+                    {gateway.label} cobra en dólares: pagarás <strong className="text-slate-700 tnum">{formatMoney(gateway.charge!.amount, gateway.charge!.currency)}</strong>
+                    {gateway.charge!.rate ? `, al tipo de cambio de S/ ${Number(gateway.charge!.rate).toFixed(2)} por dólar que fijó la academia` : ''}.
+                  </p>
+                ))}
             </Card>
           )}
 
@@ -269,6 +277,12 @@ export const MyOrderPage: React.FC = () => {
 
           {order.status === 'EXPIRED' && (
             <Alert tone="info">Esta orden venció sin pago. Si aún quieres el curso, vuelve a comprarlo desde "Cursos disponibles".</Alert>
+          )}
+          {order.status === 'REFUNDED' && (
+            <Alert tone="info">
+              Esta compra fue reembolsada{order.payment?.refund ? ` el ${formatDateTime(order.payment.refund.at)}` : ''}: se te devolvió el importe completo y ya no tienes acceso al
+              curso. Si pagaste en línea, el dinero vuelve al medio con el que pagaste; el plazo depende de tu banco.
+            </Alert>
           )}
           {order.status === 'CANCELLED' && <Alert tone="info">Esta orden fue cancelada el {formatDateTime(order.cancelled_at)}.</Alert>}
 

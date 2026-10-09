@@ -14,6 +14,8 @@ class Payment extends Model
 
     public const STATUS_CONFIRMED = 'CONFIRMED';
 
+    public const STATUS_REFUNDED = 'REFUNDED';
+
     public const METHOD_TRANSFER = 'TRANSFER';
 
     public const METHOD_YAPE = 'YAPE';
@@ -26,6 +28,8 @@ class Payment extends Model
     public const METHOD_CARD = 'CARD';
 
     public const METHOD_WALLET = 'WALLET';
+
+    public const METHOD_PAYPAL = 'PAYPAL';
 
     /** Medios que el personal puede registrar al confirmar un pago recibido por fuera */
     public const METHODS = [self::METHOD_TRANSFER, self::METHOD_YAPE, self::METHOD_CASH, self::METHOD_OTHER];
@@ -42,6 +46,10 @@ class Payment extends Model
         'notes',
         'confirmed_by',
         'paid_at',
+        'refunded_at',
+        'refunded_by',
+        'refund_reason',
+        'refund_reference',
     ];
 
     protected function casts(): array
@@ -49,12 +57,26 @@ class Payment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'refunded_at' => 'datetime',
         ];
     }
 
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * Lo cobró una pasarela en línea, no lo confirmó el personal.
+     */
+    public function isOnline(): bool
+    {
+        return $this->gateway !== 'MANUAL';
+    }
+
+    public function refunder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refunded_by');
     }
 
     public function confirmer(): BelongsTo

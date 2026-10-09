@@ -22,8 +22,18 @@ interface OnlineGateway
     /** Nombre que ve el comprador */
     public function label(): string;
 
-    /** ¿Puede cobrar órdenes en esta moneda? */
-    public function supportsCurrency(string $currency): bool;
+    /**
+     * Moneda en la que cobraría algo cuyo precio está en $currency: la
+     * misma, otra (hace falta convertir con un tipo de cambio) o null si no
+     * puede cobrarlo.
+     */
+    public function chargeCurrency(string $currency): ?string;
+
+    /**
+     * ¿Para saber si un cobro se pagó necesita el identificador de ese
+     * cobro (startCheckout: external_id), o le basta la referencia?
+     */
+    public function tracksByCheckout(): bool;
 
     /**
      * Reglas de validación de las claves que pide para conectarse.
@@ -50,12 +60,13 @@ interface OnlineGateway
     public function startCheckout(GatewayCredentials $account, Charge $charge, array $urls): array;
 
     /**
-     * Pagos que la pasarela tiene para esa referencia (Charge::$reference),
-     * del más reciente al más antiguo.
+     * Pagos que la pasarela tiene para esa referencia (Charge::$reference)
+     * o para ese cobro (ver tracksByCheckout), del más reciente al más
+     * antiguo. Si el cobro está aprobado y falta cerrarlo, lo cierra.
      *
      * @return list<GatewayPayment>
      */
-    public function paymentsFor(GatewayCredentials $account, string $reference): array;
+    public function paymentsFor(GatewayCredentials $account, string $reference, ?string $checkoutId = null): array;
 
     /**
      * El pago del que avisa una notificación de la pasarela, consultado en la
@@ -63,4 +74,12 @@ interface OnlineGateway
      * Null si el aviso no es de un pago.
      */
     public function paymentFromWebhook(GatewayCredentials $account, Request $request): ?GatewayPayment;
+
+    /**
+     * Devuelve completo un pago ya cobrado. Repetir la llamada no devuelve
+     * dos veces. Si la pasarela no lo acepta, rechaza con un error.
+     *
+     * @return string identificador de la devolución en la pasarela
+     */
+    public function refund(GatewayCredentials $account, string $paymentId): string;
 }

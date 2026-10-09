@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BadgeCheck, Ban, CircleDollarSign, CreditCard, Hourglass, Search, TimerOff } from 'lucide-react';
+import { BadgeCheck, Ban, CircleDollarSign, CreditCard, Hourglass, Search, TimerOff, Undo2 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -47,10 +47,14 @@ const OrderModal: React.FC<{
   canCancel: boolean;
   // Puede entregar las licencias de una venta a empresa antes del pago
   canDefer: boolean;
+  // Puede devolver el importe completo de una compra pagada
+  canRefund: boolean;
   onClose: () => void;
   onChanged: (order: Order) => void;
-}> = ({ order, canConfirm, canCancel, canDefer, onClose, onChanged }) => {
-  const [mode, setMode] = useState<'view' | 'pay' | 'cancel' | 'release'>('view');
+}> = ({ order, canConfirm, canCancel, canDefer, canRefund, onClose, onChanged }) => {
+  const [mode, setMode] = useState<'view' | 'pay' | 'cancel' | 'release' | 'refund'>('view');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundReference, setRefundReference] = useState('');
   const [releaseReason, setReleaseReason] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('TRANSFER');
   const [reference, setReference] = useState('');
@@ -59,6 +63,10 @@ const OrderModal: React.FC<{
   const [error, setError] = useState<string | null>(null);
 
   const pending = order.status === 'PENDING';
+  // Solo compras personales pagadas y con importe: lo demás no tiene qué devolver por aquí
+  const refundable = order.status === 'PAID' && order.customer !== null && Number(order.total_amount) > 0 && order.payment !== null;
+  const paidOnline = order.payment !== null && order.payment.gateway !== 'MANUAL';
+  const gatewayName = PAYMENT_GATEWAY_LABEL[order.payment?.gateway ?? ''] ?? 'la pasarela';
 
   const run = async (action: () => Promise<Order>, fallback: string) => {
     setProcessing(true);
@@ -96,6 +104,13 @@ const OrderModal: React.FC<{
           Entregar licencias
         </Button>
       </>
+    ) : mode === 'refund' ? (
+      <>
+        <Button onClick={() => setMode('view')}>Volver</Button>
+        <Button variant="danger" type="submit" form="refund-order-form" processing={processing}>
+          Reembolsar {formatMoney(order.total_amount, order.currency)}
+        </Button>
+      </>
     ) : mode === 'cancel' ? (
       <>
         <Button onClick={() => setMode('view')}>Volver</Button>
@@ -106,6 +121,11 @@ const OrderModal: React.FC<{
     ) : (
       <>
         <Button onClick={onClose}>Cerrar</Button>
+        {refundable && canRefund && (
+          <Button variant="danger" icon={<Undo2 className="w-4 h-4" />} onClick={() => setMode('refund')}>
+            Reembolsar
+          </Button>
+        )}
         {pending && canCancel && (
           <Button variant="danger" onClick={() => setMode('cancel')}>
             Cancelar orden
@@ -198,6 +218,40 @@ const OrderModal: React.FC<{
           </form>
         )}
 
+        {mode === 'refund' && (
+          <form
+            id="refund-order-form"
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(() => salesApi.refundOrder(order.id, refundReason.trim(), paidOnline ? null : refundReference.trim() || null), 'No se pudo reembolsar la orden.');
+            }}
+          >
+            <Alert tone="info">
+              {paidOnline ? (
+                <>
+                  Se devolverán <strong>{formatMoney(order.total_amount, order.currency)}</strong> completos por {gatewayName}, con tu cuenta, al medio con el que pagó el
+                  comprador. {order.payment?.notes ? `${order.payment.notes} ` : ''}
+                </>
+              ) : (
+                <>
+                  Este pago se recibió por fuera: <strong>devuelve tú el dinero</strong> ({formatMoney(order.total_amount, order.currency)}) y regístralo aquí. El sistema no mueve
+                  dinero en este caso.{' '}
+                </>
+              )}
+              El comprador pierde la matrícula que le dio esta compra. No se puede deshacer.
+            </Alert>
+            <Field label="Motivo" hint="Queda en la orden y en la auditoría. Ejemplo: «El alumno pidió la devolución dentro del plazo».">
+              <textarea className={INPUT_CLASS} rows={3} required minLength={5} maxLength={500} autoFocus value={refundReason} onChange={(event) => setRefundReason(event.target.value)} />
+            </Field>
+            {!paidOnline && (
+              <Field label="Cómo devolviste el dinero (opcional)" hint="Ejemplo: «Transferencia BCP, operación 445566».">
+                <input className={INPUT_CLASS} maxLength={120} value={refundReference} onChange={(event) => setRefundReference(event.target.value)} />
+              </Field>
+            )}
+          </form>
+        )}
+
         {mode === 'cancel' && (
           <p className="text-[13px] leading-relaxed text-slate-600">
             Se cancelará esta orden y el comprador tendrá que generar otra si quiere el curso. Hazlo solo si no va a pagarla.
@@ -251,6 +305,7 @@ export const OrdersPage: React.FC = () => {
     { key: 'PAID', label: 'Pagadas', value: counts.PAID ?? null, icon: CircleDollarSign, tone: 'success', help: 'Pago confirmado: el comprador ya está matriculado, o la empresa ya tiene sus licencias.' },
     { key: 'EXPIRED', label: 'Vencidas', value: counts.EXPIRED ?? null, icon: TimerOff, tone: 'danger', help: 'No se pagaron dentro del plazo. El comprador puede hacer una compra nueva.' },
     { key: 'CANCELLED', label: 'Canceladas', value: counts.CANCELLED ?? null, icon: Ban, tone: 'neutral', help: 'Las canceló el comprador o el personal antes de pagarse.' },
+    { key: 'REFUNDED', label: 'Reembolsadas', value: counts.REFUNDED ?? null, icon: Undo2, tone: 'info', help: 'Se pagaron y después se devolvió el importe completo. El comprador ya no tiene la matrícula de esa compra y no cuentan como ingreso.' },
   ];
 
   return (
@@ -362,6 +417,7 @@ export const OrdersPage: React.FC = () => {
           canConfirm={hasPermission('payments.confirm')}
           canCancel={hasPermission('orders.cancel')}
           canDefer={hasPermission('payments.defer')}
+          canRefund={hasPermission('payments.refund')}
           onClose={() => setOpen(null)}
           onChanged={(order) => {
             setOpen(order);

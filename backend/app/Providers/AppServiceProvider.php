@@ -18,6 +18,7 @@ use App\Modules\Sales\Application\Payments\ManualPaymentGateway;
 use App\Modules\Sales\Application\Payments\Online\MercadoPagoGateway;
 use App\Modules\Sales\Application\Payments\Online\OnlineGateway;
 use App\Modules\Sales\Application\Payments\Online\OnlinePaymentService;
+use App\Modules\Sales\Application\Payments\Online\PayPalGateway;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
@@ -48,7 +49,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PaymentGateway::class, ManualPaymentGateway::class);
 
         // Pasarelas de cobro en línea: cada organización conecta su cuenta en las que quiera
-        $this->app->tag([MercadoPagoGateway::class], OnlineGateway::TAG);
+        $this->app->tag([MercadoPagoGateway::class, PayPalGateway::class], OnlineGateway::TAG);
         $this->app->when(OnlinePaymentService::class)->needs('$gateways')->giveTagged(OnlineGateway::TAG);
         // La plataforma cobra los planes con las mismas pasarelas, con su propia cuenta
         $this->app->when(PlatformGateways::class)->needs('$gateways')->giveTagged(OnlineGateway::TAG);

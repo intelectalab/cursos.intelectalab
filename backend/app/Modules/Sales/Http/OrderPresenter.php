@@ -41,6 +41,7 @@ class OrderPresenter
             'expires_at' => $order->expires_at?->toIso8601String(),
             'paid_at' => $order->paid_at?->toIso8601String(),
             'cancelled_at' => $order->cancelled_at?->toIso8601String(),
+            'refunded_at' => $order->refunded_at?->toIso8601String(),
             // Venta a empresa cuyas licencias se entregaron antes del pago
             'licenses_released_at' => $order->licenses_released_at?->toIso8601String(),
             'licenses_release_reason' => $order->licenses_release_reason,
@@ -61,6 +62,13 @@ class OrderPresenter
                 'amount' => $payment->amount,
                 'paid_at' => $payment->paid_at->toIso8601String(),
                 'confirmed_by' => $payment->confirmer ? trim("{$payment->confirmer->first_name} {$payment->confirmer->last_name}") : null,
+                // Reembolso total, si lo hubo
+                'refund' => $payment->refunded_at ? [
+                    'at' => $payment->refunded_at->toIso8601String(),
+                    'reason' => $payment->refund_reason,
+                    'reference' => $payment->refund_reference,
+                    'by' => $payment->relationLoaded('refunder') && $payment->refunder ? trim("{$payment->refunder->first_name} {$payment->refunder->last_name}") : null,
+                ] : null,
             ] : null,
             // Cobros que la pasarela hizo y no se aplicaron a la orden: hay que resolverlos a mano
             'payment_reviews' => $order->relationLoaded('attemptsToReview') ? $order->attemptsToReview->map(fn (PaymentAttempt $attempt) => [

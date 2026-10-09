@@ -28,7 +28,7 @@ use Illuminate\Validation\Rule;
  */
 class OrderController extends Controller
 {
-    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer', 'attemptsToReview'];
+    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer', 'payment.refunder', 'attemptsToReview'];
 
     public function __construct(
         private readonly OrderService $orders,
@@ -182,6 +182,24 @@ class OrderController extends Controller
         $order = $this->orders->applyPayment($order, $request->user(), [
             'paid_at' => isset($data['paid_at']) ? Carbon::parse($data['paid_at']) : null,
         ] + $data);
+
+        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+    }
+
+    /**
+     * Reembolso total: si el pago fue en línea se devuelve en la pasarela;
+     * si fue por fuera, se registra que el dinero ya se devolvió. El
+     * comprador pierde la matrícula que le dio la compra.
+     */
+    public function refund(Request $request, Order $order): JsonResponse
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+            // Solo para pagos por fuera: cómo se devolvió el dinero
+            'reference' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $order = $this->online->refund($order, $request->user(), $data['reason'], $data['reference'] ?? null);
 
         return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
     }

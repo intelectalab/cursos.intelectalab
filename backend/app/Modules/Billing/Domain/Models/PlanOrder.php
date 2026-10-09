@@ -59,6 +59,8 @@ class PlanOrder extends Model
         'gateway',
         'gateway_checkout_id',
         'gateway_payment_id',
+        'gateway_amount',
+        'gateway_currency',
         'review_reason',
     ];
 
@@ -69,6 +71,7 @@ class PlanOrder extends Model
             'billing_months' => 'integer',
             'max_students' => 'integer',
             'amount' => 'decimal:2',
+            'gateway_amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'expires_at' => 'datetime',

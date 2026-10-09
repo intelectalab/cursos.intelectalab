@@ -56,6 +56,8 @@ export interface PlatformPlanOrder {
   review_reason: string | null;
   // Confirmada a mano: se puede deshacer mientras el plan no haya cambiado después
   can_revert: boolean;
+  // Cobrada en línea: se puede devolver el dinero por la pasarela
+  can_refund: boolean;
   expires_at: string | null;
   payment_method: string | null;
   payment_reference: string | null;
@@ -146,6 +148,8 @@ export const platformApi = {
   cancelPlanOrder: (id: string, reason: string) => api.post(`/platform/plan-orders/${id}/cancel`, { reason }),
   // Deshace una confirmación hecha por error: el plan vuelve a como estaba y la orden, a pendiente
   revertPlanOrder: (id: string, reason: string) => api.post(`/platform/plan-orders/${id}/revert`, { reason }),
+  // Devuelve por la pasarela un pago de plan cobrado en línea: el plan vuelve a como estaba y la orden queda cancelada
+  refundPlanOrder: (id: string, reason: string) => api.post(`/platform/plan-orders/${id}/refund`, { reason }),
   // Abre en otra pestaña la constancia que adjuntó la academia
   async openPlanOrderProof(id: string) {
     const response = await api.get(`/platform/plan-orders/${id}/proof`, { responseType: 'blob' });

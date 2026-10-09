@@ -3,15 +3,22 @@ import { CreditCard, PlugZap } from 'lucide-react';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, ConfirmModal, Field, IconChip, INPUT_CLASS, LoadingState } from '../../../shared/ui';
 
-// Cuenta de la academia en una pasarela, sin sus claves (nunca salen del servidor)
+type GatewayCode = 'MERCADOPAGO' | 'PAYPAL';
+
+// Cuenta en una pasarela, sin sus claves (nunca salen del servidor)
 interface Gateway {
-  code: 'MERCADOPAGO';
+  code: GatewayCode;
   label: string;
   connected: boolean;
   enabled: boolean;
   account: { name: string | null; country: string | null; test: boolean } | null;
-  // La pasarela no cobra en la moneda principal de la academia
+  // Moneda en la que se venden los cursos (o los planes)
+  currency: string;
+  // La pasarela no puede cobrar esa moneda de ninguna forma
   currency_supported: boolean;
+  // Cobra en dólares lo que está en soles: hace falta el tipo de cambio para ofrecerla
+  needs_exchange_rate: boolean;
+  exchange_rate: number | null;
   has_webhook_secret: boolean;
 }
 
@@ -30,16 +37,118 @@ const DISCONNECT: Record<Audience, string> = {
   platform: 'Las academias dejarán de ver este medio de pago y se borrarán las claves guardadas. Los pagos ya recibidos no cambian.',
 };
 
-const HELP: Record<Gateway['code'], { what: Record<Audience, string>; token: string; tokenHint: string }> = {
+interface KeyField {
+  key: string;
+  label: string;
+  hint: string;
+  required: boolean;
+}
+
+const HELP: Record<GatewayCode, { what: Record<Audience, string>; fields: KeyField[]; sandbox?: string }> = {
   MERCADOPAGO: {
     what: {
       academy: 'Tus alumnos pagan con tarjeta, Yape o su saldo de Mercado Pago, en soles. El dinero llega a tu cuenta de Mercado Pago y la matrícula se activa sola.',
       platform: 'Las academias pagan su plan con tarjeta, Yape o su saldo de Mercado Pago, en soles. El dinero llega a la cuenta de IntelectaLab y el plan queda vigente solo.',
     },
-    token: 'Access Token',
-    tokenHint: 'En Mercado Pago: Tus integraciones → tu aplicación → Credenciales de producción. Se guarda cifrado y no se vuelve a mostrar.',
+    fields: [
+      {
+        key: 'access_token',
+        label: 'Access Token',
+        hint: 'En Mercado Pago: Tus integraciones → tu aplicación → Credenciales de producción. Se guarda cifrado y no se vuelve a mostrar.',
+        required: true,
+      },
+      {
+        key: 'webhook_secret',
+        label: 'Clave secreta de los avisos (opcional)',
+        hint: 'En tu aplicación de Mercado Pago: Webhooks → Clave secreta. Con ella se rechazan los avisos que no vengan firmados por Mercado Pago.',
+        required: false,
+      },
+    ],
+  },
+  PAYPAL: {
+    what: {
+      academy: 'Tus alumnos pagan con su cuenta de PayPal o con tarjeta, en dólares. El dinero llega a tu cuenta de PayPal y la matrícula se activa sola.',
+      platform: 'Las academias pagan su plan con su cuenta de PayPal o con tarjeta, en dólares. El dinero llega a la cuenta de PayPal de IntelectaLab y el plan queda vigente solo.',
+    },
+    fields: [
+      { key: 'client_id', label: 'Client ID', hint: 'En developer.paypal.com: Apps & Credentials → tu aplicación.', required: true },
+      { key: 'client_secret', label: 'Secret', hint: 'En la misma pantalla que el Client ID. Se guarda cifrado y no se vuelve a mostrar.', required: true },
+      {
+        key: 'webhook_id',
+        label: 'Webhook ID (opcional)',
+        hint: 'El identificador del webhook que crees en tu aplicación de PayPal. Con él se rechazan los avisos que PayPal no reconozca como suyos.',
+        required: false,
+      },
+    ],
+    sandbox: 'Son claves de prueba (Sandbox): no mueven dinero',
   },
 };
+
+/* ───────────────────────────── Tipo de cambio ───────────────────────────── */
+
+// Para la pasarela que cobra en dólares lo que se vende en soles
+const ExchangeRate: React.FC<{ gateway: Gateway; path: string; editable: boolean; onChanged: (gateways: Gateway[]) => void }> = ({ gateway, path, editable, onChanged }) => {
+  const [rate, setRate] = useState(gateway.exchange_rate ? String(gateway.exchange_rate) : '');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    // No se envía con el formulario de Configuración que la rodea
+    event.stopPropagation();
+    setBusy(true);
+    setMessage(null);
+    try {
+      onChanged((await api.put(path, { exchange_rate: Number(rate) })).data.data);
+      setMessage({ tone: 'success', text: 'Tipo de cambio guardado: vale para los pagos que se inicien desde ahora.' });
+    } catch (err) {
+      setMessage({ tone: 'danger', text: apiErrorMessage(err, 'No se pudo guardar el tipo de cambio.') });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={save} className="mt-4 p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
+      {gateway.exchange_rate === null && (
+        <Alert tone="info">
+          {gateway.label} cobra en dólares y los precios están en soles: indica el tipo de cambio para poder ofrecerlo. Mientras no esté, no se muestra a quien paga.
+        </Alert>
+      )}
+      {message && <Alert tone={message.tone}>{message.text}</Alert>}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="w-52">
+          <Field label="Tipo de cambio (soles por dólar)">
+            <input
+              className={INPUT_CLASS}
+              type="number"
+              inputMode="decimal"
+              step="0.0001"
+              min="0.1"
+              max="100"
+              required
+              disabled={!editable}
+              placeholder="3.75"
+              value={rate}
+              onChange={(event) => setRate(event.target.value)}
+            />
+          </Field>
+        </div>
+        {editable && (
+          <Button type="submit" processing={busy}>
+            Guardar
+          </Button>
+        )}
+      </div>
+      <p className="text-xs text-slate-500">
+        Con él se calcula cuánto se cobra en dólares: un precio de S/ 100 se cobraría como US$ {Number(rate) > 0 ? (100 / Number(rate)).toFixed(2) : '—'}. Hay que actualizarlo
+        cuando cambie el dólar; no se actualiza solo.
+      </p>
+    </form>
+  );
+};
+
+/* ───────────────────────────── Una pasarela ───────────────────────────── */
 
 const GatewayCard: React.FC<{ gateway: Gateway; audience: Audience; editable: boolean; onChanged: (gateways: Gateway[]) => void }> = ({
   gateway,
@@ -50,11 +159,12 @@ const GatewayCard: React.FC<{ gateway: Gateway; audience: Audience; editable: bo
   const help = HELP[gateway.code];
   const path = `${BASE_PATH[audience]}/${gateway.code.toLowerCase()}`;
   const [editing, setEditing] = useState(false);
-  const [token, setToken] = useState('');
-  const [secret, setSecret] = useState('');
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [sandbox, setSandbox] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  const missingRate = gateway.needs_exchange_rate && gateway.exchange_rate === null;
 
   const send = async (body: Record<string, unknown>) => {
     setBusy(true);
@@ -62,13 +172,20 @@ const GatewayCard: React.FC<{ gateway: Gateway; audience: Audience; editable: bo
     try {
       onChanged((await api.put(path, body)).data.data);
       setEditing(false);
-      setToken('');
-      setSecret('');
+      setValues({});
     } catch (err) {
       setError(apiErrorMessage(err, 'No se pudo guardar.'));
     } finally {
       setBusy(false);
     }
+  };
+
+  const connect = (event: React.FormEvent) => {
+    event.preventDefault();
+    // No se envía con el formulario de Configuración que la rodea
+    event.stopPropagation();
+    const keys = Object.fromEntries(help.fields.map((field) => [field.key, (values[field.key] ?? '').trim() || null]));
+    void send({ ...keys, ...(help.sandbox ? { sandbox } : {}), enabled: true });
   };
 
   return (
@@ -79,13 +196,17 @@ const GatewayCard: React.FC<{ gateway: Gateway; audience: Audience; editable: bo
             <h3 className="text-[15px] font-bold text-slate-900">{gateway.label}</h3>
             {!gateway.connected ? (
               <Badge tone="neutral">Sin conectar</Badge>
-            ) : gateway.enabled ? (
-              <Badge tone="success" dot>
-                Cobrando
-              </Badge>
-            ) : (
+            ) : !gateway.enabled ? (
               <Badge tone="warning" dot>
                 En pausa
+              </Badge>
+            ) : missingRate ? (
+              <Badge tone="warning" dot>
+                Falta el tipo de cambio
+              </Badge>
+            ) : (
+              <Badge tone="success" dot>
+                Cobrando
               </Badge>
             )}
             {gateway.account?.test && <Badge tone="info">Cuenta de prueba</Badge>}
@@ -117,7 +238,9 @@ const GatewayCard: React.FC<{ gateway: Gateway; audience: Audience; editable: bo
 
       {!gateway.currency_supported && (
         <div className="mt-3">
-          <Alert tone="info">{gateway.label} cobra en soles y tu moneda principal es otra: no se ofrecerá a tus alumnos.</Alert>
+          <Alert tone="info">
+            {gateway.label} no cobra en la moneda principal ({gateway.currency}): no se ofrecerá.
+          </Alert>
         </div>
       )}
       {error && !editing && (
@@ -126,26 +249,30 @@ const GatewayCard: React.FC<{ gateway: Gateway; audience: Audience; editable: bo
         </div>
       )}
 
+      {gateway.connected && gateway.needs_exchange_rate && !editing && <ExchangeRate gateway={gateway} path={path} editable={editable} onChanged={onChanged} />}
+
       {editing && (
-        <form
-          className="mt-4 space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            // No se envía con el formulario de Configuración que la rodea
-            event.stopPropagation();
-            void send({ access_token: token.trim(), webhook_secret: secret.trim() || null, enabled: true });
-          }}
-        >
+        <form className="mt-4 space-y-3" onSubmit={connect}>
           {error && <Alert>{error}</Alert>}
-          <Field label={help.token} hint={help.tokenHint}>
-            <input className={INPUT_CLASS} type="password" autoComplete="off" required maxLength={300} value={token} onChange={(event) => setToken(event.target.value)} />
-          </Field>
-          <Field
-            label="Clave secreta de los avisos (opcional)"
-            hint="En tu aplicación de Mercado Pago: Webhooks → Clave secreta. Con ella se rechazan los avisos que no vengan firmados por Mercado Pago."
-          >
-            <input className={INPUT_CLASS} type="password" autoComplete="off" maxLength={300} value={secret} onChange={(event) => setSecret(event.target.value)} />
-          </Field>
+          {help.fields.map((field) => (
+            <Field key={field.key} label={field.label} hint={field.hint}>
+              <input
+                className={INPUT_CLASS}
+                type="password"
+                autoComplete="off"
+                required={field.required}
+                maxLength={300}
+                value={values[field.key] ?? ''}
+                onChange={(event) => setValues({ ...values, [field.key]: event.target.value })}
+              />
+            </Field>
+          ))}
+          {help.sandbox && (
+            <label className="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
+              <input type="checkbox" className="w-4 h-4 rounded border-slate-300" checked={sandbox} onChange={(event) => setSandbox(event.target.checked)} />
+              {help.sandbox}
+            </label>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button variant="primary" type="submit" processing={busy}>
               Comprobar y conectar

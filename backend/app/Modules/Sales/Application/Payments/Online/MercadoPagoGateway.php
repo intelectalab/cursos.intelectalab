@@ -32,9 +32,15 @@ class MercadoPagoGateway implements OnlineGateway
         return 'Mercado Pago';
     }
 
-    public function supportsCurrency(string $currency): bool
+    public function chargeCurrency(string $currency): ?string
     {
-        return $currency === 'PEN';
+        // Una cuenta peruana cobra solo en soles
+        return $currency === 'PEN' ? 'PEN' : null;
+    }
+
+    public function tracksByCheckout(): bool
+    {
+        return false;
     }
 
     public function credentialRules(): array
@@ -102,7 +108,7 @@ class MercadoPagoGateway implements OnlineGateway
         ];
     }
 
-    public function paymentsFor(GatewayCredentials $account, string $reference): array
+    public function paymentsFor(GatewayCredentials $account, string $reference, ?string $checkoutId = null): array
     {
         $response = $this->send(fn () => $this->client($account->get('access_token'))->get('/v1/payments/search', [
             'external_reference' => $reference,
@@ -136,6 +142,19 @@ class MercadoPagoGateway implements OnlineGateway
         $this->assertOk($response);
 
         return $this->payment($response->json());
+    }
+
+    public function refund(GatewayCredentials $account, string $paymentId): string
+    {
+        // Sin importe en el cuerpo, Mercado Pago devuelve el pago completo
+        $response = $this->send(fn () => $this->client($account->get('access_token'))
+            ->withHeaders(['X-Idempotency-Key' => "refund-{$paymentId}"])
+            ->withBody('{}', 'application/json')
+            ->post("/v1/payments/{$paymentId}/refunds"));
+
+        $this->assertRefunded($response);
+
+        return (string) $response->json('id');
     }
 
     /**
@@ -214,6 +233,24 @@ class MercadoPagoGateway implements OnlineGateway
 
             throw new ApiException(ErrorCode::GatewayError, 'Mercado Pago no respondió. Inténtalo de nuevo en unos minutos.', 502);
         }
+    }
+
+    /**
+     * Una devolución que la pasarela no acepta (pago ya devuelto, plazo
+     * vencido, saldo insuficiente) se explica a quien la pidió.
+     */
+    private function assertRefunded(Response $response): void
+    {
+        if ($response->clientError() && $response->status() !== 401) {
+            throw new ApiException(
+                ErrorCode::GatewayError,
+                'Mercado Pago no aceptó la devolución'.(($reason = $response->json('message')) ? " ({$reason})" : '').'. Revisa el pago en tu cuenta de Mercado Pago.',
+                502,
+                ['gateway_status' => $response->status()]
+            );
+        }
+
+        $this->assertOk($response);
     }
 
     private function assertOk(Response $response): void

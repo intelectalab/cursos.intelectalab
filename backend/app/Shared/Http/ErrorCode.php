@@ -57,6 +57,7 @@ enum ErrorCode: string
     case AlreadyEnrolled = 'ALREADY_ENROLLED';
     case OrderAlreadyPending = 'ORDER_ALREADY_PENDING';
     case OrderNotPending = 'ORDER_NOT_PENDING';
+    case OrderNotRefundable = 'ORDER_NOT_REFUNDABLE';
     case CouponInvalid = 'COUPON_INVALID';
     case GatewayNotAvailable = 'GATEWAY_NOT_AVAILABLE';
     case GatewayError = 'GATEWAY_ERROR';

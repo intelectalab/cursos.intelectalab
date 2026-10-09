@@ -27,9 +27,10 @@ class PlanOnlinePayments
     ) {}
 
     /**
-     * Pasarelas con las que la organización puede pagar esta orden ahora.
+     * Pasarelas con las que la organización puede pagar esta orden ahora, y
+     * cuánto cobraría cada una si no cobra en la moneda de la orden.
      *
-     * @return list<array{code: string, label: string}>
+     * @return list<array{code: string, label: string, charge: array{currency: string, amount: string, rate: ?string}|null}>
      */
     public function availableFor(?PlanOrder $order): array
     {
@@ -37,7 +38,7 @@ class PlanOnlinePayments
             return [];
         }
 
-        return $this->gateways->availableFor($order->currency);
+        return $this->gateways->availableFor((string) $order->amount, $order->currency);
     }
 
     /**
@@ -51,18 +52,26 @@ class PlanOnlinePayments
             throw new ApiException(ErrorCode::GatewayNotAvailable, 'Esta orden no se puede pagar por ese medio.', 409);
         }
 
+        $quote = $this->gateways->quote($code, (string) $order->amount, $order->currency);
+
         $checkout = $this->gateways->gateway($code)->startCheckout($this->gateways->credentials($code), new Charge(
             reference: $order->id,
             title: "IntelectaLab · Plan {$order->plan_name} ({$order->code()})",
-            amount: (string) $order->amount,
-            currency: $order->currency,
+            amount: $quote->amount,
+            currency: $quote->currency,
             payerEmail: $payer->email,
             payerFirstName: $payer->first_name,
             payerLastName: $payer->last_name,
             expiresAt: $order->expires_at,
         ), $urls);
 
-        $order->update(['gateway' => $code, 'gateway_checkout_id' => $checkout['external_id']]);
+        $order->update([
+            'gateway' => $code,
+            'gateway_checkout_id' => $checkout['external_id'],
+            // Lo que se le pidió cobrar a la pasarela: es contra lo que se comprueba el pago
+            'gateway_amount' => $quote->amount,
+            'gateway_currency' => $quote->currency,
+        ]);
 
         return $checkout['checkout_url'];
     }
@@ -79,13 +88,34 @@ class PlanOnlinePayments
             return $order;
         }
 
-        foreach ($this->gateways->gateway($order->gateway)->paymentsFor($account, $order->id) as $payment) {
+        foreach ($this->gateways->gateway($order->gateway)->paymentsFor($account, $order->id, $order->gateway_checkout_id) as $payment) {
             if ($payment->isApproved()) {
                 return $this->apply($order, $payment, $order->gateway);
             }
         }
 
         return $order;
+    }
+
+    /**
+     * Devuelve a la organización el pago de un plan cobrado en línea: el
+     * dinero vuelve por la pasarela, su plan vuelve a como estaba y la orden
+     * queda cancelada. Solo si el plan no cambió después de ese pago.
+     */
+    public function refund(PlanOrder $order, string $reason, string $platformAdmin): PlanOrder
+    {
+        $this->orders->assertRevertible($order, online: true);
+
+        $account = $this->gateways->credentials((string) $order->gateway);
+
+        if ($account === null) {
+            throw new ApiException(ErrorCode::GatewayNotAvailable, 'La cuenta con la que se cobró este pago ya no está conectada. Vuelve a conectarla en Planes para poder devolverlo.', 409);
+        }
+
+        // Primero el dinero: si la pasarela no devuelve, la orden y el plan quedan como estaban
+        $refundId = $this->gateways->gateway($order->gateway)->refund($account, (string) $order->gateway_payment_id);
+
+        return $this->orders->revert($order, $reason, $platformAdmin, $refundId);
     }
 
     /**
@@ -133,8 +163,13 @@ class PlanOnlinePayments
                 return $order;
             }
 
+            // Lo que se le pidió cobrar para este cobro; si el pago es de otro cobro, el importe de la orden
+            $ownCheckout = $order->gateway === $code && ($payment->checkoutId === null || $payment->checkoutId === $order->gateway_checkout_id);
+            $expectedCurrency = $ownCheckout && $order->gateway_currency ? $order->gateway_currency : $order->currency;
+            $expectedAmount = number_format((float) ($ownCheckout && $order->gateway_amount !== null ? $order->gateway_amount : $order->amount), 2, '.', '');
+
             $problem = match (true) {
-                $payment->currency !== $order->currency || $payment->amount !== number_format((float) $order->amount, 2, '.', '') => "La pasarela cobró {$payment->currency} {$payment->amount} (pago n.º {$payment->id}) y la orden es por {$order->currency} {$order->amount}.",
+                $payment->currency !== $expectedCurrency || $payment->amount !== $expectedAmount => "La pasarela cobró {$payment->currency} {$payment->amount} (pago n.º {$payment->id}) y se esperaba {$expectedCurrency} {$expectedAmount}.",
                 $order->status === PlanOrder::STATUS_PAID => "La orden ya estaba pagada: el pago n.º {$payment->id} es un cobro de más.",
                 $order->status === PlanOrder::STATUS_CANCELLED => "La orden estaba cancelada cuando llegó el pago n.º {$payment->id}.",
                 default => null,
@@ -149,7 +184,13 @@ class PlanOnlinePayments
             $gateway = $this->gateways->gateway($code);
             $order->update(['gateway' => $code]);
 
-            return $this->orders->confirm($order, ['gateway' => $code, 'method' => $payment->method, 'reference' => $payment->id], $gateway->label());
+            return $this->orders->confirm($order, [
+                'gateway' => $code,
+                'method' => $payment->method,
+                'reference' => $payment->id,
+                // Si se cobró en otra moneda, queda anotado cuánto
+                'notes' => $expectedCurrency !== $order->currency ? "Cobrado {$expectedCurrency} {$expectedAmount} con {$gateway->label()}." : null,
+            ], $gateway->label());
         });
     }
 }

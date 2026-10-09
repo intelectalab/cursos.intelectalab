@@ -2,6 +2,7 @@
 
 namespace App\Modules\Billing\Application;
 
+use App\Modules\Sales\Application\Payments\Online\ChargeQuote;
 use App\Modules\Sales\Application\Payments\Online\GatewayCredentials;
 use App\Modules\Sales\Application\Payments\Online\OnlineGateway;
 use App\Shared\Http\ApiException;
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\DB;
 class PlatformGateways
 {
     private const SETTING_PREFIX = 'payment_gateway_';
+
+    /** Moneda en la que hoy se ofrecen los planes: decide qué se avisa en la consola */
+    private const PLAN_CURRENCY = 'PEN';
 
     /**
      * @param  iterable<OnlineGateway>  $gateways
@@ -52,6 +56,7 @@ class PlatformGateways
     {
         return array_map(function (OnlineGateway $gateway) {
             $account = $this->stored($gateway->code());
+            $credentials = $this->credentials($gateway->code());
 
             return [
                 'code' => $gateway->code(),
@@ -59,8 +64,12 @@ class PlatformGateways
                 'connected' => $account !== null,
                 'enabled' => (bool) ($account['enabled'] ?? false),
                 'account' => $account['display'] ?? null,
+                'currency' => self::PLAN_CURRENCY,
                 'currency_supported' => true,
-                'has_webhook_secret' => filled($this->credentials($gateway->code())?->get('webhook_secret')),
+                // Cobra en otra moneda que la de los planes: hace falta el tipo de cambio para ofrecerla
+                'needs_exchange_rate' => ChargeQuote::needsRate($gateway, self::PLAN_CURRENCY),
+                'exchange_rate' => $this->exchangeRate($gateway->code()),
+                'has_webhook_secret' => filled($credentials?->get('webhook_secret')) || filled($credentials?->get('webhook_id')),
             ];
         }, [...$this->gateways]);
     }
@@ -68,24 +77,31 @@ class PlatformGateways
     /**
      * Conecta la cuenta de la plataforma, después de comprobar las claves con la pasarela.
      *
-     * @param  array<string, string|null>  $credentials
+     * @param  array<string, mixed>  $credentials
      */
     public function connect(string $code, array $credentials, bool $enabled = true): void
     {
         $display = $this->gateway($code)->describeAccount($credentials);
 
         $this->store($code, [
-            'credentials' => Crypt::encryptString((string) json_encode(array_filter($credentials, fn ($value) => filled($value)))),
+            'credentials' => Crypt::encryptString((string) json_encode(array_filter($credentials, fn ($value) => is_string($value) && filled($value)))),
             'display' => $display,
             'enabled' => $enabled,
-        ]);
+        ] + ($this->stored($code) ?? []));
     }
 
     public function setEnabled(string $code, bool $enabled): void
     {
-        $account = $this->stored($code) ?? throw new ApiException(ErrorCode::GatewayNotAvailable, 'Primero hay que conectar la cuenta.', 409);
+        $this->store($code, ['enabled' => $enabled] + $this->connected($code));
+    }
 
-        $this->store($code, ['enabled' => $enabled] + $account);
+    /**
+     * Tipo de cambio con el que la plataforma cobra en dólares los planes
+     * que ofrece en soles: cuántos soles vale un dólar.
+     */
+    public function setExchangeRate(string $code, float $penPerUsd): void
+    {
+        $this->store($code, ['exchange_rate' => $penPerUsd] + $this->connected($code));
     }
 
     public function disconnect(string $code): void
@@ -94,21 +110,36 @@ class PlatformGateways
     }
 
     /**
-     * Pasarelas con las que la plataforma puede cobrar en esa moneda ahora.
+     * Pasarelas con las que la plataforma puede cobrar ese importe ahora, y
+     * cuánto cobraría cada una si no cobra en esa moneda.
      *
-     * @return list<array{code: string, label: string}>
+     * @return list<array{code: string, label: string, charge: array{currency: string, amount: string, rate: ?string}|null}>
      */
-    public function availableFor(string $currency): array
+    public function availableFor(string $amount, string $currency): array
     {
         $available = [];
 
         foreach ($this->gateways as $gateway) {
-            if (($this->stored($gateway->code())['enabled'] ?? false) && $gateway->supportsCurrency($currency)) {
-                $available[] = ['code' => $gateway->code(), 'label' => $gateway->label()];
+            $quote = $this->quote($gateway->code(), $amount, $currency);
+
+            if ($quote !== null) {
+                $available[] = ['code' => $gateway->code(), 'label' => $gateway->label(), 'charge' => $quote->rate !== null ? $quote->toArray() : null];
             }
         }
 
         return $available;
+    }
+
+    /**
+     * Cuánto cobraría esa pasarela; null si no está activa o no puede cobrarlo.
+     */
+    public function quote(string $code, string $amount, string $currency): ?ChargeQuote
+    {
+        if (! ($this->stored($code)['enabled'] ?? false)) {
+            return null;
+        }
+
+        return ChargeQuote::for($this->gateway($code), $amount, $currency, $this->exchangeRate($code));
     }
 
     /**
@@ -128,8 +159,23 @@ class PlatformGateways
         );
     }
 
+    private function exchangeRate(string $code): ?float
+    {
+        $rate = $this->stored($code)['exchange_rate'] ?? null;
+
+        return $rate === null ? null : (float) $rate;
+    }
+
     /**
-     * @return array{credentials: string, display: array<string, mixed>|null, enabled: bool}|null
+     * @return array<string, mixed>
+     */
+    private function connected(string $code): array
+    {
+        return $this->stored($code) ?? throw new ApiException(ErrorCode::GatewayNotAvailable, 'Primero hay que conectar la cuenta.', 409);
+    }
+
+    /**
+     * @return array<string, mixed>|null
      */
     private function stored(string $code): ?array
     {

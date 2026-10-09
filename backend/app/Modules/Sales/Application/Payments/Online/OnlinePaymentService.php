@@ -3,6 +3,7 @@
 namespace App\Modules\Sales\Application\Payments\Online;
 
 use App\Modules\Audit\Application\AuditLogger;
+use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Application\OrderService;
 use App\Modules\Sales\Domain\Models\GatewayAccount;
 use App\Modules\Sales\Domain\Models\Order;
@@ -24,6 +25,9 @@ use Illuminate\Support\Str;
  */
 class OnlinePaymentService
 {
+    /** Intentos recientes de una orden por los que se pregunta a las pasarelas */
+    private const ATTEMPTS_TO_CHECK = 5;
+
     /**
      * @param  iterable<OnlineGateway>  $gateways
      */
@@ -72,9 +76,14 @@ class OnlinePaymentService
                 'connected' => $account !== null,
                 'enabled' => (bool) $account?->enabled,
                 'account' => $account?->display,
-                // La pasarela no cobra en la moneda de la organización: conectada o no, no se ofrece
-                'currency_supported' => $gateway->supportsCurrency($currency),
-                'has_webhook_secret' => filled($account?->credential('webhook_secret')),
+                // Moneda en la que la organización pone sus precios
+                'currency' => $currency,
+                // La pasarela no puede cobrar esa moneda de ninguna forma: conectada o no, no se ofrece
+                'currency_supported' => $gateway->chargeCurrency($currency) !== null,
+                // Cobra en otra moneda: hace falta el tipo de cambio para ofrecerla
+                'needs_exchange_rate' => ChargeQuote::needsRate($gateway, $currency),
+                'exchange_rate' => $account?->exchangeRate(),
+                'has_webhook_secret' => filled($account?->credential('webhook_secret')) || filled($account?->credential('webhook_id')),
                 'connected_at' => $account?->updated_at?->toIso8601String(),
             ];
         }, [...$this->gateways]);
@@ -84,7 +93,7 @@ class OnlinePaymentService
      * Conecta (o vuelve a conectar) la cuenta de la organización, después de
      * comprobar las claves con la pasarela.
      *
-     * @param  array<string, string|null>  $credentials
+     * @param  array<string, mixed>  $credentials
      */
     public function connect(string $code, array $credentials, bool $enabled = true): GatewayAccount
     {
@@ -93,7 +102,7 @@ class OnlinePaymentService
 
         return DB::transaction(function () use ($code, $credentials, $display, $enabled) {
             $account = GatewayAccount::query()->updateOrCreate(['gateway' => $code], [
-                'credentials' => array_filter($credentials, fn ($value) => filled($value)),
+                'credentials' => array_map('strval', array_filter($credentials, fn ($value) => is_string($value) && filled($value))),
                 'display' => $display,
                 'enabled' => $enabled,
             ]);
@@ -107,11 +116,28 @@ class OnlinePaymentService
 
     public function setEnabled(string $code, bool $enabled): GatewayAccount
     {
-        $account = $this->account($code) ?? throw new ApiException(ErrorCode::GatewayNotAvailable, 'Primero hay que conectar la cuenta.', 409);
+        $account = $this->connected($code);
 
         if ($account->enabled !== $enabled) {
             $account->update(['enabled' => $enabled]);
             $this->audit->record('payment_gateways.'.($enabled ? 'enabled' : 'disabled'), $account, null, ['gateway' => $code]);
+        }
+
+        return $account;
+    }
+
+    /**
+     * Tipo de cambio con el que la organización cobra en dólares lo que
+     * vende en soles: cuántos soles vale un dólar.
+     */
+    public function setExchangeRate(string $code, float $penPerUsd): GatewayAccount
+    {
+        $account = $this->connected($code);
+        $before = $account->exchangeRate();
+
+        if ($before !== $penPerUsd) {
+            $account->update(['settings' => ['exchange_rate' => $penPerUsd] + ($account->settings ?? [])]);
+            $this->audit->record('payment_gateways.exchange_rate_changed', $account, ['exchange_rate' => $before], ['gateway' => $code, 'exchange_rate' => $penPerUsd]);
         }
 
         return $account;
@@ -128,9 +154,10 @@ class OnlinePaymentService
     }
 
     /**
-     * Pasarelas con las que el comprador puede pagar esta orden ahora.
+     * Pasarelas con las que el comprador puede pagar esta orden ahora, y
+     * cuánto cobraría cada una si no cobra en la moneda de la orden.
      *
-     * @return list<array{code: string, label: string}>
+     * @return list<array{code: string, label: string, charge: array{currency: string, amount: string, rate: ?string}|null}>
      */
     public function availableFor(Order $order): array
     {
@@ -140,12 +167,20 @@ class OnlinePaymentService
         }
 
         $order->loadMissing('currency');
-        $enabled = GatewayAccount::query()->where('enabled', true)->pluck('gateway');
+        $accounts = GatewayAccount::query()->where('enabled', true)->get()->keyBy('gateway');
         $available = [];
 
         foreach ($this->gateways as $gateway) {
-            if ($enabled->contains($gateway->code()) && $gateway->supportsCurrency($order->currency->code)) {
-                $available[] = ['code' => $gateway->code(), 'label' => $gateway->label()];
+            $account = $accounts->get($gateway->code());
+            $quote = $account ? ChargeQuote::for($gateway, (string) $order->total_amount, $order->currency->code, $account->exchangeRate()) : null;
+
+            if ($quote !== null) {
+                $available[] = [
+                    'code' => $gateway->code(),
+                    'label' => $gateway->label(),
+                    // Solo cuando se cobra en otra moneda: el comprador debe saber cuánto antes de ir a pagar
+                    'charge' => $quote->rate !== null ? $quote->toArray() : null,
+                ];
             }
         }
 
@@ -165,12 +200,15 @@ class OnlinePaymentService
         }
 
         $order->loadMissing(['items', 'customer', 'currency']);
+        $gateway = $this->gateway($code);
+        $account = $this->account($code);
+        $quote = ChargeQuote::for($gateway, (string) $order->total_amount, $order->currency->code, $account->exchangeRate());
 
-        $checkout = $this->gateway($code)->startCheckout($this->account($code)->forGateway(), new Charge(
+        $checkout = $gateway->startCheckout($account->forGateway(), new Charge(
             reference: $order->id,
             title: 'Orden '.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT).' · '.($order->package_title ?? $order->items->first()?->title),
-            amount: (string) $order->total_amount,
-            currency: $order->currency->code,
+            amount: $quote->amount,
+            currency: $quote->currency,
             payerEmail: $order->customer->email,
             payerFirstName: $order->customer->first_name,
             payerLastName: $order->customer->last_name,
@@ -183,8 +221,10 @@ class OnlinePaymentService
             'gateway' => $code,
             'external_id' => $checkout['external_id'],
             'status' => PaymentAttempt::STATUS_CREATED,
-            'amount' => $order->total_amount,
-            'currency' => $order->currency->code,
+            // Lo que se le pidió cobrar a la pasarela: es contra lo que se comprueba el pago
+            'amount' => $quote->amount,
+            'currency' => $quote->currency,
+            'exchange_rate' => $quote->rate,
             'checkout_url' => $checkout['checkout_url'],
         ]);
     }
@@ -199,8 +239,9 @@ class OnlinePaymentService
             return $order;
         }
 
-        // El intento más reciente de cada pasarela
-        $attempts = PaymentAttempt::query()->where('order_id', $order->id)->latest()->orderByDesc('id')->get()->unique('gateway');
+        // Los intentos recientes; donde la pasarela busca por orden basta el último de cada una
+        $attempts = PaymentAttempt::query()->where('order_id', $order->id)->latest()->orderByDesc('id')->limit(self::ATTEMPTS_TO_CHECK)->get()
+            ->unique(fn (PaymentAttempt $attempt) => $this->gateway($attempt->gateway)->tracksByCheckout() ? $attempt->id : $attempt->gateway);
 
         foreach ($attempts as $attempt) {
             $account = $this->account($attempt->gateway);
@@ -209,7 +250,7 @@ class OnlinePaymentService
                 continue;
             }
 
-            foreach ($this->gateway($attempt->gateway)->paymentsFor($account->forGateway(), $order->id) as $payment) {
+            foreach ($this->gateway($attempt->gateway)->paymentsFor($account->forGateway(), $order->id, $attempt->external_id) as $payment) {
                 if ($payment->isApproved()) {
                     return $this->apply($order, $payment, $attempt->gateway);
                 }
@@ -217,6 +258,40 @@ class OnlinePaymentService
         }
 
         return $order;
+    }
+
+    /**
+     * Reembolso total de una orden pagada. Si la cobró una pasarela, el
+     * dinero se devuelve ahí con la cuenta de la organización; si el pago fue
+     * por fuera, la organización ya devolvió el dinero y aquí queda registrado.
+     *
+     * @param  string|null  $manualReference  cómo se devolvió el dinero de un pago por fuera
+     */
+    public function refund(Order $order, User $actor, string $reason, ?string $manualReference = null): Order
+    {
+        $order->loadMissing('payment');
+        $this->orders->assertRefundable($order);
+
+        $payment = $order->payment;
+
+        if (! $payment->isOnline()) {
+            return $this->orders->markRefunded($order, $actor, $reason, $manualReference);
+        }
+
+        $account = $this->account($payment->gateway);
+
+        if ($account === null) {
+            throw new ApiException(
+                ErrorCode::GatewayNotAvailable,
+                'La cuenta con la que se cobró este pago ya no está conectada. Vuelve a conectarla en Configuración para poder devolverlo.',
+                409
+            );
+        }
+
+        // Primero el dinero: si la pasarela no devuelve, la orden queda como estaba
+        $refundId = $this->gateway($payment->gateway)->refund($account->forGateway(), (string) $payment->reference);
+
+        return $this->orders->markRefunded($order, $actor, $reason, $refundId);
     }
 
     /**
@@ -246,8 +321,8 @@ class OnlinePaymentService
 
     /**
      * Lleva a la orden lo que la pasarela dice del pago. Solo un pago
-     * aprobado, por el importe y la moneda de la orden, la deja pagada; lo
-     * que no cuadra queda marcado para que lo resuelva una persona.
+     * aprobado, por el importe y la moneda que se le pidió cobrar, la deja
+     * pagada; lo que no cuadra queda marcado para que lo resuelva una persona.
      */
     private function apply(Order $order, GatewayPayment $payment, string $code): Order
     {
@@ -260,6 +335,13 @@ class OnlinePaymentService
                     $attempt->update(['status' => PaymentAttempt::STATUS_REJECTED, 'external_payment_id' => $payment->id]);
                 }
 
+                // Alguien devolvió el pago en la pasarela sin pasar por el sistema: la orden sigue pagada aquí
+                if ($payment->status === GatewayPayment::REFUNDED && $order->status === Order::STATUS_PAID && $order->payment?->reference === $payment->id && $attempt->status !== PaymentAttempt::STATUS_NEEDS_REVIEW) {
+                    $problem = 'La pasarela informa que este pago se devolvió desde su panel, pero la orden sigue pagada: reembólsala también aquí.';
+                    $attempt->update(['status' => PaymentAttempt::STATUS_NEEDS_REVIEW, 'external_payment_id' => $payment->id, 'review_reason' => $problem]);
+                    $this->audit->record('payments.online_needs_review', $attempt, null, ['order' => $order->number, 'gateway' => $code, 'payment' => $payment->id, 'reason' => $problem]);
+                }
+
                 return $order;
             }
 
@@ -269,7 +351,7 @@ class OnlinePaymentService
             }
 
             $problem = match (true) {
-                $payment->currency !== $order->currency->code || $payment->amount !== number_format((float) $order->total_amount, 2, '.', '') => "La pasarela cobró {$payment->currency} {$payment->amount} y la orden es por {$order->currency->code} {$order->total_amount}.",
+                $payment->currency !== $attempt->currency || $payment->amount !== number_format((float) $attempt->amount, 2, '.', '') => "La pasarela cobró {$payment->currency} {$payment->amount} y se le pidió cobrar {$attempt->currency} {$attempt->amount}.",
                 $order->status === Order::STATUS_PAID => 'La orden ya estaba pagada por otro medio: hay un cobro de más.',
                 $order->status !== Order::STATUS_PENDING => 'La orden ya no estaba pendiente cuando llegó el pago.',
                 default => null,
@@ -291,12 +373,15 @@ class OnlinePaymentService
                 'method' => $payment->method,
                 'reference' => $payment->id,
                 'paid_at' => $payment->paidAt,
+                // Si se cobró en otra moneda, queda anotado cuánto y a qué tipo de cambio
+                'notes' => $attempt->exchange_rate !== null ? (new ChargeQuote($attempt->currency, (string) $attempt->amount, (string) $attempt->exchange_rate))->note() : null,
             ]);
         });
     }
 
     /**
-     * Intento al que corresponde el pago: el último de esa pasarela para la orden.
+     * Intento al que corresponde el pago: el del cobro que la pasarela
+     * indica o, si no lo indica, el último de esa pasarela para la orden.
      */
     private function attemptFor(Order $order, GatewayPayment $payment, string $code): PaymentAttempt
     {
@@ -304,6 +389,7 @@ class OnlinePaymentService
         $attempts = PaymentAttempt::query()->where('order_id', $order->id)->where('gateway', $code)->latest()->orderByDesc('id')->get();
 
         return $attempts->firstWhere('external_payment_id', $payment->id)
+            ?? ($payment->checkoutId ? $attempts->firstWhere('external_id', $payment->checkoutId) : null)
             ?? $attempts->first()
             ?? PaymentAttempt::create([
                 'order_id' => $order->id,
@@ -317,5 +403,10 @@ class OnlinePaymentService
     private function account(string $code): ?GatewayAccount
     {
         return GatewayAccount::query()->where('gateway', $code)->first();
+    }
+
+    private function connected(string $code): GatewayAccount
+    {
+        return $this->account($code) ?? throw new ApiException(ErrorCode::GatewayNotAvailable, 'Primero hay que conectar la cuenta.', 409);
     }
 }

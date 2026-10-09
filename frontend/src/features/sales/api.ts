@@ -4,12 +4,21 @@ import type { Tone } from '../../shared/ui';
 import type { PageMeta } from '../identity/api';
 import type { AvailableCourse, AvailableCourseDetail } from '../enrollments/api';
 
-export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
-// CARD y WALLET solo llegan por una pasarela en línea
-export type PaymentMethod = 'TRANSFER' | 'YAPE' | 'CASH' | 'OTHER' | 'CARD' | 'WALLET';
-export type PaymentGatewayCode = 'MANUAL' | 'MERCADOPAGO';
+// REFUNDED: se pagó y después se devolvió el dinero completo
+export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
+// CARD, WALLET y PAYPAL solo llegan por una pasarela en línea
+export type PaymentMethod = 'TRANSFER' | 'YAPE' | 'CASH' | 'OTHER' | 'CARD' | 'WALLET' | 'PAYPAL';
+export type PaymentGatewayCode = 'MANUAL' | 'MERCADOPAGO' | 'PAYPAL';
 
-export const ORDER_STATUSES: OrderStatus[] = ['PENDING', 'PAID', 'CANCELLED', 'EXPIRED'];
+// Pasarela con la que se puede pagar en línea. `charge` solo viene cuando cobra en otra moneda:
+// cuánto cobraría y con qué tipo de cambio (soles por dólar)
+export interface OnlineGatewayOption {
+  code: string;
+  label: string;
+  charge: { currency: string; amount: string; rate: string | null } | null;
+}
+
+export const ORDER_STATUSES: OrderStatus[] = ['PENDING', 'PAID', 'CANCELLED', 'EXPIRED', 'REFUNDED'];
 export const PAYMENT_METHODS: PaymentMethod[] = ['TRANSFER', 'YAPE', 'CASH', 'OTHER'];
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
@@ -17,6 +26,7 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   PAID: 'Pagada',
   CANCELLED: 'Cancelada',
   EXPIRED: 'Vencida',
+  REFUNDED: 'Reembolsada',
 };
 
 export const ORDER_STATUS_TONE: Record<OrderStatus, Tone> = {
@@ -24,6 +34,7 @@ export const ORDER_STATUS_TONE: Record<OrderStatus, Tone> = {
   PAID: 'success',
   CANCELLED: 'neutral',
   EXPIRED: 'danger',
+  REFUNDED: 'info',
 };
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
@@ -33,10 +44,12 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   OTHER: 'Otro',
   CARD: 'Tarjeta',
   WALLET: 'Saldo en la pasarela',
+  PAYPAL: 'PayPal',
 };
 
 export const PAYMENT_GATEWAY_LABEL: Record<string, string> = {
   MERCADOPAGO: 'Mercado Pago',
+  PAYPAL: 'PayPal',
 };
 
 export interface OrderItem {
@@ -58,6 +71,8 @@ export interface OrderPayment {
   amount: string;
   paid_at: string;
   confirmed_by: string | null;
+  // Reembolso total, si lo hubo
+  refund: { at: string; reason: string | null; reference: string | null; by: string | null } | null;
 }
 
 export interface Order {
@@ -92,7 +107,7 @@ export interface Order {
 export interface MyOrder extends Order {
   payment_instructions: { type: string; text: string | null; methods: PaymentMethod[] } | null;
   // Pasarelas con las que puede pagarla en línea ahora mismo
-  online_gateways: { code: string; label: string }[];
+  online_gateways: OnlineGatewayOption[];
 }
 
 // Resultado de probar un cupón: cuánto descuenta y cuánto se pagaría
@@ -231,6 +246,10 @@ export const salesApi = {
   },
   async releaseLicenses(order: string, reason: string) {
     return (await api.post(`/orders/${order}/release-licenses`, { reason })).data.data as Order;
+  },
+  // Reembolso total: en línea lo devuelve la pasarela; por fuera, se registra cómo se devolvió
+  async refundOrder(order: string, reason: string, reference: string | null) {
+    return (await postIdempotent(`/orders/${order}/refund`, { reason, reference })).data.data as Order;
   },
   async cancelOrder(order: string) {
     return (await api.post(`/orders/${order}/cancel`)).data.data as Order;

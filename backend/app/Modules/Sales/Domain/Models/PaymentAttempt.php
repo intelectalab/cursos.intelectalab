@@ -33,6 +33,7 @@ class PaymentAttempt extends Model
         'status',
         'amount',
         'currency',
+        'exchange_rate',
         'checkout_url',
         'review_reason',
     ];

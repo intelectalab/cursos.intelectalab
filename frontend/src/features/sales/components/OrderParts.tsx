@@ -53,7 +53,9 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
           <dt className="text-xs font-semibold text-slate-500">Medio de pago</dt>
           <dd className="text-slate-800">
             {PAYMENT_METHOD_LABEL[order.payment.method]}
-            {PAYMENT_GATEWAY_LABEL[order.payment.gateway] ? ` · ${PAYMENT_GATEWAY_LABEL[order.payment.gateway]}` : ''}
+            {PAYMENT_GATEWAY_LABEL[order.payment.gateway] && PAYMENT_GATEWAY_LABEL[order.payment.gateway] !== PAYMENT_METHOD_LABEL[order.payment.method]
+              ? ` · ${PAYMENT_GATEWAY_LABEL[order.payment.gateway]}`
+              : ''}
           </dd>
         </div>
         <div>
@@ -70,6 +72,22 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
           <div>
             <dt className="text-xs font-semibold text-slate-500">Confirmado por</dt>
             <dd className="text-slate-800">{order.payment.confirmed_by}</dd>
+          </div>
+        )}
+        {order.payment.notes && order.payment.gateway !== 'MANUAL' && (
+          <div className="sm:col-span-2">
+            <dt className="text-xs font-semibold text-slate-500">Nota del pago</dt>
+            <dd className="text-slate-800 break-words">{order.payment.notes}</dd>
+          </div>
+        )}
+        {order.payment.refund && (
+          <div className="sm:col-span-2 p-3 rounded-xl border border-sky-200 bg-sky-50/60">
+            <dt className="text-xs font-semibold text-sky-800">Reembolsado el {formatDateTime(order.payment.refund.at)}</dt>
+            <dd className="text-slate-800 break-words">
+              {order.payment.refund.reason}
+              {order.payment.refund.reference && <span className="block text-xs text-slate-600 mt-0.5">Referencia de la devolución: {order.payment.refund.reference}</span>}
+              {order.payment.refund.by && <span className="block text-xs text-slate-600">Lo registró {order.payment.refund.by}</span>}
+            </dd>
           </div>
         )}
       </dl>

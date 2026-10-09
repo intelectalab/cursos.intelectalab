@@ -20,7 +20,8 @@ final readonly class GatewayPayment
     /**
      * @param  string  $id  identificador del pago en la pasarela
      * @param  string|null  $orderReference  la orden que la pasarela dice que se pagó
-     * @param  string  $method  uno de Payment::ONLINE_METHODS
+     * @param  string  $method  medio de pago (Payment::METHOD_*)
+     * @param  string|null  $checkoutId  cobro al que pertenece (startCheckout: external_id), si la pasarela lo dice
      */
     public function __construct(
         public string $id,
@@ -30,6 +31,7 @@ final readonly class GatewayPayment
         public ?string $orderReference,
         public string $method,
         public ?CarbonInterface $paidAt = null,
+        public ?string $checkoutId = null,
     ) {}
 
     public function isApproved(): bool

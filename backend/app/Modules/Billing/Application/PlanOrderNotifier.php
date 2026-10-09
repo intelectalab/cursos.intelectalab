@@ -81,6 +81,15 @@ class PlanOrderNotifier
         ]);
     }
 
+    public function refunded(PlanOrder $order, string $reason): void
+    {
+        $this->toTenant($order, "Se devolvió el pago de tu orden {$order->code()}", [
+            "IntelectaLab devolvió el pago de tu orden del plan «{$order->plan_name}» ({$order->currency} {$order->amount}): tu plan volvió a como estaba antes.",
+            "Motivo: {$reason}",
+            'El dinero vuelve al medio con el que pagaste; el plazo depende de la pasarela y de tu banco.',
+        ]);
+    }
+
     /**
      * @param  list<string>  $lines
      */

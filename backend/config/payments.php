@@ -27,4 +27,10 @@ return [
         'base_url' => env('MERCADOPAGO_BASE_URL', 'https://api.mercadopago.com'),
     ],
 
+    // Cada cuenta dice si sus claves son de pruebas (sandbox) o reales
+    'paypal' => [
+        'live_url' => env('PAYPAL_LIVE_URL', 'https://api-m.paypal.com'),
+        'sandbox_url' => env('PAYPAL_SANDBOX_URL', 'https://api-m.sandbox.paypal.com'),
+    ],
+
 ];

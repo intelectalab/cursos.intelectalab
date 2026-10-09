@@ -215,37 +215,34 @@ class PlanOrderService
     }
 
     /**
-     * Deshace una confirmación hecha por error: la suscripción vuelve a como
-     * estaba y la orden, a pendiente. Solo si nada cambió el plan después y
-     * si el pago no lo cobró una pasarela (eso sería una devolución).
+     * Deshace el pago de una orden: la suscripción vuelve a como estaba. Si
+     * fue una confirmación a mano hecha por error, la orden vuelve a
+     * pendiente. Si el pago lo cobró una pasarela y ya se devolvió
+     * (`$refundId`), la orden queda cancelada: el dinero volvió a la academia.
+     * Solo si nada cambió el plan después.
+     *
+     * @param  string|null  $refundId  devolución hecha en la pasarela
      */
-    public function revert(PlanOrder $order, string $reason, string $platformAdmin): PlanOrder
+    public function revert(PlanOrder $order, string $reason, string $platformAdmin, ?string $refundId = null): PlanOrder
     {
-        $order = DB::transaction(function () use ($order, $reason, $platformAdmin) {
+        $refunded = $refundId !== null;
+
+        $order = DB::transaction(function () use ($order, $reason, $platformAdmin, $refundId, $refunded) {
             $order = PlanOrder::query()->lockForUpdate()->with('tenant')->findOrFail($order->id);
 
-            $blocker = match (true) {
-                $order->status !== PlanOrder::STATUS_PAID => 'Solo se puede deshacer la confirmación de una orden pagada.',
-                $order->wasPaidOnline() => 'Esta orden la cobró la pasarela: el dinero ya se movió. Para anularla hay que devolver el pago desde la cuenta de la pasarela y ajustar el plan en la ficha de la academia.',
-                $order->applied_period_ends_at === null => 'Esta orden se confirmó antes de que existiera esta opción. Ajusta el plan desde la ficha de la academia.',
-                PlanOrder::query()->where('tenant_id', $order->tenant_id)->where('status', PlanOrder::STATUS_PENDING)->exists() => 'La academia ya tiene otra orden pendiente. Cancélala antes de reabrir esta.',
-                default => null,
-            };
-
-            $subscription = TenantSubscription::query()->where('tenant_id', $order->tenant_id)->first();
-
-            // Otra orden o un cambio a mano en la ficha vinieron después: deshacer pisaría ese cambio
-            if ($blocker === null && ! ($subscription?->plan_id === $order->plan_id && $subscription->current_period_ends_at?->equalTo($order->applied_period_ends_at))) {
-                $blocker = 'El plan de la academia cambió después de esta confirmación. Ajústalo desde su ficha.';
-            }
-
-            if ($blocker !== null) {
-                throw new ApiException(ErrorCode::PlanOrderNotRevertible, $blocker, 409);
-            }
+            $this->assertRevertible($order, online: $refunded);
 
             $this->subscriptions->restore($order->tenant, $order->previous_subscription, $platformAdmin);
 
-            $order->update([
+            $order->update($refunded ? [
+                'status' => PlanOrder::STATUS_CANCELLED,
+                'cancelled_at' => now(),
+                'resolved_by' => $platformAdmin,
+                'previous_subscription' => null,
+                'applied_period_ends_at' => null,
+                'notes' => "Pago devuelto (devolución n.º {$refundId}): {$reason}",
+                'outcome_seen_at' => null,
+            ] : [
                 'status' => PlanOrder::STATUS_PENDING,
                 'paid_at' => null,
                 'payment_method' => null,
@@ -259,19 +256,52 @@ class PlanOrderService
                 'outcome_seen_at' => null,
             ]);
 
-            $this->context->runForTenant($order->tenant_id, fn () => $this->audit->record('platform.plan_order_reverted', $order->tenant, null, [
+            $this->context->runForTenant($order->tenant_id, fn () => $this->audit->record($refunded ? 'platform.plan_order_refunded' : 'platform.plan_order_reverted', $order->tenant, null, array_filter([
                 'number' => $order->number,
                 'plan' => $order->plan_name,
                 'reason' => $reason,
+                'refund' => $refundId,
                 'platform_admin' => $platformAdmin,
-            ]));
+            ])));
 
             return $order;
         });
 
-        $this->notifier->confirmationReverted($order, $reason);
+        if ($refunded) {
+            $this->notifier->refunded($order, $reason);
+        } else {
+            $this->notifier->confirmationReverted($order, $reason);
+        }
 
         return $order;
+    }
+
+    /**
+     * ¿Se puede deshacer el pago de esta orden? Una confirmación a mano se
+     * deshace sin más; lo que cobró una pasarela exige devolver el dinero
+     * (`online`). En ambos casos, solo si el plan no cambió después.
+     */
+    public function assertRevertible(PlanOrder $order, bool $online = false): void
+    {
+        $blocker = match (true) {
+            $order->status !== PlanOrder::STATUS_PAID => 'Solo se puede deshacer el pago de una orden pagada.',
+            ! $online && $order->wasPaidOnline() => 'Esta orden la cobró la pasarela: usa «Devolver pago» para devolver el dinero.',
+            $online && ! $order->wasPaidOnline() => 'Esta orden no se pagó en línea: no hay nada que devolver en la pasarela.',
+            $order->applied_period_ends_at === null => 'Esta orden se confirmó antes de que existiera esta opción. Ajusta el plan desde la ficha de la academia.',
+            ! $online && PlanOrder::query()->where('tenant_id', $order->tenant_id)->where('status', PlanOrder::STATUS_PENDING)->exists() => 'La academia ya tiene otra orden pendiente. Cancélala antes de reabrir esta.',
+            default => null,
+        };
+
+        $subscription = TenantSubscription::query()->where('tenant_id', $order->tenant_id)->first();
+
+        // Otra orden o un cambio a mano en la ficha vinieron después: deshacer pisaría ese cambio
+        if ($blocker === null && ! ($subscription?->plan_id === $order->plan_id && $subscription->current_period_ends_at?->equalTo($order->applied_period_ends_at))) {
+            $blocker = 'El plan de la academia cambió después de este pago. '.($online ? 'Devuelve el dinero desde la cuenta de la pasarela y ajusta el plan en su ficha.' : 'Ajústalo desde su ficha.');
+        }
+
+        if ($blocker !== null) {
+            throw new ApiException(ErrorCode::PlanOrderNotRevertible, $blocker, 409);
+        }
     }
 
     /**

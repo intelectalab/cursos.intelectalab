@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2, Clock, CreditCard, FileCheck2, Hourglass, Pape
 import { useAuth } from '../../auth/AuthContext';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CardHeader, ConfirmModal, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, PageHeader, Table, TBody, Td, Th, THead, Tr, type Tone } from '../../../shared/ui';
-import { formatMoney } from '../../sales/api';
+import { formatMoney, type OnlineGatewayOption } from '../../sales/api';
 import { PlanCard, type AcademySubscription } from '../components/PlanCard';
 
 interface OfferedPlan {
@@ -44,7 +44,7 @@ interface MyPlan {
   payment_instructions: string | null;
   pending_order: PlanOrder | null;
   // Pasarelas con las que se puede pagar la orden pendiente en línea
-  online_gateways: { code: string; label: string }[];
+  online_gateways: OnlineGatewayOption[];
   proof: { max_kb: number; extensions: string[] };
   orders: PlanOrder[];
 }
@@ -188,6 +188,14 @@ const PendingOrder: React.FC<{
                 </Button>
               ))}
             </div>
+            {gateways
+              .filter((gateway) => gateway.charge)
+              .map((gateway) => (
+                <p key={gateway.code} className="text-xs text-slate-500 mt-2">
+                  {gateway.label} cobra en dólares: pagarás <strong className="text-slate-700 tnum">{formatMoney(gateway.charge!.amount, gateway.charge!.currency)}</strong>
+                  {gateway.charge!.rate ? `, al tipo de cambio de S/ ${Number(gateway.charge!.rate).toFixed(2)} por dólar que fijó IntelectaLab` : ''}.
+                </p>
+              ))}
           </div>
         )}
 
@@ -281,7 +289,7 @@ export const PlanPage: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   // Vuelve de la pasarela: en vez de esperar su aviso, se le pregunta si ya pagó
-  const [returned] = useState(() => ['payment_id', 'collection_status', 'status'].some((key) => searchParams.has(key)));
+  const [returned] = useState(() => ['payment_id', 'collection_status', 'status', 'token', 'PayerID'].some((key) => searchParams.has(key)));
   const [checking, setChecking] = useState(false);
 
   const fetchPlan = async () => (await api.get('/subscription/plans')).data.data as MyPlan;
@@ -452,7 +460,7 @@ export const PlanPage: React.FC = () => {
                       {order.status === 'PAID' ? ` el ${formatDay(order.paid_at)}` : ''}
                     </Badge>
                     {order.status === 'PAID' && order.paid_online && <span className="block text-xs text-slate-500 mt-0.5">Pago en línea</span>}
-                    {order.status === 'CANCELLED' && order.notes && <span className="block text-xs text-slate-500 mt-0.5">{order.notes}</span>}
+                    {(order.status === 'CANCELLED' || order.paid_online) && order.notes && <span className="block text-xs text-slate-500 mt-0.5">{order.notes}</span>}
                   </Td>
                 </Tr>
               ))}

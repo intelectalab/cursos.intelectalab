@@ -24,7 +24,10 @@ class Order extends Model
 
     public const STATUS_EXPIRED = 'EXPIRED';
 
-    public const STATUSES = [self::STATUS_PENDING, self::STATUS_PAID, self::STATUS_CANCELLED, self::STATUS_EXPIRED];
+    /** Se pagó y después se devolvió el dinero completo */
+    public const STATUS_REFUNDED = 'REFUNDED';
+
+    public const STATUSES = [self::STATUS_PENDING, self::STATUS_PAID, self::STATUS_CANCELLED, self::STATUS_EXPIRED, self::STATUS_REFUNDED];
 
     protected $fillable = [
         'tenant_id',
@@ -43,6 +46,7 @@ class Order extends Model
         'paid_at',
         'cancelled_at',
         'cancelled_by',
+        'refunded_at',
         'licenses_released_at',
         'licenses_released_by',
         'licenses_release_reason',
@@ -58,6 +62,7 @@ class Order extends Model
             'expires_at' => 'datetime',
             'paid_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'refunded_at' => 'datetime',
             'licenses_released_at' => 'datetime',
         ];
     }
@@ -122,7 +127,8 @@ class Order extends Model
 
     public function payment(): HasOne
     {
-        return $this->hasOne(Payment::class)->where('status', Payment::STATUS_CONFIRMED);
+        // El pago de la orden, también cuando ya se devolvió
+        return $this->hasOne(Payment::class)->whereIn('status', [Payment::STATUS_CONFIRMED, Payment::STATUS_REFUNDED]);
     }
 
     /**

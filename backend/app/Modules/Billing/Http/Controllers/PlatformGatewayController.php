@@ -27,7 +27,8 @@ class PlatformGatewayController extends Controller
 
     /**
      * Con claves: conecta la cuenta (se comprueban con la pasarela). Sin
-     * claves: solo activa o pausa una cuenta ya conectada.
+     * claves: activa o pausa una cuenta ya conectada, o cambia su tipo de
+     * cambio (soles por dólar, para la pasarela que cobra en dólares).
      */
     public function update(Request $request, string $gateway): JsonResponse
     {
@@ -35,13 +36,19 @@ class PlatformGatewayController extends Controller
         $rules = $this->gateways->gateway($gateway)->credentialRules();
         $connecting = $request->filled(array_key_first($rules));
 
-        $data = $request->validate(['enabled' => ['sometimes', 'boolean']] + ($connecting ? $rules : []));
-        $enabled = (bool) ($data['enabled'] ?? true);
+        $data = $request->validate([
+            'enabled' => ['sometimes', 'boolean'],
+            'exchange_rate' => ['sometimes', 'numeric', 'min:0.1', 'max:100'],
+        ] + ($connecting ? $rules : []));
 
         if ($connecting) {
-            $this->gateways->connect($gateway, array_intersect_key($data, $rules), $enabled);
-        } else {
-            $this->gateways->setEnabled($gateway, $enabled);
+            $this->gateways->connect($gateway, array_intersect_key($data, $rules), (bool) ($data['enabled'] ?? true));
+        } elseif (isset($data['enabled'])) {
+            $this->gateways->setEnabled($gateway, (bool) $data['enabled']);
+        }
+
+        if (isset($data['exchange_rate'])) {
+            $this->gateways->setExchangeRate($gateway, (float) $data['exchange_rate']);
         }
 
         return $this->index();

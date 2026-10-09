@@ -37,14 +37,15 @@ const STATUS: Record<PlatformPlanOrder['status'], { label: string; tone: Tone }>
   EXPIRED: { label: 'Vencida sin pago', tone: 'danger' },
 };
 
-const METHOD_LABEL: Record<string, string> = { TRANSFER: 'Transferencia', YAPE: 'Yape o Plin', CASH: 'Efectivo', OTHER: 'Otro', CARD: 'Tarjeta', WALLET: 'Saldo en la pasarela' };
+const METHOD_LABEL: Record<string, string> = { TRANSFER: 'Transferencia', YAPE: 'Yape o Plin', CASH: 'Efectivo', OTHER: 'Otro', CARD: 'Tarjeta', WALLET: 'Saldo en la pasarela', PAYPAL: 'PayPal' };
 
-type ResolveMode = 'confirm' | 'cancel' | 'revert';
+type ResolveMode = 'confirm' | 'cancel' | 'revert' | 'refund';
 
 const MODE: Record<ResolveMode, { title: string; action: string; failed: string }> = {
   confirm: { title: 'Confirmar pago recibido', action: 'Confirmar pago', failed: 'No se pudo confirmar el pago.' },
   cancel: { title: 'Cancelar orden', action: 'Cancelar orden', failed: 'No se pudo cancelar la orden.' },
   revert: { title: 'Deshacer la confirmación', action: 'Deshacer confirmación', failed: 'No se pudo deshacer la confirmación.' },
+  refund: { title: 'Devolver el pago', action: 'Devolver pago', failed: 'No se pudo devolver el pago.' },
 };
 
 /* ───────────────────────────── Confirmar o cancelar ───────────────────────────── */
@@ -70,6 +71,7 @@ const ResolveModal: React.FC<{ order: PlatformPlanOrder; mode: ResolveMode; meth
     try {
       if (confirming) await platformApi.confirmPlanOrder(order.id, method, reference.trim() || null, notes.trim() || null);
       else if (mode === 'revert') await platformApi.revertPlanOrder(order.id, notes.trim());
+      else if (mode === 'refund') await platformApi.refundPlanOrder(order.id, notes.trim());
       else await platformApi.cancelPlanOrder(order.id, notes.trim());
       await onDone();
     } catch (err) {
@@ -127,6 +129,16 @@ const ResolveModal: React.FC<{ order: PlatformPlanOrder; mode: ResolveMode; meth
             </div>
             <Field label="Nota interna (opcional)" hint="Por ejemplo, el número de la factura que emitiste.">
               <input className={INPUT_CLASS} maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)} />
+            </Field>
+          </>
+        ) : mode === 'refund' ? (
+          <>
+            <Alert tone="info">
+              Se devolverán <strong>{formatMoney(order.amount, order.currency)}</strong> completos por la pasarela, con la cuenta de IntelectaLab, al medio con el que pagó la academia.
+              {order.notes ? ` ${order.notes}` : ''} Su plan vuelve a como estaba antes de este pago y la orden queda cancelada. No se puede deshacer.
+            </Alert>
+            <Field label="Motivo" hint="Lo verá la academia. Ejemplo: «Pagó dos veces el mismo plan».">
+              <textarea className={INPUT_CLASS} rows={3} required minLength={5} maxLength={300} autoFocus value={notes} onChange={(event) => setNotes(event.target.value)} />
             </Field>
           </>
         ) : mode === 'revert' ? (
@@ -283,6 +295,11 @@ export const PaymentsPanel: React.FC = () => {
                         Deshacer
                       </Button>
                     )}
+                    {order.can_refund && (
+                      <Button size="sm" onClick={() => setDialog({ order, mode: 'refund' })}>
+                        Devolver pago
+                      </Button>
+                    )}
                   </Td>
                 </Tr>
               ))}
@@ -302,8 +319,10 @@ export const PaymentsPanel: React.FC = () => {
             setNotice(
               dialog.mode === 'confirm'
                 ? `Pago confirmado: «${dialog.order.tenant.name}» ya tiene vigente el plan «${dialog.order.plan_name}».`
-                : dialog.mode === 'revert'
-                  ? `Confirmación deshecha: el plan de «${dialog.order.tenant.name}» volvió a como estaba y su orden quedó pendiente.`
+                : dialog.mode === 'refund'
+                  ? `Pago devuelto: el plan de «${dialog.order.tenant.name}» volvió a como estaba y su orden quedó cancelada.`
+                  : dialog.mode === 'revert'
+                    ? `Confirmación deshecha: el plan de «${dialog.order.tenant.name}» volvió a como estaba y su orden quedó pendiente.`
                   : `Orden de «${dialog.order.tenant.name}» cancelada.`,
             );
             setDialog(null);
