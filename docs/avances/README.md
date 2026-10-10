@@ -56,6 +56,9 @@ Documentos relacionados:
 - [Instalación y despliegue](../instalacion-y-despliegue.md)
 - [Pendientes](../pendientes.md)
 - [Verificación contra el backlog de historias YC](../verificacion-backlog.md)
+- [Verificación contra el Documento Maestro](../verificacion-maestro.md)
+- [Documentación técnica](../tecnica/README.md): OpenAPI, diccionario de datos, catálogos de estados y de errores, y mapa de trazabilidad (`php artisan docs:technical`)
+- Manual de uso por rol: `docs/manual-de-uso-por-rol.docx` (se genera desde [manual/](../manual/LEEME.md) y se actualiza con cada cambio)
 
 ## Qué sigue
 

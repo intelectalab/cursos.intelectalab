@@ -60,7 +60,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Consola de plataforma · ficha por academia | Datos editables, cifras y ventas de seis meses, administradores con restablecimiento de contraseña, historial de la plataforma y motivo obligatorio al suspender | Hecho |
 
 - **Avance del plan:** 12 de 14 sprints construidos (S0 a S8 y S10 a S12). **S6 Pagos está construido pero sin un solo cobro real ni de prueba**: faltan las credenciales de Mercado Pago y PayPal, y los comprobantes siguen fuera. Faltan S9, en espera de una decisión, y S13.
-- **Calidad:** 307 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que no se corren desde S12; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
+- **Calidad:** 308 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que no se corren desde S12; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
 - **Seguridad:** las pruebas revisan que las 277 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 65 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
@@ -74,7 +74,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 - **Qué no se puede hacer todavía:** reembolsar una parte, emitir comprobantes ni enviar correos de verdad (los avisos por correo ya se generan, pero quedan en el registro del servidor hasta definir el proveedor).
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
-El detalle de cada bloque terminado está en [avances/](avances/README.md).
+El detalle de cada bloque terminado está en [avances/](avances/README.md). La comparación con el Documento Maestro (18 de 26 requisitos hechos, 5 a medias y 3 sin construir) está en [verificacion-maestro.md](verificacion-maestro.md). El manual de uso por rol está en `docs/manual-de-uso-por-rol.docx` y se actualiza con cada cambio. La documentación técnica que pide el Maestro (OpenAPI, diccionario de datos, catálogos de estados y de errores, y trazabilidad) está en [tecnica/](tecnica/README.md) y se regenera con `php artisan docs:technical`.
 
 **Terminado: el cobro de la plataforma a las academias, con pago por fuera.** Modelo descrito por el responsable del proyecto (falta confirmarlo con jefatura, decisión 16): la academia se registra en prueba gratuita, luego paga a IntelectaLab según su cantidad de alumnos, y sus alumnos le pagan los cursos a ella. Tres entregas hechas: (1) planes y prueba gratuita; (2) "Mi plan" en la academia con orden de pago y confirmación en la consola; (3) límites y vencimiento. **El plan ya limita:** con el cupo lleno no entran alumnos nuevos, y una academia vencida pasa por siete días de gracia y luego queda en solo lectura.
 
