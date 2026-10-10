@@ -220,7 +220,7 @@ class PayPalGateway implements OnlineGateway
             currency: (string) ($capture['amount']['currency_code'] ?? ''),
             orderReference: $capture['custom_id'] ?? $unit['custom_id'] ?? $unit['reference_id'] ?? null,
             method: Payment::METHOD_PAYPAL,
-            paidAt: isset($capture['create_time']) ? Carbon::parse($capture['create_time']) : null,
+            paidAt: isset($capture['create_time']) ? Carbon::parse($capture['create_time'])->utc() : null,
             checkoutId: (string) ($order['id'] ?? ''),
         ), $unit['payments']['captures'] ?? []);
     }

@@ -223,6 +223,8 @@ class OnlinePaymentTest extends TestCase
         $sync()->assertOk()
             ->assertJsonPath('data.status', 'PAID')
             ->assertJsonPath('data.payment.method', 'CARD')
+            // Mercado Pago informa la hora con su propio desfase (-04:00): se guarda el instante real
+            ->assertJsonPath('data.payment.paid_at', '2026-10-08T19:00:00+00:00')
             ->assertJsonPath('data.online_gateways', []);
 
         // La orden de otra persona no existe para quien pregunta

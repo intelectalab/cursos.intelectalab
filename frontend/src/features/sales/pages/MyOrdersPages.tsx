@@ -108,8 +108,11 @@ export const MyOrderPage: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
+      const fresh = await salesApi.myOrder(orderId);
+      // No siempre se vuelve por el enlace de la pasarela: mientras la orden espere un pago en línea, se le pregunta.
       // Si la pasarela no responde, la orden se muestra igual
-      setOrder(returned ? await salesApi.syncPayment(orderId).catch(() => salesApi.myOrder(orderId)) : await salesApi.myOrder(orderId));
+      const ask = fresh.status === 'PENDING' && (returned || fresh.online_gateways.length > 0);
+      setOrder(ask ? await salesApi.syncPayment(orderId).catch(() => fresh) : fresh);
       setState('ready');
     } catch (err) {
       setError(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
@@ -233,6 +236,14 @@ export const MyOrderPage: React.FC = () => {
                   </Button>
                 ))}
               </div>
+              {!returned && (
+                <p className="text-xs text-slate-500">
+                  ¿Ya pagaste y sigue pendiente?{' '}
+                  <button type="button" className="font-semibold underline cursor-pointer disabled:opacity-60" disabled={checking} onClick={checkAgain}>
+                    {checking ? 'Comprobando…' : 'Comprobar pago'}
+                  </button>
+                </p>
+              )}
               {gateways
                 .filter((gateway) => gateway.charge)
                 .map((gateway) => (

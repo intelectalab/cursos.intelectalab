@@ -48,6 +48,7 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-08 | Pagos de plan: cobro en línea, constancia adjunta, avisos, vencimiento y deshacer una confirmación | [2026-10-08-pagos-de-plan-cuatro-mejoras.md](2026-10-08-pagos-de-plan-cuatro-mejoras.md) |
 | 2026-10-08 | S6 — Pagos · Entrega 2: cobro en línea con PayPal (en dólares, con tipo de cambio manual) | [2026-10-08-s6-entrega-2-paypal.md](2026-10-08-s6-entrega-2-paypal.md) |
 | 2026-10-09 | S6 — Pagos · Entrega 3: reembolso total de compras y de pagos de plan en línea | [2026-10-09-s6-entrega-3-reembolsos.md](2026-10-09-s6-entrega-3-reembolsos.md) |
+| 2026-10-10 | S6 — Pagos · Primer pago de prueba con Mercado Pago (curso pagado con tarjeta de prueba) y dos correcciones | [2026-10-10-s6-primer-pago-de-prueba-mercado-pago.md](2026-10-10-s6-primer-pago-de-prueba-mercado-pago.md) |
 
 Documentos relacionados:
 
@@ -62,11 +63,11 @@ Documentos relacionados:
 
 ## Qué sigue
 
-Lo aprobado que no dependía de una respuesta está terminado: la revisión de jefatura (tres entregas), "Evaluaciones y aula" (tres), "Alumnos y docentes" (dos), el buscador del catálogo, los ajustes de evaluación y la ficha por academia de la consola. También el cobro de la plataforma a las academias (planes), en sus tres entregas: planes y prueba gratuita; "Mi plan" con orden de pago y confirmación en la consola; y límites y vencimiento (cupo de alumnos, siete días de gracia y solo lectura). **En curso:** las pasarelas (S6). Entrega 1 hecha: base común y Mercado Pago para los alumnos, con la cuenta de cada academia, probado solo con respuestas simuladas. También el pago de los planes en línea con Mercado Pago (cuenta de IntelectaLab), la constancia adjunta, los avisos, el vencimiento de las órdenes de plan y el botón para deshacer una confirmación. Entrega 2 hecha: PayPal, en dólares con tipo de cambio manual, para los alumnos y para los planes. Entrega 3 hecha: reembolso total de compras y de pagos de plan en línea. **Con esto S6 queda construido; falta probarlo con credenciales de prueba y definir los comprobantes.** **Sin credenciales de prueba no se ha hecho ningún cobro real.**
+Lo aprobado que no dependía de una respuesta está terminado: la revisión de jefatura (tres entregas), "Evaluaciones y aula" (tres), "Alumnos y docentes" (dos), el buscador del catálogo, los ajustes de evaluación y la ficha por academia de la consola. También el cobro de la plataforma a las academias (planes), en sus tres entregas: planes y prueba gratuita; "Mi plan" con orden de pago y confirmación en la consola; y límites y vencimiento (cupo de alumnos, siete días de gracia y solo lectura). **En curso:** las pasarelas (S6). Entrega 1 hecha: base común y Mercado Pago para los alumnos, con la cuenta de cada academia, probado solo con respuestas simuladas. También el pago de los planes en línea con Mercado Pago (cuenta de IntelectaLab), la constancia adjunta, los avisos, el vencimiento de las órdenes de plan y el botón para deshacer una confirmación. Entrega 2 hecha: PayPal, en dólares con tipo de cambio manual, para los alumnos y para los planes. Entrega 3 hecha: reembolso total de compras y de pagos de plan en línea. **Con esto S6 queda construido; falta probarlo con credenciales de prueba y definir los comprobantes.** **El 2026-10-10 se hizo el primer pago de prueba con Mercado Pago (un curso, con tarjeta); faltan su reembolso, el pago de un plan y todo PayPal.**
 
 Lo que espera una respuesta:
 
-1. S6 — Pagos: credenciales de prueba de Mercado Pago y PayPal, y lo que queda de la decisión 8 de [pendientes](../pendientes.md) (comprobantes, reembolsos).
+1. S6 — Pagos: credenciales de prueba de PayPal, terminar las pruebas con Mercado Pago (reembolso, plan), y lo que queda de la decisión 8 de [pendientes](../pendientes.md) (comprobantes, reembolsos).
 2. S13 — salida a producción: servidor, dominio y correo (decisiones 1 a 3).
 3. Moodle y horarios por disponibilidad docente: decisiones 14 y 15.
 4. S9 — SCORM: decisión 9.

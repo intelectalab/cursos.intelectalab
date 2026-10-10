@@ -26,7 +26,7 @@ Comparación del sistema con `ERP_SaaS_Cursos_Documento_Maestro_Integral_v2.docx
 | RF-PROMO-001 | Promociones | Hecho | Cupones validados en el servidor. |
 | RF-FIN-001 | Finanzas | A medias | Órdenes y pagos sí. **Faltan comprobantes y deudas** (pagos parciales, RN-012). Espera PD-003. |
 | RF-CUR-001 | Monedas | A medias | Una moneda por academia (soles o dólares) y tipo de cambio manual para PayPal. **Faltan los tipos de cambio como dato propio** (fuente y frecuencia, PD-011). |
-| RF-PAY-001 | Pagos | A medias | Mercado Pago, PayPal y reembolsos construidos detrás de un adaptador. **Ningún cobro real ni de prueba**: faltan credenciales. |
+| RF-PAY-001 | Pagos | A medias | Mercado Pago, PayPal y reembolsos construidos detrás de un adaptador. **Primer pago de prueba hecho el 2026-10-10** (un curso, con tarjeta, en Mercado Pago). Faltan: su reembolso, Yape, los avisos, el pago de un plan y todo PayPal (sin credenciales). |
 | RF-WAL-001 | Wallet | **Falta** | Fase 3 del Maestro. Reglas sin definir (PD-012). Solo existe el permiso. |
 | RF-SUP-001 | Soporte | Hecho | Tickets y mensajes. |
 | RF-AI-001 | IA | **Falta** | Fase 3 del Maestro. Falta proveedor, modelo y política de datos (PD-016). Solo existe el permiso. |
@@ -39,7 +39,7 @@ Comparación del sistema con `ERP_SaaS_Cursos_Documento_Maestro_Integral_v2.docx
 
 ## 2. Flujos (sección 10)
 
-De los 23 flujos, no existen: **FP-10 Asistencia**, **FP-11 SCORM**, **FP-15 Deuda**, **FP-16 Wallet** y **FP-18 IA**. FP-14 Pago está construido y sin probar con una pasarela real. El resto funciona.
+De los 23 flujos, no existen: **FP-10 Asistencia**, **FP-11 SCORM**, **FP-15 Deuda**, **FP-16 Wallet** y **FP-18 IA**. FP-14 Pago está construido y probado con un pago de prueba de Mercado Pago; PayPal y los reembolsos siguen sin probar con la pasarela. El resto funciona.
 
 ## 3. Reglas de negocio (sección 3)
 
@@ -112,7 +112,7 @@ El Maestro pide no inventar estas decisiones. Las cuatro **asumidas** se constru
 
 ## 8. Qué falta para poder decir «solo queda revisar el sistema»
 
-1. Credenciales de prueba de Mercado Pago y PayPal, para dar los pagos por probados.
+1. Terminar las pruebas de pagos: reembolso y pago de plan con Mercado Pago (ya hay credenciales y un primer pago hecho), y credenciales de prueba de PayPal.
 2. Que jefatura decida, por escrito, si SCORM, billetera, IA, asistencia, comprobantes y deudas se construyen o quedan fuera de esta versión.
 3. Servidor, dominio y correo, para S13.
 4. La documentación técnica que sale del código ya está en `docs/tecnica/`. Siguen faltando runbooks, manual operativo, reporte de seguridad, reporte de aceptación y notas de versión, que dependen de tener servidor.

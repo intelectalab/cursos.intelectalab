@@ -2,7 +2,7 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-08, al cerrar la entrega 3 de pagos en línea (reembolsos), con la que S6 queda construido.
+Última actualización: 2026-10-10, tras el primer pago de prueba con Mercado Pago.
 
 ## Dónde estamos
 
@@ -23,7 +23,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | S4 | Matrículas y portal del alumno: vigencia, gestión general, curso completado, inicio del alumno y cursos disponibles | Hecho |
 | — | Escalas de notas guardadas por academia | Hecho |
 | S5 | Venta a personas (B2C): catálogo público, registro, compra, órdenes y pago confirmado por el personal | Hecho |
-| S6 · entrega 1 | Cobro en línea con Mercado Pago: cada academia conecta su cuenta; el alumno paga con tarjeta, Yape o saldo y queda matriculado al momento. **Probado solo con respuestas simuladas: faltan credenciales de prueba** | Hecho, sin cobro real |
+| S6 · entrega 1 | Cobro en línea con Mercado Pago: cada academia conecta su cuenta; el alumno paga con tarjeta, Yape o saldo y queda matriculado al momento. **Probado el 2026-10-10 con un pago de prueba con tarjeta**; faltan Yape y los avisos | Hecho, con pago de prueba |
 | S6 · entrega 2 | PayPal para los alumnos y para los planes, en dólares con el tipo de cambio que fija quien cobra. **Probado solo con respuestas simuladas** | Hecho, sin cobro real |
 | S6 · pago de planes | Las academias pagan su plan en línea con Mercado Pago, con la cuenta de IntelectaLab. **Probado solo con respuestas simuladas** | Hecho, sin cobro real |
 | Pagos de plan · mejoras | Constancia adjunta, avisos a la plataforma y a la academia (contador, aviso fijo y correo), vencimiento a los 7 días y botón para deshacer una confirmación | Hecho |
@@ -59,7 +59,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Planes de la plataforma · entrega 3 | Límites y vencimiento: con el cupo lleno no entran alumnos nuevos; al vencer, siete días de gracia con aviso y luego la academia en solo lectura (sus alumnos siguen estudiando) hasta que pague | Hecho |
 | Consola de plataforma · ficha por academia | Datos editables, cifras y ventas de seis meses, administradores con restablecimiento de contraseña, historial de la plataforma y motivo obligatorio al suspender | Hecho |
 
-- **Avance del plan:** 12 de 14 sprints construidos (S0 a S8 y S10 a S12). **S6 Pagos está construido pero sin un solo cobro real ni de prueba**: faltan las credenciales de Mercado Pago y PayPal, y los comprobantes siguen fuera. Faltan S9, en espera de una decisión, y S13.
+- **Avance del plan:** 12 de 14 sprints construidos (S0 a S8 y S10 a S12). **S6 Pagos tiene su primer pago de prueba** (un curso con tarjeta, en Mercado Pago, el 2026-10-10); faltan el reembolso, el pago de un plan y todo PayPal, que no tiene credenciales. Los comprobantes siguen fuera. Faltan S9, en espera de una decisión, y S13.
 - **Calidad:** 308 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que no se corren desde S12; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
 - **Seguridad:** las pruebas revisan que las 277 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 65 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
@@ -69,7 +69,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 - **Venta a empresas:** el equipo comercial registra prospectos, lleva cada oportunidad por el embudo y arma la cotización; cuando la empresa la acepta (en línea o por otro medio) nace la venta. Confirmado el pago, la empresa recibe sus licencias y su responsable las asigna a sus trabajadores, que quedan matriculados; desde su portal ve el avance y los certificados.
 - **Operación:** quien usa la academia pide ayuda desde su cuenta y el personal la atiende en una bandeja de soporte; cualquier consumidor registra un reclamo o queja en el Libro de Reclamaciones público y consulta su respuesta con un código; y la academia publica sus páginas de texto (términos, privacidad, preguntas frecuentes).
 - **Promociones:** la academia crea cupones de descuento (porcentaje o monto, con vigencia, tope de usos y compra mínima) que el comprador aplica al pagar, y arma paquetes de cursos a un precio especial. Los descuentos no se acumulan: un cupón por compra.
-- **Pago en línea:** la academia conecta su cuenta de Mercado Pago o de PayPal y sus alumnos pagan al momento; las academias pagan su plan igual, con las cuentas de IntelectaLab. Construido y probado con respuestas simuladas; falta el primer pago de prueba real.
+- **Pago en línea:** la academia conecta su cuenta de Mercado Pago o de PayPal y sus alumnos pagan al momento; las academias pagan su plan igual, con las cuentas de IntelectaLab. Mercado Pago ya cobró un curso de prueba de punta a punta; PayPal y el pago de planes siguen probados solo con respuestas simuladas.
 - **Reembolsos:** el Administrador devuelve el importe completo de una compra pagada y el comprador pierde esa matrícula; la plataforma devuelve el pago en línea de un plan.
 - **Qué no se puede hacer todavía:** reembolsar una parte, emitir comprobantes ni enviar correos de verdad (los avisos por correo ya se generan, pero quedan en el registro del servidor hasta definir el proveedor).
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
@@ -78,7 +78,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **Terminado: el cobro de la plataforma a las academias, con pago por fuera.** Modelo descrito por el responsable del proyecto (falta confirmarlo con jefatura, decisión 16): la academia se registra en prueba gratuita, luego paga a IntelectaLab según su cantidad de alumnos, y sus alumnos le pagan los cursos a ella. Tres entregas hechas: (1) planes y prueba gratuita; (2) "Mi plan" en la academia con orden de pago y confirmación en la consola; (3) límites y vencimiento. **El plan ya limita:** con el cupo lleno no entran alumnos nuevos, y una academia vencida pasa por siete días de gracia y luego queda en solo lectura.
 
-**En curso: las pasarelas (S6)**, con las recomendaciones ya avisadas (cada academia conecta sus cuentas; Mercado Pago en soles con Yape dentro; PayPal en dólares con tipo de cambio manual; sin carrito; reembolso total por el Administrador; comprobantes fuera). Hecho: Mercado Pago y PayPal, para los alumnos y para el pago de los planes, y el reembolso total. **S6 está construido; lo que falta es probarlo de verdad.** **Sin credenciales de prueba no se ha hecho ningún cobro, ni real ni de prueba**: lo primero al tenerlas es un pago de punta a punta.
+**En curso: las pasarelas (S6)**, con las recomendaciones ya avisadas (cada academia conecta sus cuentas; Mercado Pago en soles con Yape dentro; PayPal en dólares con tipo de cambio manual; sin carrito; reembolso total por el Administrador; comprobantes fuera). Hecho: Mercado Pago y PayPal, para los alumnos y para el pago de los planes, y el reembolso total. **S6 está construido y se está probando.** El 2026-10-10 se pagó un curso con una tarjeta de prueba de Mercado Pago y la orden quedó pagada; la prueba sacó dos fallas, ya corregidas (la orden no comprobaba el pago si no se volvía por el enlace de la pasarela, y la hora del pago salía cuatro horas antes). Sigue: reembolso de ese pago, pago de un plan, y PayPal cuando haya credenciales.
 
 ## 1. Decisiones que necesitamos de jefatura
 
@@ -273,7 +273,9 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **Del cobro en línea con Mercado Pago (S6, entrega 1)**
 
-- **Hacer un pago de prueba de punta a punta con credenciales de prueba** (conectar, pagar con tarjeta y con Yape, volver, recibir el aviso). Todo está probado con respuestas simuladas.
+- Hecho el 2026-10-10: pago de prueba de un curso con tarjeta (conectar, pagar, confirmar al abrir la orden). **Falta probar con la pasarela:** Yape, saldo en cuenta, el regreso automático y los avisos (necesitan servidor con HTTPS).
+- Marcar como «Cuenta de prueba» las cuentas de usuarios de prueba de Mercado Pago: sus claves empiezan con `APP_USR-` y el sistema solo reconoce las `TEST-`.
+- Ver si Mercado Pago acepta el correo real del alumno cuando la cuenta que cobra es de prueba (en la prueba no dio problema).
 - Lista de cobros en revisión; hoy se ven como alerta en cada orden.
 - Botón para que el personal vuelva a consultar a la pasarela por una orden.
 - Conectar con permiso (OAuth) en vez de pegar la clave; exige registrar una aplicación de IntelectaLab en Mercado Pago.
@@ -410,8 +412,8 @@ Lista que jefatura envió el 2026-10-07 tras revisar el sistema.
 
 ## 5. Orden propuesto
 
-1. Commit de las entregas 2 y 3 de pagos (PayPal y reembolsos); lo anterior ya está commiteado. Limpieza del repositorio (sección 2).
-2. **Conseguir las credenciales de prueba de Mercado Pago y PayPal** y hacer con cada una un pago de prueba de un curso y de un plan, y su devolución. Es lo único que falta para dar S6 por probado. Confirmar con jefatura el modelo de cobro (decisión 16) y lo que falta de la decisión 8 (comprobantes, reembolsos).
+1. Commit de las correcciones del primer pago de prueba; lo anterior ya está commiteado. Limpieza del repositorio (sección 2).
+2. **Terminar las pruebas de pagos.** Con Mercado Pago ya se pagó un curso; faltan su devolución y el pago de un plan. Con PayPal falta todo: **conseguir sus credenciales de prueba**. Es lo que falta para dar S6 por probado. Confirmar con jefatura el modelo de cobro (decisión 16) y lo que falta de la decisión 8 (comprobantes, reembolsos).
 3. Definir servidor, dominio y correo (decisiones 1 a 3) y montar staging: con eso se puede hacer S13 y que jefatura pruebe el sistema.
 4. Responder las decisiones 14 (Moodle) y 15 (horarios) para poder estimarlas.
 5. Definir si hace falta SCORM (decisión 9) para S9.

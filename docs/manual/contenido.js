@@ -12,11 +12,12 @@
 module.exports = {
   titulo: 'Manual de uso por rol',
   producto: 'ERP SaaS IntelectaLab · Plataforma de cursos virtuales',
-  version: '1.0',
+  version: '1.1',
   fecha: '10 de octubre de 2026',
   // Qué cambió en cada versión del manual: se agrega una fila con cada cambio del sistema
   historial: [
     ['1.0', '10/10/2026', 'Primera versión. Cubre lo construido hasta la entrega 3 de pagos (reembolsos).'],
+    ['1.1', '10/10/2026', 'Pago en línea: la orden comprueba sola si ya se pagó y tiene el enlace «Comprobar pago». Nota sobre las cuentas de prueba de Mercado Pago.'],
   ],
 
   capitulos: [
@@ -99,6 +100,7 @@ module.exports = {
           'Pulsa el botón de compra. Si tienes un cupón, escríbelo: el sistema te dice cuánto descuenta. Solo se usa un cupón por compra.',
           'Confirma. Se crea una orden y la ves en «Mis compras».',
           'Paga. Si la academia tiene pago en línea, verás «Pagar con Mercado Pago» o «Pagar con PayPal»: te lleva a la página del medio de pago y, al volver, tu matrícula queda activa. PayPal cobra en dólares y te muestra cuánto antes de salir.',
+          'Si pagaste y la orden sigue «Pendiente de pago», ábrela desde «Mis compras»: al abrirla comprueba el pago. También puedes pulsar «Comprobar pago». No pagues dos veces.',
           'Si pagas por fuera, sigue las instrucciones de pago que aparecen en la orden. Tu acceso se activa cuando la academia confirma el pago.',
         ]],
         ['lista', [
@@ -196,6 +198,7 @@ module.exports = {
           'Puedes «Pausar» (deja de ofrecerse), «Cambiar claves» o «Desconectar».',
           'Mercado Pago cobra en soles (tarjeta, Yape o saldo). PayPal cobra en dólares.',
           'El pago por fuera sigue disponible junto al pago en línea.',
+          'Para probar con Mercado Pago necesitas dos cuentas de prueba: la vendedora (su Access Token es el que conectas) y una compradora para pagar. Mercado Pago no deja pagar con la misma cuenta que cobra: el botón «Pagar» queda gris.',
         ]],
         ['nota', 'El pago en línea está construido pero todavía no se ha probado con cuentas reales de las pasarelas. Antes de usarlo con alumnos, haz un pago de prueba.'],
 

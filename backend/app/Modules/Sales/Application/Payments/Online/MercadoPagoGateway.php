@@ -206,7 +206,7 @@ class MercadoPagoGateway implements OnlineGateway
                 in_array($payment['payment_type_id'] ?? null, ['bank_transfer', 'atm', 'ticket'], true) => Payment::METHOD_TRANSFER,
                 default => Payment::METHOD_OTHER,
             },
-            paidAt: isset($payment['date_approved']) ? Carbon::parse($payment['date_approved']) : null,
+            paidAt: isset($payment['date_approved']) ? Carbon::parse($payment['date_approved'])->utc() : null,
         );
     }
 
