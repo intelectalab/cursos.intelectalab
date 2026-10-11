@@ -10,6 +10,7 @@ use App\Modules\Certificates\Domain\CertificateLayout;
 use App\Modules\Certificates\Domain\Models\Certificate;
 use App\Modules\Certificates\Domain\Models\CertificateTemplate;
 use App\Modules\Certificates\Http\CertificatePresenter;
+use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Files\Application\FileStorage;
 use App\Modules\Files\Domain\Models\File;
@@ -22,6 +23,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -38,6 +41,9 @@ class CertificateController extends Controller
 
     /** Imágenes que la organización coloca en el diseño libre */
     public const IMAGE_PURPOSE = 'certificate_image';
+
+    /** Tope de plantillas por organización */
+    public const MAX_TEMPLATES = 20;
 
     public function __construct(
         private readonly CertificateService $certificates,
@@ -160,9 +166,9 @@ class CertificateController extends Controller
         return self::download($request, $certificate, $pdf);
     }
 
-    public function template(): JsonResponse
+    public function template(Request $request): JsonResponse
     {
-        return ApiResponse::success($this->presentTemplate($this->certificates->template()), [
+        return ApiResponse::success($this->presentTemplate($this->current($request)), [
             'signature' => [
                 'max_kb' => config('files.limits.image'),
                 'extensions' => config('files.purposes.'.self::SIGNATURE_PURPOSE.'.extensions'),
@@ -196,7 +202,7 @@ class CertificateController extends Controller
      */
     public function updateLayout(Request $request): JsonResponse
     {
-        $template = $this->certificates->template();
+        $template = $this->current($request);
         $before = ['layout' => $template->layout];
 
         $template->fill(['layout' => $request->input('layout') === null ? null : $this->validatedLayout($request)])->save();
@@ -233,15 +239,163 @@ class CertificateController extends Controller
     /**
      * El fondo, para dibujarlo bajo el lienzo del editor.
      */
-    public function background(): StreamedResponse
+    public function background(Request $request): StreamedResponse
     {
-        $file = $this->certificates->template()->background;
+        $file = $this->current($request)->background;
 
         if (! $file || ! $this->storage->exists($file)) {
             throw new ApiException(ErrorCode::NotFound, 'No hay un fondo cargado.', 404);
         }
 
         return $this->storage->response($file);
+    }
+
+    /**
+     * Plantillas de la organización y los cursos que pueden elegir una.
+     */
+    public function templates(Request $request): JsonResponse
+    {
+        $templates = CertificateTemplate::query()->orderByDesc('is_default')->orderBy('name')->orderBy('id')->get();
+
+        if ($templates->isEmpty()) {
+            $templates = collect([$this->certificates->template()]);
+        }
+
+        return ApiResponse::success($templates->map(fn (CertificateTemplate $template) => $this->presentTemplate($template))->values(), [
+            'courses' => Course::query()->where('issues_certificate', true)->orderBy('title')->get(['id', 'title'])
+                ->map(fn (Course $course) => ['id' => $course->id, 'title' => $course->title])->values(),
+            'max' => self::MAX_TEMPLATES,
+        ]);
+    }
+
+    /**
+     * Crea una plantilla, en blanco o como copia de otra.
+     */
+    public function storeTemplate(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'copy_from' => ['nullable', 'uuid'],
+        ]);
+
+        // La principal existe desde que hay una segunda
+        $main = $this->certificates->template();
+        if (! $main->exists) {
+            $main->save();
+        }
+
+        if (CertificateTemplate::query()->count() >= self::MAX_TEMPLATES) {
+            throw new ApiException(ErrorCode::ValidationError, 'Ya tienes '.self::MAX_TEMPLATES.' plantillas. Elimina una que no uses.', 422);
+        }
+
+        $source = ($data['copy_from'] ?? null) ? $this->certificates->template($data['copy_from']) : null;
+
+        $template = CertificateTemplate::create([
+            'name' => $data['name'],
+            'is_default' => false,
+            // La copia comparte fondo, firma e imágenes con la original
+            ...($source ? $source->only(['signer_name', 'signer_title', 'signature_file_id', 'background_file_id', 'design', 'layout']) : []),
+        ]);
+
+        $this->audit->record('certificate_templates.created', $template, null, ['name' => $template->name, 'copied_from' => $source?->name]);
+
+        return ApiResponse::success($this->presentTemplate($template), null, 201);
+    }
+
+    /**
+     * Nombre de la plantilla y los cursos que la usan.
+     */
+    public function renameTemplate(Request $request, string $template): JsonResponse
+    {
+        $record = $this->certificates->template($template);
+        $data = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:100'],
+            'course_ids' => ['sometimes', 'array'],
+            'course_ids.*' => ['uuid'],
+        ]);
+
+        $before = ['name' => $record->name, 'courses' => Course::query()->where('certificate_template_id', $record->id)->count()];
+
+        if (isset($data['name'])) {
+            $record->update(['name' => $data['name']]);
+        }
+
+        if (array_key_exists('course_ids', $data)) {
+            // Los cursos que salen de esta plantilla vuelven a la principal
+            Course::query()->where('certificate_template_id', $record->id)->whereNotIn('id', $data['course_ids'])->update(['certificate_template_id' => null]);
+            Course::query()->whereIn('id', $data['course_ids'])->update(['certificate_template_id' => $record->is_default ? null : $record->id]);
+        }
+
+        $this->audit->record('certificate_templates.updated', $record, $before, ['name' => $record->name, 'courses' => Course::query()->where('certificate_template_id', $record->id)->count()]);
+
+        return ApiResponse::success($this->presentTemplate($record));
+    }
+
+    /**
+     * La plantilla pasa a ser la principal: la usan los cursos que no eligieron otra.
+     */
+    public function makeDefault(string $template): JsonResponse
+    {
+        $record = $this->certificates->template($template);
+
+        DB::transaction(function () use ($record) {
+            CertificateTemplate::query()->where('is_default', true)->update(['is_default' => false]);
+            $record->update(['is_default' => true]);
+            // Los cursos que la habían elegido ya la reciben por ser la principal
+            Course::query()->where('certificate_template_id', $record->id)->update(['certificate_template_id' => null]);
+        });
+
+        $this->audit->record('certificate_templates.made_default', $record, null, ['name' => $record->name]);
+
+        return ApiResponse::success($this->presentTemplate($record));
+    }
+
+    /**
+     * Elimina una plantilla que no es la principal. Sus cursos pasan a la
+     * principal; los certificados ya emitidos conservan su diseño.
+     */
+    public function destroyTemplate(string $template): JsonResponse
+    {
+        $record = $this->certificates->template($template);
+
+        if ($record->is_default) {
+            throw new ApiException(ErrorCode::ValidationError, 'La plantilla principal no se elimina. Marca otra como principal primero.', 422);
+        }
+
+        $files = array_filter([$record->background, $record->signature]);
+        $this->audit->record('certificate_templates.deleted', $record, ['name' => $record->name]);
+        $record->delete();
+
+        foreach ($files as $file) {
+            $this->discard($file);
+        }
+
+        return ApiResponse::success(null);
+    }
+
+    /**
+     * La plantilla sobre la que trabaja la petición: la indicada o la principal.
+     */
+    private function current(Request $request): CertificateTemplate
+    {
+        $id = $request->input('template_id');
+
+        if ($id !== null && ! Str::isUuid($id)) {
+            throw new ApiException(ErrorCode::NotFound, 'La plantilla no existe.', 404);
+        }
+
+        return $this->certificates->template($id);
+    }
+
+    /**
+     * Borra un archivo reemplazado, salvo que lo use otra plantilla o un
+     * certificado ya emitido con ese diseño.
+     */
+    private function discard(File $file, ?CertificateTemplate $template = null): void
+    {
+        if (! $this->certificates->fileInUse($file, $template)) {
+            $this->storage->delete($file);
+        }
     }
 
     /**
@@ -291,7 +445,7 @@ class CertificateController extends Controller
             'design.qr_position' => ['sometimes', Rule::in(CertificateTemplate::POSITIONS)],
         ], ['design.*.regex' => 'El color debe tener el formato #RRGGBB.']);
 
-        $template = $this->certificates->template();
+        $template = $this->current($request);
         $before = $template->only(['signer_name', 'signer_title']) + ['design' => $template->resolvedDesign()];
         $design = ($data['design'] ?? []) + $template->resolvedDesign();
 
@@ -313,7 +467,7 @@ class CertificateController extends Controller
     {
         $request->validate(['file' => $this->storage->rules(self::SIGNATURE_PURPOSE)]);
 
-        $template = $this->certificates->template();
+        $template = $this->current($request);
         $previous = $template->signature;
 
         $file = $this->storage->store($request->file('file'), self::SIGNATURE_PURPOSE);
@@ -321,7 +475,7 @@ class CertificateController extends Controller
         $template->unsetRelation('signature');
 
         if ($previous) {
-            $this->storage->delete($previous);
+            $this->discard($previous, $template);
         }
 
         $this->audit->record('certificate_templates.signature_updated', $template, null, ['signature' => $file->original_name]);
@@ -329,15 +483,15 @@ class CertificateController extends Controller
         return ApiResponse::success($this->presentTemplate($template));
     }
 
-    public function removeSignature(): JsonResponse
+    public function removeSignature(Request $request): JsonResponse
     {
-        $template = $this->certificates->template();
+        $template = $this->current($request);
         $previous = $template->signature;
 
         if ($previous) {
             $template->update(['signature_file_id' => null]);
             $template->unsetRelation('signature');
-            $this->storage->delete($previous);
+            $this->discard($previous, $template);
             $this->audit->record('certificate_templates.signature_removed', $template, ['signature' => $previous->original_name]);
         }
 
@@ -351,7 +505,7 @@ class CertificateController extends Controller
     {
         $request->validate(['file' => $this->storage->rules(self::BACKGROUND_PURPOSE)]);
 
-        $template = $this->certificates->template();
+        $template = $this->current($request);
         $previous = $template->background;
 
         $file = $this->storage->store($request->file('file'), self::BACKGROUND_PURPOSE);
@@ -359,7 +513,7 @@ class CertificateController extends Controller
         $template->unsetRelation('background');
 
         if ($previous) {
-            $this->storage->delete($previous);
+            $this->discard($previous, $template);
         }
 
         $this->audit->record('certificate_templates.background_updated', $template, null, ['background' => $file->original_name]);
@@ -370,15 +524,15 @@ class CertificateController extends Controller
     /**
      * Sin fondo propio, el certificado vuelve al diseño del sistema.
      */
-    public function removeBackground(): JsonResponse
+    public function removeBackground(Request $request): JsonResponse
     {
-        $template = $this->certificates->template();
+        $template = $this->current($request);
         $previous = $template->background;
 
         if ($previous) {
             $template->update(['background_file_id' => null]);
             $template->unsetRelation('background');
-            $this->storage->delete($previous);
+            $this->discard($previous, $template);
             $this->audit->record('certificate_templates.background_removed', $template, ['background' => $previous->original_name]);
         }
 
@@ -390,7 +544,7 @@ class CertificateController extends Controller
      */
     public function previewTemplate(Request $request, CertificatePdf $pdf): Response
     {
-        $template = $this->certificates->template();
+        $template = $this->current($request);
         $sample = new Certificate([
             'verification_code' => 'ABCD-EFGH-JKLM',
             'status' => Certificate::STATUS_ISSUED,
@@ -407,9 +561,11 @@ class CertificateController extends Controller
         ]);
 
         // El editor visual previsualiza lo que tiene en pantalla, aunque no lo haya guardado
-        $layout = $request->isMethod('post') && $request->input('layout') !== null ? $this->validatedLayout($request) : null;
+        $sample->design = $request->isMethod('post') && $request->input('layout') !== null
+            ? ['layout' => $this->validatedLayout($request)] + $template->frozen()
+            : $template->frozen();
 
-        return response($pdf->render($sample, $request->getSchemeAndHttpHost().'/verify/ABCD-EFGH-JKLM', $layout), 200, [
+        return response($pdf->render($sample, $request->getSchemeAndHttpHost().'/verify/ABCD-EFGH-JKLM'), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="vista-previa-certificado.pdf"',
         ]);
@@ -418,9 +574,9 @@ class CertificateController extends Controller
     /**
      * La firma es privada: solo la ve el personal que gestiona certificados.
      */
-    public function signature(): StreamedResponse
+    public function signature(Request $request): StreamedResponse
     {
-        $file = $this->certificates->template()->signature;
+        $file = $this->current($request)->signature;
 
         if (! $file || ! $this->storage->exists($file)) {
             throw new ApiException(ErrorCode::NotFound, 'No hay una firma cargada.', 404);
@@ -450,6 +606,12 @@ class CertificateController extends Controller
     private function presentTemplate(CertificateTemplate $template): array
     {
         return [
+            // null = la principal, que la organización todavía no guardó
+            'id' => $template->id,
+            'name' => $template->name ?? CertificateTemplate::DEFAULT_NAME,
+            'is_default' => (bool) $template->is_default,
+            // Cursos que eligieron esta plantilla; los demás usan la principal
+            'course_ids' => $template->exists ? Course::query()->where('certificate_template_id', $template->id)->orderBy('title')->pluck('id')->all() : [],
             'signer_name' => $template->signer_name,
             'signer_title' => $template->signer_title,
             'has_signature' => $template->signature_file_id !== null,

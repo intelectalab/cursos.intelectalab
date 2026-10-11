@@ -4,7 +4,7 @@ import { Eye, ImageUp, MousePointer2, Palette, RotateCcw, Trash2 } from 'lucide-
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, CHECKBOX_CLASS, Field, INPUT_CLASS } from '../../../shared/ui';
 import { HelpTip } from '../../../shared/ui/filters';
-import { certificatesApi, type CertificateDesign, type CertificateTemplate, type Position } from '../api';
+import { templateApi, type CertificateDesign, type CertificateTemplate, type Position } from '../api';
 
 const POSITION_LABEL: Record<Position, string> = { LEFT: 'Izquierda', CENTER: 'Centro', RIGHT: 'Derecha' };
 const HEIGHT_LABEL: Record<CertificateDesign['text_top'], string> = { TOP: 'Arriba', MIDDLE: 'Al medio', LOW: 'Más abajo' };
@@ -32,6 +32,8 @@ export const CertificateDesignSection: React.FC<{
   onChange: (template: CertificateTemplate) => void;
 }> = ({ template, maxKb, onChange }) => {
   const fileInput = useRef<HTMLInputElement>(null);
+  const tpl = templateApi(template.id);
+  const editorPath = template.id ? `/certificates/design?template=${template.id}` : '/certificates/design';
   const [design, setDesign] = useState<CertificateDesign>(template.design);
   const [busy, setBusy] = useState<'save' | 'upload' | 'remove' | 'preview' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,14 +82,14 @@ export const CertificateDesignSection: React.FC<{
       setError(`La imagen pesa más de ${maxMb} MB. Guárdala como JPG o bájale la resolución.`);
       return;
     }
-    void run('upload', () => certificatesApi.uploadBackground(file), 'No se pudo subir el fondo.');
+    void run('upload', () => tpl.uploadBackground(file), 'No se pudo subir el fondo.');
   };
 
   const preview = async () => {
     setBusy('preview');
     setError(null);
     try {
-      setPreviewUrl(await certificatesApi.templatePreviewUrl());
+      setPreviewUrl(await tpl.templatePreviewUrl());
     } catch (err) {
       setError(apiErrorMessage(err, 'No se pudo generar la vista previa.'));
     } finally {
@@ -145,7 +147,7 @@ export const CertificateDesignSection: React.FC<{
             </>
           )}
         </p>
-        <Link to="/certificates/design" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-violet-800 underline">
+        <Link to={editorPath} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-violet-800 underline">
           <MousePointer2 className="w-3.5 h-3.5" />
           {template.layout ? 'Abrir el editor visual' : 'Probar el editor visual'}
         </Link>
@@ -166,7 +168,7 @@ export const CertificateDesignSection: React.FC<{
               variant="danger"
               icon={<Trash2 className="w-3.5 h-3.5" />}
               processing={busy === 'remove'}
-              onClick={() => void run('remove', certificatesApi.removeBackground, 'No se pudo quitar el fondo.')}
+              onClick={() => void run('remove', tpl.removeBackground, 'No se pudo quitar el fondo.')}
             >
               Quitar y volver al diseño del sistema
             </Button>
@@ -214,7 +216,7 @@ export const CertificateDesignSection: React.FC<{
           variant="primary"
           processing={busy === 'save'}
           disabled={!dirty || clash}
-          onClick={() => void run('save', () => certificatesApi.updateTemplate({ design }), 'No se pudo guardar el diseño.')}
+          onClick={() => void run('save', () => tpl.updateTemplate({ design }), 'No se pudo guardar el diseño.')}
         >
           Guardar diseño
         </Button>

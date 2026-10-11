@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Award, ImageUp, Search, Trash2 } from 'lucide-react';
+import { Award, CopyPlus, ImageUp, Pencil, Search, Star, Trash2 } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
-import { Alert, Button, EmptyState, Field, INPUT_CLASS, LoadingState, Modal } from '../../../shared/ui';
+import { Alert, Badge, Button, CHECKBOX_CLASS, EmptyState, Field, INPUT_CLASS, LoadingState, Modal } from '../../../shared/ui';
 import { SelectAll, SelectRow } from '../../../shared/ui/filters';
 import {
   certificatesApi,
   formatDate,
+  templateApi,
   type Certificate,
   type CertificateCandidate,
   type CertificateTemplate,
@@ -194,8 +195,10 @@ export const RevokeModal: React.FC<{ certificate: Certificate; onClose: () => vo
 };
 
 // Plantilla del certificado: quién firma. El diseño es el mismo para toda la academia.
-export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+// Quién firma y cómo se ve una plantilla
+const TemplateForm: React.FC<{ templateId: string | null; onSaved: () => void }> = ({ templateId, onSaved }) => {
   const fileInput = useRef<HTMLInputElement>(null);
+  const tpl = templateApi(templateId);
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [rules, setRules] = useState<SignatureRules>({ max_kb: 2048, extensions: [] });
   const [backgroundMaxKb, setBackgroundMaxKb] = useState(2048);
@@ -210,7 +213,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 
   useEffect(() => {
     let active = true;
-    certificatesApi
+    templateApi(templateId)
       .template()
       .then((result) => {
         if (!active) return;
@@ -224,7 +227,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
     return () => {
       active = false;
     };
-  }, []);
+  }, [templateId]);
 
   // La firma se pide aparte, con la sesión
   const hasSignature = template?.has_signature ?? false;
@@ -233,7 +236,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 
     let active = true;
     let url: string | null = null;
-    certificatesApi
+    templateApi(templateId)
       .signatureUrl()
       .then((result) => {
         url = result;
@@ -244,7 +247,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
       active = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [hasSignature, template]);
+  }, [hasSignature, template, templateId]);
 
   const run = async (kind: 'save' | 'upload' | 'remove', action: () => Promise<CertificateTemplate>, fallback: string) => {
     setBusy(kind);
@@ -255,6 +258,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
       setTemplate(result);
       if (!result.has_signature) setPreview(null);
       if (kind === 'save') setSaved(true);
+      onSaved();
     } catch (err) {
       setError(apiErrorMessage(err, fallback));
     } finally {
@@ -264,7 +268,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 
   const save = (event: React.FormEvent) => {
     event.preventDefault();
-    void run('save', () => certificatesApi.updateTemplate({ signer_name: name.trim() || null, signer_title: title.trim() || null }), 'No se pudo guardar.');
+    void run('save', () => tpl.updateTemplate({ signer_name: name.trim() || null, signer_title: title.trim() || null }), 'No se pudo guardar.');
   };
 
   const upload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -276,24 +280,11 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
       setError(`La imagen pesa más de ${maxMb} MB.`);
       return;
     }
-    void run('upload', () => certificatesApi.uploadSignature(file), 'No se pudo subir la firma.');
+    void run('upload', () => tpl.uploadSignature(file), 'No se pudo subir la firma.');
   };
 
   return (
-    <Modal
-      title="Plantilla del certificado"
-      subtitle="Quién firma el certificado y cómo se ve: con el diseño del sistema o con tu propio fondo."
-      size="wide"
-      onClose={onClose}
-      footer={
-        <>
-          <Button onClick={onClose}>Cerrar</Button>
-          <Button variant="primary" type="submit" form="certificate-template-form" processing={busy === 'save'} disabled={!template}>
-            Guardar firmante
-          </Button>
-        </>
-      }
-    >
+    <>
       {!template && !error && <LoadingState />}
       {error && !template && <Alert>{error}</Alert>}
       {template && (
@@ -329,7 +320,7 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                       variant="danger"
                       icon={<Trash2 className="w-3.5 h-3.5" />}
                       processing={busy === 'remove'}
-                      onClick={() => void run('remove', certificatesApi.removeSignature, 'No se pudo quitar la firma.')}
+                      onClick={() => void run('remove', tpl.removeSignature, 'No se pudo quitar la firma.')}
                     >
                       Quitar
                     </Button>
@@ -340,11 +331,200 @@ export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
             </div>
             <input ref={fileInput} type="file" accept=".png,.jpg,.jpeg" className="hidden" onChange={upload} />
           </div>
+          <div>
+            <Button variant="primary" type="submit" processing={busy === 'save'}>
+              Guardar firmante
+            </Button>
+          </div>
         </form>
       )}
       {template && (
         <div className="mt-5">
           <CertificateDesignSection template={template} maxKb={backgroundMaxKb} onChange={setTemplate} />
+        </div>
+      )}
+    </>
+  );
+};
+
+type TemplateList = { templates: CertificateTemplate[]; courses: { id: string; title: string }[]; max: number };
+
+// Plantillas de la academia: una principal y, si hace falta, otras para cursos concretos
+export const TemplateModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [list, setList] = useState<TemplateList | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mode, setMode] = useState<'create' | 'rename' | null>(null);
+  const [name, setName] = useState('');
+  const [copy, setCopy] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setList(await certificatesApi.templates());
+    } catch (err) {
+      setError(apiErrorMessage(err, 'No se pudieron cargar las plantillas.'));
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(load, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
+
+  // Sin elegir ninguna se trabaja sobre la principal
+  const selected = list?.templates.find((template) => template.id === selectedId) ?? list?.templates.find((template) => template.is_default) ?? list?.templates[0] ?? null;
+
+  const act = async (action: () => Promise<void>, fallback: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      await load();
+      setMode(null);
+    } catch (err) {
+      setError(apiErrorMessage(err, fallback));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitName = (event: React.FormEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (mode === 'create') {
+      void act(async () => {
+        const created = await certificatesApi.createTemplate(name.trim(), copy ? (selected?.id ?? null) : null);
+        setSelectedId(created.id);
+      }, 'No se pudo crear la plantilla.');
+    } else if (selected?.id) {
+      const id = selected.id;
+      void act(async () => void (await certificatesApi.updateTemplateInfo(id, { name: name.trim() })), 'No se pudo cambiar el nombre.');
+    }
+  };
+
+  const toggleCourse = (courseId: string) => {
+    if (!selected?.id) return;
+    const id = selected.id;
+    const next = selected.course_ids.includes(courseId) ? selected.course_ids.filter((course) => course !== courseId) : [...selected.course_ids, courseId];
+    void act(async () => void (await certificatesApi.updateTemplateInfo(id, { course_ids: next })), 'No se pudo asignar el curso.');
+  };
+
+  // Qué otra plantilla usa hoy cada curso, para avisar antes de quitárselo
+  const ownerOf = (courseId: string) => list?.templates.find((template) => template.id !== selected?.id && template.course_ids.includes(courseId))?.name;
+
+  return (
+    <Modal
+      title="Plantillas de certificado"
+      subtitle="Quién firma y cómo se ve el certificado. Con una plantilla alcanza; crea otras si algunos cursos necesitan un diseño distinto."
+      size="wide"
+      onClose={onClose}
+      footer={<Button onClick={onClose}>Cerrar</Button>}
+    >
+      {!list && !error && <LoadingState />}
+      {error && <Alert>{error}</Alert>}
+      {list && selected && (
+        <div className="space-y-5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+            <div className="flex flex-wrap items-end gap-2.5">
+              <div className="flex-1 min-w-[220px]">
+                <Field label="Plantilla">
+                  <select className={INPUT_CLASS} value={selected.id ?? ''} onChange={(event) => { setSelectedId(event.target.value || null); setMode(null); }}>
+                    {list.templates.map((template) => (
+                      <option key={template.id ?? 'main'} value={template.id ?? ''}>
+                        {template.name}
+                        {template.is_default ? ' (principal)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <Button
+                size="sm"
+                icon={<CopyPlus className="w-3.5 h-3.5" />}
+                disabled={list.templates.length >= list.max}
+                onClick={() => { setName(''); setCopy(true); setMode('create'); }}
+              >
+                Nueva plantilla
+              </Button>
+              {selected.id && (
+                <Button size="sm" icon={<Pencil className="w-3.5 h-3.5" />} onClick={() => { setName(selected.name); setMode('rename'); }}>
+                  Renombrar
+                </Button>
+              )}
+              {selected.id && !selected.is_default && (
+                <>
+                  <Button
+                    size="sm"
+                    icon={<Star className="w-3.5 h-3.5" />}
+                    processing={busy}
+                    onClick={() => { const id = selected.id!; void act(async () => void (await certificatesApi.makeDefaultTemplate(id)), 'No se pudo marcar como principal.'); }}
+                  >
+                    Hacer principal
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                    processing={busy}
+                    onClick={() => { const id = selected.id!; void act(async () => { await certificatesApi.deleteTemplate(id); setSelectedId(null); }, 'No se pudo eliminar la plantilla.'); }}
+                  >
+                    Eliminar
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {mode && (
+              <form onSubmit={submitName} className="flex flex-wrap items-end gap-2.5">
+                <div className="flex-1 min-w-[220px]">
+                  <Field label={mode === 'create' ? 'Nombre de la plantilla nueva' : 'Nombre de la plantilla'}>
+                    <input className={INPUT_CLASS} required maxLength={100} autoFocus placeholder="Ej. Diplomados" value={name} onChange={(event) => setName(event.target.value)} />
+                  </Field>
+                </div>
+                {mode === 'create' && (
+                  <label className="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer pb-2.5">
+                    <input type="checkbox" className={CHECKBOX_CLASS} checked={copy} onChange={(event) => setCopy(event.target.checked)} />
+                    Copiar «{selected.name}»
+                  </label>
+                )}
+                <Button size="sm" variant="primary" type="submit" processing={busy}>
+                  {mode === 'create' ? 'Crear' : 'Guardar nombre'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setMode(null)}>
+                  Cancelar
+                </Button>
+              </form>
+            )}
+
+            {selected.is_default ? (
+              <p className="text-xs text-slate-500">
+                <Badge tone="success">Principal</Badge> La usan todos los cursos que no eligieron otra plantilla. Los certificados ya emitidos conservan el diseño con el que salieron.
+              </p>
+            ) : (
+              <fieldset>
+                <legend className="block text-[13px] font-medium text-slate-700 mb-1.5">Cursos que usan esta plantilla</legend>
+                {list.courses.length === 0 ? (
+                  <p className="text-xs text-slate-500">Ningún curso entrega certificado todavía.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                    {list.courses.map((course) => (
+                      <label key={course.id} className="flex items-start gap-2 text-[13px] text-slate-700 cursor-pointer">
+                        <input type="checkbox" className={`${CHECKBOX_CLASS} mt-0.5`} disabled={busy} checked={selected.course_ids.includes(course.id)} onChange={() => toggleCourse(course.id)} />
+                        <span>
+                          {course.title}
+                          {ownerOf(course.id) && <span className="block text-xs text-slate-500">Hoy usa «{ownerOf(course.id)}»</span>}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-1.5 text-xs text-slate-500">Los demás cursos usan la plantilla principal. Se guarda al marcar.</p>
+              </fieldset>
+            )}
+          </div>
+
+          <TemplateForm key={selected.id ?? 'main'} templateId={selected.id} onSaved={load} />
         </div>
       )}
     </Modal>

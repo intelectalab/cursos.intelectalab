@@ -2,7 +2,7 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-10, al cerrar la entrega 1 del editor visual de certificados.
+Última actualización: 2026-10-10, al cerrar la entrega 2 del editor visual de certificados.
 
 ## Dónde estamos
 
@@ -56,7 +56,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Cierre de brechas del Maestro · entrega 1 | Exportar a Excel el tablero de reportes, las órdenes, los alumnos, las matrículas y los prospectos, con los filtros de la pantalla | Hecho |
 | Cierre de brechas del Maestro · entrega 2 | Paso de revisión en Páginas: quien redacta envía a revisión; quien publica aprueba publicando o devuelve con observaciones | Hecho |
 | Editor visual de certificados · entrega 1 | Lienzo donde cada dato, texto o imagen se arrastra, se redimensiona y se edita; hoja horizontal o vertical; vista previa en PDF | Hecho |
-| Editor visual de certificados · entrega 2 | Varias plantillas con una por curso, y diseño congelado al emitir | Pendiente |
+| Editor visual de certificados · entrega 2 | Varias plantillas con una por curso, y diseño congelado al emitir (los ya emitidos conservan el suyo) | Hecho |
 | Ajustes de evaluación | El cuestionario que vence califica lo guardado; nota mínima para aprobar el curso, que también exige el certificado | Hecho |
 | Planes de la plataforma · entrega 1 | Planes por tope de alumnos, prueba gratuita de 14 días y 10 alumnos para toda academia nueva, asignación de plan desde la ficha y tarjeta "Tu plan" en la academia | Hecho |
 | Planes de la plataforma · entrega 2 | "Mi plan": la academia elige plan, genera su orden de pago a IntelectaLab e informa su pago; el super administrador lo confirma en "Pagos" y el plan queda vigente | Hecho |
@@ -64,7 +64,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Consola de plataforma · ficha por academia | Datos editables, cifras y ventas de seis meses, administradores con restablecimiento de contraseña, historial de la plataforma y motivo obligatorio al suspender | Hecho |
 
 - **Avance del plan:** 12 de 14 sprints construidos (S0 a S8 y S10 a S12). **S6 Pagos tiene su primer pago de prueba** (un curso con tarjeta, en Mercado Pago, el 2026-10-10); faltan el reembolso, el pago de un plan y todo PayPal, que no tiene credenciales. Los comprobantes siguen fuera. Faltan S9, en espera de una decisión, y S13.
-- **Calidad:** 314 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que no se corren desde S12; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
+- **Calidad:** 315 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que no se corren desde S12; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
 - **Seguridad:** las pruebas revisan que las 277 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 65 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
@@ -171,7 +171,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 **De certificados (S7, entrega 1)**
 
 - Aviso por correo al emitir el certificado (depende de la decisión 3).
-- Más de una plantilla o un editor de diseño; plantilla por curso.
+- Resuelto el 2026-10-10: varias plantillas, plantilla por curso y editor visual.
 - Que el alumno vea desde "Mis cursos" que ya tiene certificado, y que el profesor vea los de sus cursos.
 - Emitir de una vez todos los certificados pendientes.
 - Pantalla para ver las consultas de verificación registradas.
@@ -388,8 +388,8 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **De la plantilla de certificado y la consola de plataforma (revisión de jefatura, entrega 3)**
 
-- Resuelto el 2026-10-10: editor visual de la plantilla (arrastrar cada dato, textos libres, imágenes propias, seis tipografías). Faltan: **varias plantillas y una por curso**; **congelar el diseño al emitir**; una tipografía caligráfica (exige instalar un archivo de fuente: necesita aprobación); deshacer, capas, guías entre elementos, formas y rotación; limpiar las imágenes subidas que ya no se usan; probarlo en pantalla táctil.
-- Decidir si el diseño debe congelarse al emitir cada certificado (hoy un cambio de diseño alcanza a los ya emitidos).
+- Resuelto el 2026-10-10: editor visual de la plantilla (arrastrar cada dato, textos libres, imágenes propias, seis tipografías). Resuelto también: varias plantillas con una por curso y diseño congelado al emitir. Faltan: mostrar en la ficha del curso qué plantilla usa; elegir plantilla al emitir a mano; miniaturas en el selector; una tipografía caligráfica (exige instalar un archivo de fuente: necesita aprobación); deshacer, capas, guías entre elementos, formas y rotación; limpiar las imágenes subidas que ya no se usan; probarlo en pantalla táctil.
+- Resuelto el 2026-10-10: el diseño se congela al emitir. Falta confirmar con jefatura que así lo quieren, y una forma de regenerar un certificado emitido con el diseño nuevo sin anularlo.
 - Consola: planes y límites por academia y cobro a las academias (esperan que jefatura defina los planes); crear o desactivar administradores de una academia desde su ficha; gestionar otros administradores de plataforma; ventas por mes en la zona horaria de cada academia. Editar los datos y el historial único ya están hechos (ficha por academia).
 - Modo soporte que oculte datos personales.
 

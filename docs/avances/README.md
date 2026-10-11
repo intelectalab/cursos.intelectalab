@@ -52,6 +52,7 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-10 | Reportes: exportar a Excel el tablero, las órdenes, los alumnos, las matrículas y los prospectos (cierra RF-REP-001) | [2026-10-10-exportar-a-excel.md](2026-10-10-exportar-a-excel.md) |
 | 2026-10-10 | Páginas: paso de revisión (enviar a revisión, publicar o devolver con observaciones; cierra RF-CMS-001) | [2026-10-10-paginas-paso-de-revision.md](2026-10-10-paginas-paso-de-revision.md) |
 | 2026-10-10 | Certificados: editor visual, entrega 1 (lienzo donde cada dato, texto o imagen se arrastra y se edita) | [2026-10-10-certificados-editor-visual.md](2026-10-10-certificados-editor-visual.md) |
+| 2026-10-10 | Certificados: editor visual, entrega 2 (varias plantillas con una por curso y diseño congelado al emitir) | [2026-10-10-certificados-plantillas-por-curso.md](2026-10-10-certificados-plantillas-por-curso.md) |
 
 Documentos relacionados:
 

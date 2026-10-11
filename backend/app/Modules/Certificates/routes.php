@@ -21,6 +21,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     Route::middleware('permission:certificates.read,certificates.issue')->group(function () {
         Route::get('/certificates', [CertificateController::class, 'index']);
         Route::get('/certificates/template', [CertificateController::class, 'template']);
+        Route::get('/certificates/templates', [CertificateController::class, 'templates']);
         Route::get('/certificates/template/signature', [CertificateController::class, 'signature']);
         Route::get('/certificates/template/preview', [CertificateController::class, 'previewTemplate']);
         Route::get('/certificates/template/background', [CertificateController::class, 'background']);
@@ -45,6 +46,11 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::delete('/certificates/template/signature', [CertificateController::class, 'removeSignature']);
         Route::post('/certificates/template/background', [CertificateController::class, 'uploadBackground']);
         Route::delete('/certificates/template/background', [CertificateController::class, 'removeBackground']);
+        // Varias plantillas: crear, renombrar y asignar cursos, marcar la principal, eliminar
+        Route::post('/certificates/templates', [CertificateController::class, 'storeTemplate']);
+        Route::put('/certificates/templates/{template}', [CertificateController::class, 'renameTemplate'])->whereUuid('template');
+        Route::post('/certificates/templates/{template}/default', [CertificateController::class, 'makeDefault'])->whereUuid('template');
+        Route::delete('/certificates/templates/{template}', [CertificateController::class, 'destroyTemplate'])->whereUuid('template');
         // Editor visual: diseño libre, sus imágenes y la vista previa de lo que hay en pantalla
         Route::put('/certificates/template/layout', [CertificateController::class, 'updateLayout']);
         Route::post('/certificates/template/images', [CertificateController::class, 'uploadImage']);

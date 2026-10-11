@@ -12,7 +12,7 @@
 module.exports = {
   titulo: 'Manual de uso por rol',
   producto: 'ERP SaaS IntelectaLab · Plataforma de cursos virtuales',
-  version: '1.4',
+  version: '1.5',
   fecha: '10 de octubre de 2026',
   // Qué cambió en cada versión del manual: se agrega una fila con cada cambio del sistema
   historial: [
@@ -21,6 +21,7 @@ module.exports = {
     ['1.2', '10/10/2026', 'Botón «Exportar a Excel» en Reportes, Ventas y pagos, Alumnos, Matrículas y Prospectos.'],
     ['1.3', '10/10/2026', 'Páginas: paso de revisión. Quien redacta envía a revisión; quien publica aprueba o devuelve con observaciones.'],
     ['1.4', '10/10/2026', 'Certificados: editor visual para mover y editar cada elemento del diseño.'],
+    ['1.5', '10/10/2026', 'Certificados: varias plantillas con una por curso; el certificado emitido conserva su diseño.'],
   ],
 
   capitulos: [
@@ -282,7 +283,8 @@ module.exports = {
         ['lista', [
           'El certificado se emite solo cuando el alumno cumple los requisitos del curso. También puedes emitirlo a mano o emitir todos los pendientes.',
           'Puedes anular un certificado con un motivo; al verificarlo figurará como no válido.',
-          'El diseño es uno por academia: fondo propio, firma, colores y posición de los datos, con vista previa. Un cambio de diseño alcanza también a los ya emitidos.',
+          'Cada plantilla tiene su firmante, firma, fondo y diseño, con vista previa. Un certificado ya emitido conserva el diseño con el que salió: cambiar la plantilla después no lo altera.',
+          'Plantillas: en «Plantilla» eliges cuál editar. La principal la usan todos los cursos que no eligieron otra. Con «Nueva plantilla» creas otra (en blanco o como copia) y marcas en «Cursos que usan esta plantilla» a cuáles se aplica. «Hacer principal» la cambia; la principal no se elimina.',
         ]],
         ['h', 'Editor visual del certificado'],
         ['p', 'Si la lista de opciones no te alcanza, el editor visual te deja colocar cada elemento a mano. Mientras no guardes un diseño ahí, vale el de la lista de opciones.'],

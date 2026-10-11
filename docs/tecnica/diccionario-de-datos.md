@@ -469,12 +469,11 @@ Aislada por academia.
 ### `certificate_templates`
 
 Aislada por academia.
-Único: `tenant_id`.
 
 | Columna | Tipo | Clave | Oblig. | Descripción |
 | --- | --- | --- | :---: | --- |
 | `id` | UUID | PK | Sí | Identificador del registro |
-| `tenant_id` | UUID | FK tenants.id, U | Sí | Academia a la que pertenece el registro |
+| `tenant_id` | UUID | FK tenants.id | Sí | Academia a la que pertenece el registro |
 | `signer_name` | texto (150) |  | No |  |
 | `signer_title` | texto (150) |  | No |  |
 | `signature_file_id` | UUID | FK files.id | No | Referencia a `files` |
@@ -483,6 +482,8 @@ Aislada por academia.
 | `background_file_id` | UUID | FK files.id | No | Diseño propio de la organización: su imagen de fondo y dónde va cada dato |
 | `design` | JSON |  | No |  |
 | `layout` | JSON |  | No | Diseño libre del editor visual: orientación de la hoja y cada elemento con su posición en milímetros. NULL = se usa el diseño por opciones de la columna design |
+| `name` | texto (100) |  | Sí | Nombre con el que la organización la reconoce |
+| `is_default` | sí/no |  | Sí | La que usan los cursos que no eligieron una |
 
 ### `certificate_verifications`
 
@@ -521,6 +522,7 @@ Aislada por academia.
 | `revoke_reason` | texto (500) |  | No |  |
 | `created_at` | fecha y hora |  | No | Cuándo se creó |
 | `updated_at` | fecha y hora |  | No | Última modificación |
+| `design` | JSON |  | No | Diseño con el que se emitió, congelado: un cambio posterior de la plantilla no lo altera. NULL = emitido sin plantilla guardada; se dibuja con la plantilla vigente de su curso |
 
 ## Libro de Reclamaciones
 
@@ -747,6 +749,7 @@ Aislada por academia.
 | `issues_certificate` | sí/no |  | Sí | El curso entrega certificado a quien lo completa (RN-007). Regla de la organización, no contenido. |
 | `sequential` | sí/no |  | Sí | Avance secuencial: una sección se abre al completar la anterior |
 | `passing_percent` | decimal (5,2) |  | No | Nota final mínima para aprobar el curso, en porcentaje; vacío = no se exige |
+| `certificate_template_id` | UUID | FK certificate_templates.id | No | Plantilla de certificado del curso; NULL = la principal de la organización |
 
 ## CRM
 

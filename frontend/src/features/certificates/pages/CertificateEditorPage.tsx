@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   AlignCenter,
   AlignLeft,
@@ -21,7 +21,7 @@ import {
 import { apiErrorMessage } from '../../../shared/api/client';
 import { useTenant } from '../../../shared/tenancy/TenantContext';
 import { Alert, Button, Card, CardHeader, ConfirmModal, ErrorState, Field, INPUT_CLASS, LoadingState, Modal } from '../../../shared/ui';
-import { certificatesApi, type Align, type CanvasOptions, type CertificateLayout, type CertificateTemplate, type LayoutElement, type Orientation } from '../api';
+import { certificatesApi, templateApi, type Align, type CanvasOptions, type CertificateLayout, type CertificateTemplate, type LayoutElement, type Orientation } from '../api';
 
 // Cómo se ve cada tipografía del PDF en el navegador. La vista previa en PDF muestra la real.
 const FONT_CSS: Record<string, string> = {
@@ -80,6 +80,10 @@ function describe(element: LayoutElement, fields: Record<string, string>): strin
 // Editor visual del certificado: una hoja donde cada dato, texto o imagen se arrastra a su sitio.
 export const CertificateEditorPage: React.FC = () => {
   const { tenant } = useTenant();
+  const [searchParams] = useSearchParams();
+  // Sin indicar ninguna, se edita la plantilla principal
+  const templateId = searchParams.get('template');
+  const tpl = templateApi(templateId);
   const sheet = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const drag = useRef<Drag | null>(null);
@@ -102,7 +106,7 @@ export const CertificateEditorPage: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    certificatesApi
+    templateApi(templateId)
       .template()
       .then((result) => {
         if (!active) return;
@@ -117,7 +121,7 @@ export const CertificateEditorPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [templateId]);
 
   // Fondo, firma e imágenes propias: son privadas y se piden con la sesión
   const wanted = useMemo(() => {
@@ -132,13 +136,14 @@ export const CertificateEditorPage: React.FC = () => {
     if (wanted === '') return;
     let active = true;
     wanted.split(',').forEach((key) => {
-      const request = key === 'background' ? certificatesApi.backgroundUrl() : key === 'signature' ? certificatesApi.signatureUrl() : certificatesApi.imageUrl(key);
+      const scoped = templateApi(templateId);
+      const request = key === 'background' ? scoped.backgroundUrl() : key === 'signature' ? scoped.signatureUrl() : certificatesApi.imageUrl(key);
       request.then((url) => active && setImages((current) => ({ ...current, [key]: url }))).catch(() => active && setImages((current) => ({ ...current, [key]: '' })));
     });
     return () => {
       active = false;
     };
-  }, [wanted]);
+  }, [wanted, templateId]);
 
   // Píxeles por milímetro, según el ancho que tenga la hoja en pantalla
   const sheetWidth = layout && canvas ? canvas.sheets[layout.orientation][0] : 297;
@@ -290,7 +295,7 @@ export const CertificateEditorPage: React.FC = () => {
     setBusy('save');
     setError(null);
     try {
-      const saved = await certificatesApi.updateLayout(layout);
+      const saved = await tpl.updateLayout(layout);
       setTemplate(saved);
       if (saved.layout) setLayout(saved.layout);
       setDirty(false);
@@ -307,7 +312,7 @@ export const CertificateEditorPage: React.FC = () => {
     setBusy('preview');
     setError(null);
     try {
-      setPreviewUrl(await certificatesApi.layoutPreviewUrl(layout));
+      setPreviewUrl(await tpl.layoutPreviewUrl(layout));
     } catch (err) {
       setError(apiErrorMessage(err, 'No se pudo generar la vista previa.'));
     } finally {
@@ -397,6 +402,7 @@ export const CertificateEditorPage: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div className="min-w-0">
           <h1 className="text-[22px] leading-7 font-bold text-slate-900 tracking-tight">Diseño del certificado</h1>
+          <p className="text-[13px] font-semibold text-brand-700 mt-0.5">Plantilla: {template.name}{template.is_default ? ' (principal)' : ''}</p>
           <p className="text-[13px] text-slate-500 mt-0.5">Arrastra cada elemento a su sitio. Tócalo para cambiar su letra, tamaño y color.</p>
         </div>
         <div className="flex flex-wrap gap-2.5">
@@ -715,7 +721,7 @@ export const CertificateEditorPage: React.FC = () => {
           confirmLabel="Volver"
           onClose={() => setConfirm(null)}
           onConfirm={async () => {
-            const saved = await certificatesApi.updateLayout(null);
+            const saved = await tpl.updateLayout(null);
             setTemplate(saved);
             setLayout(canvas.defaults.landscape);
             setSelected(null);

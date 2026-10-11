@@ -37,8 +37,12 @@ class CertificateTemplate extends Model
         'qr_position' => 'RIGHT',
     ];
 
+    public const DEFAULT_NAME = 'Plantilla principal';
+
     protected $fillable = [
         'tenant_id',
+        'name',
+        'is_default',
         'signer_name',
         'signer_title',
         'signature_file_id',
@@ -52,6 +56,7 @@ class CertificateTemplate extends Model
         return [
             'design' => 'array',
             'layout' => 'array',
+            'is_default' => 'boolean',
         ];
     }
 
@@ -63,6 +68,24 @@ class CertificateTemplate extends Model
     public function background(): BelongsTo
     {
         return $this->belongsTo(File::class, 'background_file_id');
+    }
+
+    /**
+     * El diseño tal como está ahora, para dejarlo fijo en un certificado al
+     * emitirlo: lo que cambie después en la plantilla no lo alcanza.
+     *
+     * @return array<string, mixed>
+     */
+    public function frozen(): array
+    {
+        return [
+            'template_id' => $this->id,
+            'template_name' => $this->name ?? self::DEFAULT_NAME,
+            'layout' => $this->layout,
+            'design' => $this->resolvedDesign(),
+            'background_file_id' => $this->background_file_id,
+            'signature_file_id' => $this->signature_file_id,
+        ];
     }
 
     /**

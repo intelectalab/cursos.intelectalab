@@ -4,6 +4,7 @@ namespace Tests\Feature\Certificates;
 
 use App\Modules\Audit\Domain\Models\AuditEvent;
 use App\Modules\Certificates\Domain\Models\Certificate;
+use App\Modules\Certificates\Domain\Models\CertificateTemplate;
 use App\Modules\Certificates\Domain\Models\CertificateVerification;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\User;
@@ -481,6 +482,88 @@ class CertificateTest extends TestCase
         // Un alumno no toca el diseño
         $this->withToken($token)->putJson($template.'/layout', ['layout' => $layout])->assertForbidden();
         $this->withToken($token)->get($template."/images/{$stamp}", ['Accept' => 'application/json'])->assertForbidden();
+    }
+
+    public function test_each_course_uses_its_template_and_an_issued_certificate_keeps_its_design(): void
+    {
+        $admin = fn () => $this->withToken($this->admin);
+        $templates = $this->api('/certificates/templates');
+        $background = function (string $name) {
+            $path = tempnam(sys_get_temp_dir(), 'fondo').'.png';
+            imagepng(imagecreatetruecolor(297, 210), $path);
+
+            return ['file' => new UploadedFile($path, $name, null, null, true)];
+        };
+
+        ['course' => $excel, 'resources' => $excelResources] = $this->publishedCourse(['title' => 'Excel']);
+        ['course' => $python, 'resources' => $pythonResources] = $this->publishedCourse(['title' => 'Python']);
+
+        // Al principio solo está la principal, que todavía no se guardó
+        $admin()->getJson($templates)->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', null)
+            ->assertJsonPath('data.0.is_default', true)
+            ->assertJsonCount(2, 'meta.courses');
+
+        $admin()->putJson($this->api('/certificates/template'), ['signer_name' => 'María Pérez', 'design' => ['primary_color' => '#111111']])->assertOk();
+        $admin()->post($this->api('/certificates/template/background'), $background('azul.png'), ['Accept' => 'application/json'])->assertOk();
+        $main = $admin()->getJson($templates)->json('data.0.id');
+
+        // Una segunda plantilla, copia de la principal, para el curso de Python
+        $second = $admin()->postJson($templates, ['name' => 'Diplomados', 'copy_from' => $main])->assertCreated()
+            ->assertJsonPath('data.is_default', false)
+            ->assertJsonPath('data.signer_name', 'María Pérez')
+            ->assertJsonPath('data.has_background', true)
+            ->json('data.id');
+        $admin()->putJson($this->api('/certificates/template'), ['template_id' => $second, 'signer_name' => 'Luis Rojas', 'design' => ['primary_color' => '#222222']])
+            ->assertOk()->assertJsonPath('data.id', $second);
+        $admin()->putJson("{$templates}/{$second}", ['name' => 'Diplomados 2026', 'course_ids' => [$python]])->assertOk()
+            ->assertJsonPath('data.name', 'Diplomados 2026')
+            ->assertJsonPath('data.course_ids', [$python]);
+
+        // Cada curso emite con su plantilla
+        $student = $this->student();
+        ['token' => $token] = $this->enroll($student, $excel);
+        $this->complete($token, $excel, $excelResources);
+        $this->enroll($student, $python);
+        $this->complete($token, $python, $pythonResources);
+
+        $issued = fn () => app(TenantContext::class)->runForTenant($this->tenant->id, fn () => Certificate::query()->with('course')->get()->keyBy(fn (Certificate $certificate) => $certificate->course->title));
+        $this->assertSame($main, $issued()['Excel']->design['template_id']);
+        $this->assertSame('María Pérez', $issued()['Excel']->snapshot['signer_name']);
+        $this->assertSame($second, $issued()['Python']->design['template_id']);
+        $this->assertSame('Luis Rojas', $issued()['Python']->snapshot['signer_name']);
+        $this->assertSame('#222222', $issued()['Python']->design['design']['primary_color']);
+
+        // Cambiar la plantilla después no toca lo ya emitido: ni el diseño ni el fondo con el que salió
+        $oldBackground = $issued()['Excel']->design['background_file_id'];
+        $admin()->putJson($this->api('/certificates/template'), ['design' => ['primary_color' => '#999999']])->assertOk();
+        $admin()->post($this->api('/certificates/template/background'), $background('rojo.png'), ['Accept' => 'application/json'])->assertOk();
+
+        $this->assertSame('#111111', $issued()['Excel']->design['design']['primary_color']);
+        $this->assertSame($oldBackground, $issued()['Excel']->design['background_file_id']);
+        app(TenantContext::class)->runForTenant($this->tenant->id, function () use ($oldBackground) {
+            $this->assertDatabaseHas('files', ['id' => $oldBackground]);
+            $this->assertNotSame($oldBackground, CertificateTemplate::query()->where('is_default', true)->value('background_file_id'));
+        });
+        $id = $this->withToken($token)->getJson($this->api('/me/certificates'))->json('data.0.id');
+        $this->assertStringStartsWith('%PDF', $this->withToken($token)->get($this->api("/me/certificates/{$id}/pdf"))->assertOk()->getContent());
+
+        // La principal no se elimina; otra sí, y sus cursos vuelven a la principal
+        $this->withToken($this->admin)->deleteJson("{$templates}/{$main}")->assertStatus(422);
+        $this->withToken($this->admin)->deleteJson("{$templates}/{$second}")->assertOk();
+        $this->withToken($this->admin)->getJson($templates)->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $main);
+        $this->assertSame($second, $issued()['Python']->design['template_id']);
+        $this->assertStringStartsWith('%PDF', $this->withToken($this->admin)->get($this->api('/certificates/'.$issued()['Python']->id.'/pdf'))->assertOk()->getContent());
+
+        // Una plantilla nueva pasa a ser la principal
+        $third = $this->withToken($this->admin)->postJson($templates, ['name' => 'Nueva imagen'])->assertCreated()->json('data.id');
+        $this->withToken($this->admin)->postJson("{$templates}/{$third}/default")->assertOk()->assertJsonPath('data.is_default', true);
+        $this->withToken($this->admin)->getJson($this->api('/certificates/template'))->assertJsonPath('data.id', $third);
+
+        // Un alumno no gestiona plantillas
+        $this->withToken($token)->postJson($templates, ['name' => 'Mía'])->assertForbidden();
+        $this->withToken($token)->deleteJson("{$templates}/{$main}")->assertForbidden();
     }
 
     public function test_certificates_are_isolated_and_require_permission(): void

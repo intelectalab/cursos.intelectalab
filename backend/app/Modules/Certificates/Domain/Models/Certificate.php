@@ -28,6 +28,7 @@ class Certificate extends Model
         'verification_code',
         'status',
         'snapshot',
+        'design',
         'issued_at',
         'issued_by',
         'revoked_at',
@@ -39,6 +40,7 @@ class Certificate extends Model
     {
         return [
             'snapshot' => 'array',
+            'design' => 'array',
             'issued_at' => 'datetime',
             'revoked_at' => 'datetime',
         ];

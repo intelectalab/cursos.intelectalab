@@ -25,12 +25,19 @@ class CertificatePdf
 
     /**
      * @param  string  $verifyUrl  dirección pública de verificación, la que lleva el QR
-     * @param  array{orientation: string, elements: list<array<string, mixed>>}|null  $layout  diseño libre a usar en vez del guardado (vista previa)
      */
-    public function render(Certificate $certificate, string $verifyUrl, ?array $layout = null): string
+    public function render(Certificate $certificate, string $verifyUrl): string
     {
-        $template = $this->certificates->template();
-        $layout ??= $template->layout;
+        // El diseño con el que se emitió; uno emitido sin plantilla guardada usa la vigente de su curso
+        $frozen = $certificate->design;
+        $template = ($frozen['template_id'] ?? null) ? CertificateTemplate::query()->find($frozen['template_id']) : null;
+        $template ??= $certificate->course ? $this->certificates->templateFor($certificate->course) : $this->certificates->template();
+        $frozen ??= $template->frozen();
+
+        $layout = $frozen['layout'] ?? null;
+        $files = File::query()->whereIn('id', array_filter([$frozen['background_file_id'] ?? null, $frozen['signature_file_id'] ?? null]))->get()->keyBy('id');
+        $background = $files->get($frozen['background_file_id'] ?? null);
+        $signature = $files->get($frozen['signature_file_id'] ?? null);
         $logo = File::query()->where('purpose', TenantLogoService::PURPOSE)->latest('id')->first();
 
         // Un certificado emitido antes de configurar la firma usa la vigente
@@ -43,7 +50,7 @@ class CertificatePdf
         $qr = 'data:image/png;base64,'.base64_encode(QrCode::png($verifyUrl));
 
         $html = $layout
-            ? view('certificates.canvas', $this->canvas($layout, $template, $certificate, $data, $issuedOn, (string) $verifyHost, $qr, $logo))->render()
+            ? view('certificates.canvas', $this->canvas($layout, $certificate, $data, $issuedOn, (string) $verifyHost, $qr, $logo, $signature, $background))->render()
             : view('certificates.certificate', [
                 'certificate' => $certificate,
                 'data' => $data,
@@ -52,9 +59,9 @@ class CertificatePdf
                 'verifyHost' => $verifyHost,
                 'qr' => $qr,
                 'logo' => $this->dataUri($logo),
-                'signature' => $this->dataUri($template->signature),
-                'background' => $this->dataUri($template->background),
-                'design' => $template->resolvedDesign(),
+                'signature' => $this->dataUri($signature),
+                'background' => $this->dataUri($background),
+                'design' => array_intersect_key($frozen['design'] ?? [], CertificateTemplate::DEFAULT_DESIGN) + CertificateTemplate::DEFAULT_DESIGN,
             ])->render();
 
         $options = new Options;
@@ -81,7 +88,7 @@ class CertificatePdf
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function canvas(array $layout, CertificateTemplate $template, Certificate $certificate, array $data, string $issuedOn, string $verifyHost, string $qr, ?File $logo): array
+    private function canvas(array $layout, Certificate $certificate, array $data, string $issuedOn, string $verifyHost, string $qr, ?File $logo, ?File $signature, ?File $background): array
     {
         [$width, $height] = CertificateLayout::SHEETS[$layout['orientation']];
         $hours = (int) ($data['duration_hours'] ?? 0);
@@ -121,7 +128,7 @@ class CertificatePdf
             if ($element['type'] === CertificateLayout::TYPE_IMAGE) {
                 $src = $this->dataUri(match ($element['source']) {
                     CertificateLayout::SOURCE_LOGO => $logo,
-                    CertificateLayout::SOURCE_SIGNATURE => $template->signature,
+                    CertificateLayout::SOURCE_SIGNATURE => $signature,
                     default => $files->get($element['file_id']),
                 });
 
@@ -144,7 +151,7 @@ class CertificatePdf
             'code' => $certificate->verification_code,
             'width' => $width,
             'height' => $height,
-            'background' => $this->dataUri($template->background),
+            'background' => $this->dataUri($background),
             'elements' => $elements,
         ];
     }

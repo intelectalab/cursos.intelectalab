@@ -52,6 +52,13 @@ export interface CertificateDesign {
 }
 
 export interface CertificateTemplate {
+  // null = la principal, que la academia todavía no guardó
+  id: string | null;
+  name: string;
+  // La que usan los cursos que no eligieron otra
+  is_default: boolean;
+  // Cursos que eligieron esta plantilla
+  course_ids: string[];
   signer_name: string | null;
   signer_title: string | null;
   has_signature: boolean;
@@ -177,65 +184,98 @@ export const certificatesApi = {
   async revoke(id: string, reason: string) {
     return (await api.post(`/certificates/${id}/revoke`, { reason })).data.data as Certificate;
   },
-  async template() {
-    const response = await api.get('/certificates/template');
-    return {
-      template: response.data.data as CertificateTemplate,
-      rules: response.data.meta.signature as SignatureRules,
-      backgroundRules: response.data.meta.background as SignatureRules,
-      canvas: response.data.meta.canvas as CanvasOptions,
-    };
-  },
-  // Editor visual: guarda el diseño libre; con null vuelve al diseño por opciones
-  async updateLayout(layout: CertificateLayout | null) {
-    return (await api.put('/certificates/template/layout', { layout })).data.data as CertificateTemplate;
-  },
-  // PDF de muestra con lo que hay en el lienzo, aunque no esté guardado
-  async layoutPreviewUrl(layout: CertificateLayout) {
-    const response = await api.post('/certificates/template/preview', { layout }, { responseType: 'blob' });
-    return URL.createObjectURL(new Blob([response.data as Blob], { type: 'application/pdf' }));
-  },
+  // Imágenes propias del certificado: sirven a cualquier plantilla
   async uploadImage(file: File) {
     const body = new FormData();
     body.append('file', file);
     return (await api.post('/certificates/template/images', body)).data.data as { id: string; name: string };
   },
-  // Las imágenes del certificado son privadas: se piden con la sesión y se muestran desde memoria
+  // Son privadas: se piden con la sesión y se muestran desde memoria
   async imageUrl(fileId: string) {
     const response = await api.get(`/certificates/template/images/${fileId}`, { responseType: 'blob' });
     return URL.createObjectURL(response.data as Blob);
   },
-  async backgroundUrl() {
-    const response = await api.get('/certificates/template/background', { responseType: 'blob' });
-    return URL.createObjectURL(response.data as Blob);
+
+  // Plantillas de la academia y los cursos que pueden elegir una
+  async templates() {
+    const response = await api.get('/certificates/templates');
+    return {
+      templates: response.data.data as CertificateTemplate[],
+      courses: response.data.meta.courses as { id: string; title: string }[],
+      max: response.data.meta.max as number,
+    };
   },
-  async uploadBackground(file: File) {
-    const body = new FormData();
-    body.append('file', file);
-    return (await api.post('/certificates/template/background', body)).data.data as CertificateTemplate;
+  async createTemplate(name: string, copyFrom: string | null) {
+    return (await api.post('/certificates/templates', { name, copy_from: copyFrom })).data.data as CertificateTemplate;
   },
-  async removeBackground() {
-    return (await api.delete('/certificates/template/background')).data.data as CertificateTemplate;
+  async updateTemplateInfo(id: string, input: { name?: string; course_ids?: string[] }) {
+    return (await api.put(`/certificates/templates/${id}`, input)).data.data as CertificateTemplate;
   },
-  // PDF de muestra con la plantilla guardada; se muestra desde memoria
-  async templatePreviewUrl() {
-    const response = await api.get('/certificates/template/preview', { responseType: 'blob' });
-    return URL.createObjectURL(new Blob([response.data as Blob], { type: 'application/pdf' }));
+  async makeDefaultTemplate(id: string) {
+    return (await api.post(`/certificates/templates/${id}/default`)).data.data as CertificateTemplate;
   },
-  async updateTemplate(input: { signer_name?: string | null; signer_title?: string | null; design?: CertificateDesign }) {
-    return (await api.put('/certificates/template', input)).data.data as CertificateTemplate;
-  },
-  async uploadSignature(file: File) {
-    const body = new FormData();
-    body.append('file', file);
-    return (await api.post('/certificates/template/signature', body)).data.data as CertificateTemplate;
-  },
-  async removeSignature() {
-    return (await api.delete('/certificates/template/signature')).data.data as CertificateTemplate;
-  },
-  // La firma es privada: se pide con la sesión y se muestra desde memoria
-  async signatureUrl() {
-    const response = await api.get('/certificates/template/signature', { responseType: 'blob' });
-    return URL.createObjectURL(response.data as Blob);
+  async deleteTemplate(id: string) {
+    await api.delete(`/certificates/templates/${id}`);
   },
 };
+
+// Operaciones sobre una plantilla concreta; sin identificador, la principal de la academia
+export function templateApi(templateId: string | null) {
+  const scope = templateId ? { template_id: templateId } : {};
+  const form = (file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    if (templateId) body.append('template_id', templateId);
+    return body;
+  };
+
+  return {
+    async template() {
+      const response = await api.get('/certificates/template', { params: scope });
+      return {
+        template: response.data.data as CertificateTemplate,
+        rules: response.data.meta.signature as SignatureRules,
+        backgroundRules: response.data.meta.background as SignatureRules,
+        canvas: response.data.meta.canvas as CanvasOptions,
+      };
+    },
+    async updateTemplate(input: { signer_name?: string | null; signer_title?: string | null; design?: CertificateDesign }) {
+      return (await api.put('/certificates/template', { ...input, ...scope })).data.data as CertificateTemplate;
+    },
+    async uploadBackground(file: File) {
+      return (await api.post('/certificates/template/background', form(file))).data.data as CertificateTemplate;
+    },
+    async removeBackground() {
+      return (await api.delete('/certificates/template/background', { params: scope })).data.data as CertificateTemplate;
+    },
+    async backgroundUrl() {
+      const response = await api.get('/certificates/template/background', { params: scope, responseType: 'blob' });
+      return URL.createObjectURL(response.data as Blob);
+    },
+    async uploadSignature(file: File) {
+      return (await api.post('/certificates/template/signature', form(file))).data.data as CertificateTemplate;
+    },
+    async removeSignature() {
+      return (await api.delete('/certificates/template/signature', { params: scope })).data.data as CertificateTemplate;
+    },
+    // La firma es privada: se pide con la sesión y se muestra desde memoria
+    async signatureUrl() {
+      const response = await api.get('/certificates/template/signature', { params: scope, responseType: 'blob' });
+      return URL.createObjectURL(response.data as Blob);
+    },
+    // PDF de muestra con la plantilla guardada; se muestra desde memoria
+    async templatePreviewUrl() {
+      const response = await api.get('/certificates/template/preview', { params: scope, responseType: 'blob' });
+      return URL.createObjectURL(new Blob([response.data as Blob], { type: 'application/pdf' }));
+    },
+    // Editor visual: guarda el diseño libre; con null vuelve al diseño por opciones
+    async updateLayout(layout: CertificateLayout | null) {
+      return (await api.put('/certificates/template/layout', { layout, ...scope })).data.data as CertificateTemplate;
+    },
+    // PDF de muestra con lo que hay en el lienzo, aunque no esté guardado
+    async layoutPreviewUrl(layout: CertificateLayout) {
+      const response = await api.post('/certificates/template/preview', { layout, ...scope }, { responseType: 'blob' });
+      return URL.createObjectURL(new Blob([response.data as Blob], { type: 'application/pdf' }));
+    },
+  };
+}

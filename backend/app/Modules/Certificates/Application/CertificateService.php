@@ -10,6 +10,7 @@ use App\Modules\Certificates\Domain\Models\CertificateVerification;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Http\ClassroomPresenter;
+use App\Modules\Files\Domain\Models\File;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Http\ApiException;
@@ -71,6 +72,8 @@ class CertificateService
                 'verification_code' => $this->newCode(),
                 'status' => Certificate::STATUS_ISSUED,
                 'snapshot' => $this->snapshot($enrollment),
+                // El diseño queda fijo: cambiar la plantilla después no altera este certificado
+                'design' => $this->templateFor($enrollment->course)->frozen(),
                 'issued_at' => now(),
                 'issued_by' => $actor?->id,
             ]);
@@ -174,9 +177,53 @@ class CertificateService
         return $this->eligible()->whereNotIn('id', Certificate::query()->where('status', Certificate::STATUS_ISSUED)->select('enrollment_id'));
     }
 
-    public function template(): CertificateTemplate
+    /**
+     * Una plantilla de la organización; sin identificador, la principal. Si
+     * la organización todavía no guardó ninguna, es una en blanco sin guardar.
+     */
+    public function template(?string $id = null): CertificateTemplate
     {
-        return CertificateTemplate::query()->firstOrNew([]);
+        if ($id !== null) {
+            return CertificateTemplate::query()->findOrFail($id);
+        }
+
+        return CertificateTemplate::query()->orderByDesc('is_default')->orderBy('created_at')->orderBy('id')->first()
+            ?? new CertificateTemplate(['name' => CertificateTemplate::DEFAULT_NAME, 'is_default' => true]);
+    }
+
+    /**
+     * La plantilla con la que se emiten los certificados de un curso: la que
+     * el curso eligió o, si no eligió, la principal.
+     */
+    public function templateFor(Course $course): CertificateTemplate
+    {
+        $own = $course->certificate_template_id ? CertificateTemplate::query()->find($course->certificate_template_id) : null;
+
+        return $own ?? $this->template();
+    }
+
+    /**
+     * Un fondo, una firma o una imagen se conserva mientras lo use otra
+     * plantilla o un certificado ya emitido con ese diseño.
+     */
+    public function fileInUse(File $file, ?CertificateTemplate $except = null): bool
+    {
+        $templates = CertificateTemplate::query()
+            ->when($except?->exists, fn (Builder $query) => $query->whereKeyNot($except->id))
+            ->get(['id', 'background_file_id', 'signature_file_id', 'layout']);
+
+        foreach ($templates as $template) {
+            if (in_array($file->id, [$template->background_file_id, $template->signature_file_id, ...array_column($template->layout['elements'] ?? [], 'file_id')], true)) {
+                return true;
+            }
+        }
+
+        return Certificate::query()
+            ->where(fn (Builder $query) => $query
+                ->where('design->background_file_id', $file->id)
+                ->orWhere('design->signature_file_id', $file->id)
+                ->orWhereJsonContains('design->layout->elements', [['file_id' => $file->id]]))
+            ->exists();
     }
 
     /**
@@ -279,7 +326,7 @@ class CertificateService
         $student = $enrollment->student;
         $course = $enrollment->course->loadMissing('currentVersion');
         $published = $course->currentVersion?->snapshot ?? [];
-        $template = $this->template();
+        $template = $this->templateFor($course);
 
         return [
             'student_name' => trim("{$student->first_name} {$student->last_name}"),
