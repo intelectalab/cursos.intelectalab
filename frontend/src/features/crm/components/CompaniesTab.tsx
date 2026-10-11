@@ -23,6 +23,7 @@ import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filter
 import type { PageMeta } from '../../identity/api';
 import { COMPANY_STATUS_LABEL, COMPANY_STATUS_TONE, crmApi, type Company, type Person } from '../api';
 import { CompanyFormModal, CompanyModal } from './CompanyDialogs';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 export const CompaniesTab: React.FC<{ canManage: boolean; owners: Person[] }> = ({ canManage, owners }) => {
   const { hasPermission } = useAuth();
@@ -82,11 +83,11 @@ export const CompaniesTab: React.FC<{ canManage: boolean; owners: Person[] }> = 
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <select className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por tipo" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
+          <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por tipo" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
             <option value="">Todas</option>
             <option value="PROSPECT">Prospectos</option>
             <option value="CUSTOMER">Clientes</option>
-          </select>
+          </SearchSelect>
           <HelpTip text="Prospecto: aún no compra. Cliente: ya tiene al menos una venta; el cambio es automático." label="Qué significa el tipo de empresa" />
           {canManage && (
             <Button variant="primary" className="ml-auto" icon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>

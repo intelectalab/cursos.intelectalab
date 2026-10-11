@@ -240,7 +240,7 @@ export const TenantProfile: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   }, [load]);
 
   const back = (
-    <Link to="/platform" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-brand-700 mb-4">
+    <Link to="/platform" className="flex w-fit items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-brand-700 mb-4">
       <ArrowLeft className="w-4 h-4" /> Academias
     </Link>
   );

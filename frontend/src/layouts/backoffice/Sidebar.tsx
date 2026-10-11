@@ -140,10 +140,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
           )}
           {!isCollapsed && (
             <div className="min-w-0 leading-tight overflow-hidden whitespace-nowrap">
-              <span className="text-white font-extrabold text-[15px] tracking-tight">
-                Intelecta<span className="text-sky-400">Lab_</span>
-              </span>
-              <span className="block text-[10px] font-medium text-brand-300 truncate">{tenant?.name}</span>
+              {tenant ? (
+                // Dentro de una academia manda su nombre; la plataforma queda como firma
+                <>
+                  <span className="block text-white font-extrabold text-[15px] tracking-tight truncate" title={tenant.name}>
+                    {tenant.name}
+                  </span>
+                  <span className="block text-[10px] font-medium text-brand-300 truncate">
+                    con Intelecta<span className="text-sky-400">Lab_</span>
+                  </span>
+                </>
+              ) : (
+                <span className="text-white font-extrabold text-[15px] tracking-tight">
+                  Intelecta<span className="text-sky-400">Lab_</span>
+                </span>
+              )}
             </div>
           )}
           {isDrawer && (

@@ -29,6 +29,7 @@ import { BulkBar, FilterCards, HelpTip, SelectAll, SelectRow, type FilterCard } 
 import { ImportModal } from '../../../shared/ui/ImportModal';
 import { GroupsTab } from '../components/GroupsTab';
 import { DOCUMENT_TYPES, identityApi, type DocumentType, type PageMeta, type Role, type UserRow } from '../api';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 const STATUS_LABEL: Record<UserRow['status'], string> = { ACTIVE: 'Activo', INACTIVE: 'Inactivo' };
 
@@ -420,7 +421,7 @@ export const UsersPage: React.FC = () => {
             />
           </div>
           <div className="flex items-center gap-1.5">
-            <select
+            <SearchSelect
               className={`${INPUT_CLASS} !w-48`}
               aria-label="Filtrar por estado"
               value={status}
@@ -429,7 +430,7 @@ export const UsersPage: React.FC = () => {
               <option value="">Todos los estados</option>
               <option value="ACTIVE">Activos</option>
               <option value="INACTIVE">Inactivos</option>
-            </select>
+            </SearchSelect>
             <HelpTip
               text="Activo: puede iniciar sesión. Inactivo: su cuenta está desactivada y no puede entrar, pero conserva su historial."
               label="Qué significa el estado de un usuario"

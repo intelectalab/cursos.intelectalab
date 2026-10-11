@@ -35,6 +35,19 @@ class AuditEventsTest extends TestCase
             ->assertJsonPath('data.0.entity_type', 'roles');
 
         $this->withToken($token)->getJson($url.'?from='.now()->addDay()->toDateString())->assertJsonPath('meta.total', 0);
+
+        // Por persona: quienes aparecen en el registro, lo que hizo cada una y lo que no hizo nadie a mano
+        $actor = $this->withToken($token)->getJson($url.'/actors')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.email', 'admin@acme.com')
+            ->json('data.0.id');
+
+        $this->withToken($token)->getJson($url.'?actor_user_id='.$actor)->assertJsonPath('meta.total', 3);
+        // Todo lo registrado aquí lo hizo el administrador: nada quedó a nombre del sistema
+        $this->withToken($token)->getJson($url.'?actor_user_id=system')->assertJsonPath('meta.total', 0);
+        $this->withToken($token)->getJson($url.'?actor_user_id=00000000-0000-0000-0000-000000000000')->assertJsonPath('meta.total', 0);
+        $this->withToken($token)->getJson($url.'?actor_user_id=cualquiera')->assertStatus(422);
     }
 
     public function test_audit_log_is_isolated_and_requires_permission(): void
@@ -53,5 +66,7 @@ class AuditEventsTest extends TestCase
         $this->withToken($this->login('alfa', $student->email))
             ->getJson($this->tenantUrl('alfa', '/audit-events'))
             ->assertForbidden();
+
+        $this->withToken($this->login('alfa', $student->email))->getJson($this->tenantUrl('alfa', '/audit-events/actors'))->assertForbidden();
     }
 }

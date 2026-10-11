@@ -1,5 +1,6 @@
 import React, { Suspense, useCallback, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from '../../shared/ui/ErrorBoundary';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { DebtAlerts } from '../../features/sales/components/DebtAlerts';
@@ -60,9 +61,11 @@ export const AppLayout: React.FC = () => {
         <main id="contenido" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-none">
           {/* La clave reinicia la animación de entrada al cambiar de pantalla */}
           <div key={pathname} className="max-w-[1400px] mx-auto p-4 sm:p-7 lg:p-8 animate-rise">
-            <Suspense fallback={<LoadingState />}>
-              <Outlet />
-            </Suspense>
+            <ErrorBoundary resetKey={pathname}>
+              <Suspense fallback={<LoadingState />}>
+                <Outlet />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
         {/* Quien cobra ve aquí, sobre cualquier pantalla, las cuotas que vencieron */}

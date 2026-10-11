@@ -25,6 +25,7 @@ import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filter
 import type { PageMeta } from '../../identity/api';
 import { CERTIFICATE_STATUS_LABEL, CERTIFICATE_STATUS_TONE, certificatesApi, formatDate, type Certificate } from '../api';
 import { IssueModal, RevokeModal, TemplateModal } from '../components/CertificateDialogs';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 type Dialog = { kind: 'issue' } | { kind: 'template' } | { kind: 'revoke'; certificate: Certificate };
 
@@ -131,7 +132,7 @@ export const CertificatesPage: React.FC = () => {
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <select
+          <SearchSelect
             className={`${INPUT_CLASS} !w-44`}
             aria-label="Filtrar por estado"
             value={status}
@@ -140,7 +141,7 @@ export const CertificatesPage: React.FC = () => {
             <option value="">Todos</option>
             <option value="ISSUED">Vigentes</option>
             <option value="REVOKED">Anulados</option>
-          </select>
+          </SearchSelect>
           <HelpTip text="Vigente: es válido al verificarlo. Anulado: el personal lo retiró y figura como no válido." label="Qué significa el estado de un certificado" />
         </div>
 

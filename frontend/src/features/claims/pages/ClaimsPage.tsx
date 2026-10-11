@@ -28,6 +28,7 @@ import { formatDay } from '../../crm/api';
 import { formatDateTime } from '../../sales/api';
 import { claimsApi, CLAIM_TYPE_LABEL, type Claim, type ClaimSummary } from '../api';
 import { ClaimSheet, ClaimStatusBadge } from '../components/ClaimSheet';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 const ClaimModal: React.FC<{ claimId: string; canManage: boolean; onClose: () => void; onChanged: () => void }> = ({ claimId, canManage, onClose, onChanged }) => {
   const [claim, setClaim] = useState<Claim | null>(null);
@@ -229,12 +230,12 @@ export const ClaimsPage: React.FC = () => {
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <select className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
+          <SearchSelect className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
             <option value="PENDING">Sin responder</option>
             <option value="OVERDUE">Fuera de plazo</option>
             <option value="ANSWERED">Respondidos</option>
             <option value="">Todos</option>
-          </select>
+          </SearchSelect>
         </div>
 
         {state === 'loading' && <LoadingState />}

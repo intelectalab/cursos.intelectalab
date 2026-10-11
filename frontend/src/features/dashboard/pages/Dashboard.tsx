@@ -105,15 +105,9 @@ export const Dashboard: React.FC = () => {
       {isStudent && <StudentHome />}
 
       {/* Indicadores */}
-      <section className={isStudent ? 'hidden' : 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'}>
+      <section className={isStudent ? 'hidden' : `grid grid-cols-1 sm:grid-cols-2 ${canSeeUsers ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} gap-4`}>
         <StatCard label="Organización" value={tenant?.name} hint="Espacio de trabajo activo" icon={Building2} tone="brand" />
-        <StatCard
-          label="Usuarios"
-          value={canSeeUsers ? (userCount ?? '—') : '—'}
-          hint={canSeeUsers ? 'Con acceso a la organización' : 'Sin permiso para consultarlos'}
-          icon={UserCog}
-          tone="success"
-        />
+        {canSeeUsers && <StatCard label="Usuarios" value={userCount ?? '—'} hint="Con acceso a la organización" icon={UserCog} tone="success" />}
         <StatCard
           label="Roles"
           value={canSeeRoles ? (roleCount ?? '—') : user?.roles.length}

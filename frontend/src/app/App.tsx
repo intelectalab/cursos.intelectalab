@@ -1,3 +1,4 @@
+import { ErrorBoundary } from '../shared/ui/ErrorBoundary';
 import { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TenantProvider, useTenant } from '../shared/tenancy/TenantContext';
@@ -234,7 +235,7 @@ function AppRoutes() {
         </div>
       }
     >
-      {tenant ? <TenantRoutes /> : <CentralRoutes />}
+      <ErrorBoundary>{tenant ? <TenantRoutes /> : <CentralRoutes />}</ErrorBoundary>
     </Suspense>
   );
 }

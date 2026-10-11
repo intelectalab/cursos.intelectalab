@@ -1,3 +1,4 @@
+import type { OrderStatus } from '../sales/api';
 import { api } from '../../shared/api/client';
 import type { PageMeta } from '../identity/api';
 
@@ -36,7 +37,7 @@ export interface StudentOrder {
   id: string;
   number: number;
   title: string | null;
-  state: 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
+  state: OrderStatus;
   total_amount: string;
   currency: string | null;
   created_at: string;

@@ -460,7 +460,7 @@ export const SettingsPage: React.FC = () => {
             }}
           />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Nombre de la plataforma">
+            <Field label="Nombre de la academia">
               <input {...text('name')} required maxLength={150} />
             </Field>
             <Field label="Razón social">

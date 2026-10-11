@@ -4,6 +4,7 @@ import { api, apiErrorMessage } from '../../../shared/api/client';
 import {
   Avatar,
   Badge,
+  Button,
   Card,
   EmptyState,
   ErrorState,
@@ -19,6 +20,7 @@ import {
   Tr,
   type Tone,
 } from '../../../shared/ui';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 interface AuditRow {
   id: string;
@@ -66,6 +68,71 @@ const ACTION_LABEL: Record<string, string> = {
   'auth.password_reset': 'Contraseña restablecida',
   'auth.password_changed': 'Contraseña cambiada',
   'access.denied': 'Acceso denegado',
+  'auth.login': 'Inicio de sesión',
+  'auth.login_failed': 'Intento de acceso fallido',
+  'users.registered': 'Cuenta creada desde el registro público',
+  'users.sessions_revoked': 'Sesiones de un usuario cerradas',
+  'groups.created': 'Grupo creado',
+  'grade_scales.created': 'Escala de notas creada',
+  'grade_scales.updated': 'Escala de notas editada',
+  'grade_scales.deleted': 'Escala de notas eliminada',
+  'attempts.granted': 'Intento adicional otorgado',
+  'submissions.returned': 'Tarea devuelta para rehacer',
+  'orders.created': 'Orden creada',
+  'orders.paid': 'Orden pagada',
+  'orders.partially_paid': 'Primera cuota pagada: orden en cuotas',
+  'orders.cancelled': 'Orden cancelada',
+  'orders.expired': 'Orden vencida',
+  'orders.refunded': 'Orden reembolsada',
+  'orders.installments_set': 'Plan de pagos armado',
+  'orders.installments_removed': 'Plan de pagos quitado',
+  'payments.confirmed': 'Pago confirmado',
+  'payments.online_needs_review': 'Cobro en línea dejado en revisión',
+  'payments.online_review_resolved': 'Cobro en revisión resuelto',
+  'payment_gateways.connected': 'Pasarela de pago conectada',
+  'payment_gateways.disconnected': 'Pasarela de pago desconectada',
+  'payment_gateways.enabled': 'Pasarela de pago activada',
+  'payment_gateways.disabled': 'Pasarela de pago desactivada',
+  'exchange_rates.configured': 'Tipo de cambio configurado',
+  'exchange_rates.recorded': 'Tipo de cambio registrado',
+  'promotions.created': 'Cupón creado',
+  'packages.created': 'Paquete creado',
+  'certificates.issued': 'Certificado emitido',
+  'certificates.revoked': 'Certificado anulado',
+  'certificate_templates.created': 'Plantilla de certificado creada',
+  'certificate_templates.updated': 'Plantilla de certificado editada',
+  'certificate_templates.deleted': 'Plantilla de certificado eliminada',
+  'certificate_templates.layout_updated': 'Diseño del certificado cambiado',
+  'certificate_templates.background_updated': 'Fondo del certificado cambiado',
+  'certificate_templates.background_removed': 'Fondo del certificado quitado',
+  'certificate_templates.signature_updated': 'Firma del certificado cambiada',
+  'companies.created': 'Empresa registrada',
+  'corporate_members.added': 'Persona agregada a una empresa',
+  'leads.converted': 'Prospecto convertido en oportunidad',
+  'opportunities.created': 'Oportunidad creada',
+  'opportunities.stage_changed': 'Oportunidad movida de etapa',
+  'quotations.created': 'Cotización creada',
+  'quotations.sent': 'Cotización enviada',
+  'quotations.accepted': 'Cotización aceptada',
+  'licenses.issued': 'Licencias entregadas',
+  'licenses.assigned': 'Licencia asignada',
+  'tickets.created': 'Consulta de soporte abierta',
+  'tickets.status_changed': 'Consulta de soporte cambió de estado',
+  'claims.registered': 'Reclamo registrado',
+  'claims.status_changed': 'Reclamo cambió de estado',
+  'pages.created': 'Página creada',
+  'pages.published': 'Página publicada',
+  'pages.deleted': 'Página eliminada',
+  'pages.review_requested': 'Página enviada a revisión',
+  'pages.changes_requested': 'Página devuelta con observaciones',
+  'holidays.national_loaded': 'Feriados nacionales cargados',
+  'subscription.order_created': 'Orden de plan pedida',
+  'subscription.order_cancelled': 'Orden de plan cancelada',
+  'platform.plan_order_confirmed': 'Pago del plan confirmado por IntelectaLab',
+  'platform.plan_order_reverted': 'Confirmación del plan deshecha por IntelectaLab',
+  'platform.subscription_changed': 'Plan cambiado por IntelectaLab',
+  'platform.tenant_updated': 'Datos de la academia editados por IntelectaLab',
+  'platform.support_session_started': 'IntelectaLab entró en modo soporte',
 };
 
 // Color por familia de acción (el texto siempre acompaña al color)
@@ -75,6 +142,8 @@ function actionTone(action: string): Tone {
   if (action.startsWith('roles.')) return 'violet';
   if (action.startsWith('users.')) return 'brand';
   if (action.startsWith('courses.')) return 'success';
+  if (action.startsWith('orders.') || action.startsWith('payments.')) return 'success';
+  if (action.startsWith('platform.')) return 'neutral';
   return 'info';
 }
 
@@ -82,12 +151,30 @@ const GROUPS = [
   ['', 'Todas las acciones'],
   ['users', 'Usuarios'],
   ['roles', 'Roles'],
-  ['auth', 'Contraseñas'],
+  ['auth', 'Accesos y contraseñas'],
   ['courses', 'Cursos'],
   ['enrollments', 'Matrículas'],
+  ['orders', 'Órdenes de compra'],
+  ['payment', 'Pagos y pasarelas'],
+  ['certificate', 'Certificados'],
+  ['quotations', 'Cotizaciones'],
+  ['licenses', 'Licencias'],
+  ['tickets', 'Soporte'],
+  ['claims', 'Reclamos'],
+  ['pages', 'Páginas'],
   ['tenant', 'Organización'],
+  ['platform', 'Hecho por IntelectaLab'],
   ['access', 'Accesos denegados'],
 ];
+
+// Valor del filtro para lo que no hizo ninguna persona
+const SYSTEM = 'system';
+
+interface Actor {
+  id: string;
+  name: string;
+  email: string;
+}
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'medium' });
@@ -102,7 +189,9 @@ const Json: React.FC<{ title: string; value: Record<string, unknown> | null }> =
 );
 
 export const AuditPage: React.FC = () => {
-  const [filters, setFilters] = useState({ action: '', from: '', to: '', page: 1 });
+  const [filters, setFilters] = useState({ action: '', actor_user_id: '', from: '', to: '', page: 1 });
+  // Personas que aparecen en el registro; si no cargan, el resto de filtros sigue funcionando
+  const [actors, setActors] = useState<Actor[]>([]);
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -133,7 +222,20 @@ export const AuditPage: React.FC = () => {
     };
   }, [filters, attempt]);
 
-  const change = (key: 'action' | 'from' | 'to') => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  useEffect(() => {
+    let active = true;
+    api
+      .get('/audit-events/actors')
+      .then((response) => active && setActors(response.data.data))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filtered = filters.action !== '' || filters.actor_user_id !== '' || filters.from !== '' || filters.to !== '';
+
+  const change = (key: 'action' | 'actor_user_id' | 'from' | 'to') => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setState('loading');
     setFilters({ ...filters, [key]: event.target.value, page: 1 });
   };
@@ -155,13 +257,25 @@ export const AuditPage: React.FC = () => {
         <div className="flex flex-wrap items-end gap-3 px-5 py-4 border-b border-slate-200/80">
           <label className="text-[13px] font-medium text-slate-700">
             Tipo de acción
-            <select className={`${INPUT_CLASS} mt-1.5`} value={filters.action} onChange={change('action')}>
+            <SearchSelect className={`${INPUT_CLASS} mt-1.5`} value={filters.action} onChange={change('action')}>
               {GROUPS.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
+          </label>
+          <label className="text-[13px] font-medium text-slate-700 min-w-[220px] max-w-xs flex-1">
+            Usuario
+            <SearchSelect className={`${INPUT_CLASS} mt-1.5`} value={filters.actor_user_id} onChange={change('actor_user_id')}>
+              <option value="">Todos los usuarios</option>
+              <option value={SYSTEM}>Sistema (sin usuario)</option>
+              {actors.map((actor) => (
+                <option key={actor.id} value={actor.id}>
+                  {actor.name || actor.email} · {actor.email}
+                </option>
+              ))}
+            </SearchSelect>
           </label>
           <label className="text-[13px] font-medium text-slate-700">
             Desde
@@ -171,6 +285,16 @@ export const AuditPage: React.FC = () => {
             Hasta
             <input className={`${INPUT_CLASS} mt-1.5`} type="date" value={filters.to} min={filters.from || undefined} onChange={change('to')} />
           </label>
+          {filtered && (
+            <Button
+              onClick={() => {
+                setState('loading');
+                setFilters({ action: '', actor_user_id: '', from: '', to: '', page: 1 });
+              }}
+            >
+              Quitar filtros
+            </Button>
+          )}
         </div>
 
         {state === 'loading' && <LoadingState />}

@@ -12,6 +12,7 @@ use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\Group;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Support\Domain\Models\Ticket;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -111,7 +112,7 @@ class StudentDirectory
     {
         $orders = Order::query()
             ->where('customer_id', $student->id)
-            ->with(['currency', 'items'])
+            ->with(['currency', 'items', 'payments'])
             ->latest()
             ->orderByDesc('id')
             ->limit(self::RECENT)
@@ -142,10 +143,11 @@ class StudentDirectory
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ])->values(),
             // Lo pagado, por moneda: una academia puede haber cobrado en más de una
+            // Cuenta lo cobrado de verdad: también las cuotas de una compra que aún no termina de pagarse, y no lo reembolsado
             'paid_totals' => $orders
-                ->where('status', Order::STATUS_PAID)
                 ->groupBy(fn (Order $order) => (string) $order->currency?->code)
-                ->map(fn ($group) => round((float) $group->sum('total_amount'), 2))
+                ->map(fn ($group) => round((float) $group->sum(fn (Order $order) => $order->payments->where('status', Payment::STATUS_CONFIRMED)->sum('amount')), 2))
+                ->filter(fn (float $total) => $total > 0)
                 ->all(),
             'certificates' => Certificate::query()
                 ->where('student_id', $student->id)

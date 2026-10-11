@@ -4,7 +4,8 @@ import { ArrowLeft, Award, BookOpen, Building2, LifeBuoy, Mail, Phone, Receipt, 
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Avatar, Badge, Card, CardHeader, EmptyState, ErrorState, LoadingState, StatCard, Table, TBody, Td, Th, THead, Tr, type Tone } from '../../../shared/ui';
 import { toScale } from '../../academic/api';
-import { studentsApi, type StudentEnrollment, type StudentOrder, type StudentProfile, type StudentTicket } from '../api';
+import { OrderStatusBadge } from '../../sales/components/OrderParts';
+import { studentsApi, type StudentEnrollment, type StudentProfile, type StudentTicket } from '../api';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -17,13 +18,6 @@ const ENROLLMENT_STATE: Record<StudentEnrollment['state'], { label: string; tone
   EXPIRED: { label: 'Acceso vencido', tone: 'warning' },
   UPCOMING: { label: 'Por iniciar', tone: 'neutral' },
   CANCELLED: { label: 'Anulada', tone: 'neutral' },
-};
-
-const ORDER_STATE: Record<StudentOrder['state'], { label: string; tone: Tone }> = {
-  PENDING: { label: 'Pendiente de pago', tone: 'warning' },
-  PAID: { label: 'Pagada', tone: 'success' },
-  CANCELLED: { label: 'Cancelada', tone: 'neutral' },
-  EXPIRED: { label: 'Vencida', tone: 'neutral' },
 };
 
 const TICKET_STATE: Record<StudentTicket['status'], { label: string; tone: Tone }> = {
@@ -206,9 +200,7 @@ export const StudentProfilePage: React.FC = () => {
                       {order.currency} {Number(order.total_amount).toFixed(2)}
                     </Td>
                     <Td className="whitespace-nowrap">
-                      <Badge tone={ORDER_STATE[order.state].tone} dot>
-                        {ORDER_STATE[order.state].label}
-                      </Badge>
+                      <OrderStatusBadge status={order.state} />
                     </Td>
                     <Td className="whitespace-nowrap text-slate-500 tnum">{formatDate(order.created_at)}</Td>
                   </Tr>

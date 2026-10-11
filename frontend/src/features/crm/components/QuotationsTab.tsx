@@ -9,6 +9,7 @@ import { formatMoney } from '../../sales/api';
 import { formatDay, QUOTATION_STATUS_LABEL, quotationCode, quotationsApi, type QuotationStatus, type QuotationSummary } from '../api';
 import { QuotationFormModal, QuotationModal } from './QuotationDialogs';
 import { QuotationStatusBadge } from './QuotationParts';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 export const QuotationsTab: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -73,14 +74,14 @@ export const QuotationsTab: React.FC = () => {
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <select className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
+          <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
             <option value="">Todas</option>
             {(Object.keys(QUOTATION_STATUS_LABEL) as QuotationStatus[]).map((key) => (
               <option key={key} value={key}>
                 {QUOTATION_STATUS_LABEL[key]}
               </option>
             ))}
-          </select>
+          </SearchSelect>
           <HelpTip
             text={status ? (cards.find((card) => card.key === status)?.help ?? '') : 'Una cotización nace como borrador, se envía y la empresa la acepta o la rechaza; si pasa su vigencia, vence.'}
             label="Qué significa el estado elegido"

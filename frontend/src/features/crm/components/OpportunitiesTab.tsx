@@ -5,6 +5,7 @@ import { Avatar, Button, Card, EmptyState, ErrorState, INPUT_CLASS, LoadingState
 import { formatMoney } from '../../sales/api';
 import { crmApi, formatDay, STAGE_BAR, type BoardColumn, type Opportunity, type Person } from '../api';
 import { OpportunityFormModal, OpportunityModal } from './OpportunityDialogs';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 const OpportunityCard: React.FC<{ opportunity: Opportunity; currency: string; onOpen: () => void }> = ({ opportunity, currency, onOpen }) => (
   <button
@@ -73,14 +74,14 @@ export const OpportunitiesTab: React.FC<{ canManage: boolean; owners: Person[] }
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
-        <select className={`${INPUT_CLASS} !w-52`} aria-label="Filtrar por responsable" value={ownerId} onChange={(event) => setOwnerId(event.target.value)}>
+        <SearchSelect className={`${INPUT_CLASS} !w-52`} aria-label="Filtrar por responsable" value={ownerId} onChange={(event) => setOwnerId(event.target.value)}>
           <option value="">Todo el equipo</option>
           {owners.map((owner) => (
             <option key={owner.id} value={owner.id}>
               {owner.name}
             </option>
           ))}
-        </select>
+        </SearchSelect>
         {canManage && (
           <Button variant="primary" className="ml-auto" icon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
             Nueva oportunidad

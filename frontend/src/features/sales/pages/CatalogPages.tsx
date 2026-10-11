@@ -12,6 +12,7 @@ import { COURSE_CARD_CLASS, salesApi, type CatalogMeta, type CatalogPackage } fr
 import { PackageCard } from './PackagePages';
 import { CourseCardBody, CourseCover, CourseFacts, CourseOverview, CoursePrice } from '../components/CourseCatalog';
 import { PublicShell } from '../components/PublicShell';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 const SELECT_CLASS = `${INPUT_CLASS} sm:!w-auto sm:min-w-[9.5rem]`;
 
@@ -163,31 +164,31 @@ export const PublicCatalogPage: React.FC = () => {
                 />
               </div>
               {meta.categories.length > 1 && (
-                <select className={SELECT_CLASS} aria-label="Filtrar por categoría" value={category} onChange={(event) => setFilter('category', event.target.value)}>
+                <SearchSelect className={SELECT_CLASS} aria-label="Filtrar por categoría" value={category} onChange={(event) => setFilter('category', event.target.value)}>
                   <option value="">Todas las categorías</option>
                   {meta.categories.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               )}
               {meta.levels.length > 1 && (
-                <select className={SELECT_CLASS} aria-label="Filtrar por nivel" value={level} onChange={(event) => setFilter('level', event.target.value)}>
+                <SearchSelect className={SELECT_CLASS} aria-label="Filtrar por nivel" value={level} onChange={(event) => setFilter('level', event.target.value)}>
                   <option value="">Todos los niveles</option>
                   {meta.levels.map((option) => (
                     <option key={option} value={option}>
                       {LEVEL_LABEL[option]}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               )}
               {meta.has_free && meta.has_paid && (
-                <select className={SELECT_CLASS} aria-label="Filtrar por precio" value={price} onChange={(event) => setFilter('price', event.target.value)}>
+                <SearchSelect className={SELECT_CLASS} aria-label="Filtrar por precio" value={price} onChange={(event) => setFilter('price', event.target.value)}>
                   <option value="">Cualquier precio</option>
                   <option value="free">Gratis</option>
                   <option value="paid">De pago</option>
-                </select>
+                </SearchSelect>
               )}
               {filtered && <Button onClick={clear}>Quitar filtros</Button>}
             </form>
@@ -297,7 +298,7 @@ export const PublicCoursePage: React.FC = () => {
       {state === 'ready' && course && (
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
           <Card className="overflow-hidden">
-            <CourseCover url={course.cover_url} className="max-h-72" />
+            <CourseCover url={course.cover_url} className="w-full max-h-72" />
             <div className="p-5 sm:p-6 space-y-5">
               <div>
                 {course.category && <p className="text-xs font-semibold text-brand-600 mb-1">{course.category}</p>}

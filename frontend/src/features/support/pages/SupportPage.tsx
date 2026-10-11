@@ -42,6 +42,7 @@ import {
   type TicketSummary,
 } from '../api';
 import { ReplyBox, TicketStatusBadge, TicketThread } from '../components/TicketParts';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 type Agent = { id: string; name: string };
 
@@ -270,7 +271,7 @@ export const SupportPage: React.FC = () => {
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <select className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
+          <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
             <option value="PENDING">Por atender</option>
             {TICKET_STATUSES.map((item) => (
               <option key={item} value={item}>
@@ -278,8 +279,8 @@ export const SupportPage: React.FC = () => {
               </option>
             ))}
             <option value="">Todos</option>
-          </select>
-          <select className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por responsable" value={assignee} onChange={(event) => filter(() => setAssignee(event.target.value))}>
+          </SearchSelect>
+          <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por responsable" value={assignee} onChange={(event) => filter(() => setAssignee(event.target.value))}>
             <option value="">Todo el equipo</option>
             <option value="me">A mi cargo</option>
             <option value="none">Sin asignar</option>
@@ -288,15 +289,15 @@ export const SupportPage: React.FC = () => {
                 {agent.name}
               </option>
             ))}
-          </select>
-          <select className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por tema" value={category} onChange={(event) => filter(() => setCategory(event.target.value))}>
+          </SearchSelect>
+          <SearchSelect className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por tema" value={category} onChange={(event) => filter(() => setCategory(event.target.value))}>
             <option value="">Todos los temas</option>
             {TICKET_CATEGORIES.map((item) => (
               <option key={item} value={item}>
                 {TICKET_CATEGORY_LABEL[item]}
               </option>
             ))}
-          </select>
+          </SearchSelect>
         </div>
 
         {state === 'loading' && <LoadingState />}

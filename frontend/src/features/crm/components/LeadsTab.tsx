@@ -24,6 +24,7 @@ import type { PageMeta } from '../../identity/api';
 import { crmApi, formatDay, LEAD_SOURCE_LABEL, LEAD_STATUS_LABEL, LEAD_STATUS_TONE, type Lead, type Person } from '../api';
 import { ConvertLeadModal, DiscardLeadModal, LeadFormModal } from './LeadDialogs';
 import { ExportButton } from '../../../shared/ui/ExportButton';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 type Dialog = { kind: 'create' } | { kind: 'import' } | { kind: 'edit' | 'convert' | 'discard'; lead: Lead };
 
@@ -89,12 +90,12 @@ export const LeadsTab: React.FC<{ canManage: boolean; owners: Person[] }> = ({ c
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <select className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
+          <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
             <option value="OPEN">Por trabajar</option>
             <option value="CONVERTED">Convertidos</option>
             <option value="DISCARDED">Descartados</option>
             <option value="">Todos</option>
-          </select>
+          </SearchSelect>
           <HelpTip
             text="Por trabajar reúne nuevos y contactados: los que todavía esperan una acción tuya. Las tarjetas de arriba separan cada estado."
             label="Qué significa el estado de un prospecto"

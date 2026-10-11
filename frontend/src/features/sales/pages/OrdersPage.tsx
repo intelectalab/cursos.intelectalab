@@ -44,6 +44,7 @@ import { DueInstallments, InstallmentPlanForm } from '../components/Installments
 import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
 import { PaymentReviewList } from '../components/PaymentReviews';
 import { ExportButton } from '../../../shared/ui/ExportButton';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 // Detalle de una orden con sus acciones: confirmar el pago recibido o cancelarla
 const OrderModal: React.FC<{
@@ -497,7 +498,7 @@ export const OrdersPage: React.FC = () => {
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <select
+          <SearchSelect
             className={`${INPUT_CLASS} !w-52`}
             aria-label="Filtrar por estado"
             value={status}
@@ -509,7 +510,7 @@ export const OrdersPage: React.FC = () => {
                 {ORDER_STATUS_LABEL[option]}
               </option>
             ))}
-          </select>
+          </SearchSelect>
           <HelpTip
             text={status ? (cards.find((card) => card.key === status)?.help ?? '') : 'Una orden nace pendiente; pasa a pagada al confirmarse el pago, o vence o se cancela si no se paga.'}
             label="Qué significa el estado elegido"

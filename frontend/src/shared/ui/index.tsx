@@ -198,8 +198,9 @@ export const THead: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   </thead>
 );
 
+// En pantallas de portátil las celdas van más juntas, para que la columna de acciones no quede fuera de la vista
 export const Th: React.FC<{ children?: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <th scope="col" className={`px-5 py-3 font-semibold whitespace-nowrap ${className}`}>
+  <th scope="col" className={`px-3.5 first:pl-5 last:pr-5 2xl:px-5 py-3 font-semibold whitespace-nowrap ${className}`}>
     {children}
   </th>
 );
@@ -213,7 +214,7 @@ export const Tr: React.FC<React.HTMLAttributes<HTMLTableRowElement>> = ({ classN
 );
 
 export const Td: React.FC<React.TdHTMLAttributes<HTMLTableCellElement>> = ({ className = '', ...props }) => (
-  <td className={`px-5 py-3.5 align-middle ${className}`} {...props} />
+  <td className={`px-3.5 first:pl-5 last:pr-5 2xl:px-5 py-3.5 align-middle ${className}`} {...props} />
 );
 
 interface PaginationProps {

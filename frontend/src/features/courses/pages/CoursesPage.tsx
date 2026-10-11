@@ -30,6 +30,7 @@ import {
   type CourseSummary,
 } from '../api';
 import { CourseFields } from '../components/CourseForm';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 const NewCourseModal: React.FC<{ options: CourseOptions | null; onClose: () => void }> = ({ options, onClose }) => {
   const navigate = useNavigate();
@@ -234,7 +235,7 @@ export const CoursesPage: React.FC = () => {
               }}
             />
           </div>
-          <select
+          <SearchSelect
             className={`${INPUT_CLASS} !w-44`}
             aria-label="Filtrar por estado"
             value={status}
@@ -247,13 +248,13 @@ export const CoursesPage: React.FC = () => {
             <option value="DRAFT">Borradores</option>
             <option value="PUBLISHED">Publicados</option>
             <option value="ARCHIVED">Archivados</option>
-          </select>
+          </SearchSelect>
           <HelpTip
             text="Borrador: en preparación, solo lo ve el personal. Publicado: sus alumnos lo pueden llevar. Archivado: retirado, sin alumnos nuevos."
             label="Qué significa el estado de un curso"
           />
           {(options?.categories.length ?? 0) > 0 && (
-            <select
+            <SearchSelect
               className={`${INPUT_CLASS} !w-48`}
               aria-label="Filtrar por categoría"
               value={category}
@@ -268,7 +269,7 @@ export const CoursesPage: React.FC = () => {
                   {item}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           )}
         </div>
       </Card>

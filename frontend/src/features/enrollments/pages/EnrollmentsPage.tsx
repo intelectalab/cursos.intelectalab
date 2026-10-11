@@ -9,6 +9,7 @@ import { enrollmentsApi, type EnrollableCourse, type Enrollment } from '../api';
 import { BulkValidityModal, EnrollModal } from '../components/EnrollmentDialogs';
 import { EnrollmentTable } from '../components/EnrollmentTable';
 import { ExportButton } from '../../../shared/ui/ExportButton';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 // Situaciones por las que se puede filtrar y qué significa cada una
 const SITUATIONS: { key: string; label: string; help: string }[] = [
@@ -126,7 +127,7 @@ export const EnrollmentsPage: React.FC = () => {
             />
           </div>
           <div className="flex items-center gap-1.5">
-            <select
+            <SearchSelect
               className={`${INPUT_CLASS} !w-56`}
               aria-label="Filtrar por curso"
               value={courseId}
@@ -138,11 +139,11 @@ export const EnrollmentsPage: React.FC = () => {
                   {course.title}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
             <HelpTip text="Muestra solo las matrículas de un curso. Las tarjetas de arriba se recalculan para ese curso." label="Qué hace el filtro por curso" />
           </div>
           <div className="flex items-center gap-1.5">
-            <select
+            <SearchSelect
               className={`${INPUT_CLASS} !w-48`}
               aria-label="Filtrar por situación"
               value={stateFilter}
@@ -154,7 +155,7 @@ export const EnrollmentsPage: React.FC = () => {
                   {option.label}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
             <HelpTip
               text={stateFilter ? (SITUATIONS.find((option) => option.key === stateFilter)?.help ?? '') : 'La situación se deduce de las fechas de cada matrícula. Elige una para ver qué significa.'}
               label="Qué significa la situación elegida"

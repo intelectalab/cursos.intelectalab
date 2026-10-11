@@ -21,6 +21,7 @@ import { ImportModal } from '../../../shared/ui/ImportModal';
 import type { PageMeta } from '../../identity/api';
 import { academicApi, QUESTION_LABEL, QUESTION_TYPES, type Question, type QuestionBank } from '../api';
 import { QuestionEditor } from '../components/QuestionEditor';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 const BankModal: React.FC<{
   bank: QuestionBank | null;
@@ -282,7 +283,7 @@ export const QuestionBanksPage: React.FC = () => {
                     }}
                   />
                 </div>
-                <select
+                <SearchSelect
                   className={`${INPUT_CLASS} !w-48`}
                   aria-label="Filtrar por tipo"
                   value={type}
@@ -297,7 +298,7 @@ export const QuestionBanksPage: React.FC = () => {
                       {QUESTION_LABEL[option]}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
 
               {questionsState === 'loading' && <LoadingState />}
