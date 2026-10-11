@@ -39,6 +39,7 @@ import {
   type PaymentMethod,
 } from '../api';
 import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
+import { ExportButton } from '../../../shared/ui/ExportButton';
 
 // Detalle de una orden con sus acciones: confirmar el pago recibido o cancelarla
 const OrderModal: React.FC<{
@@ -310,7 +311,12 @@ export const OrdersPage: React.FC = () => {
 
   return (
     <div>
-      <PageHeader title="Ventas y pagos" icon={CreditCard} subtitle="Órdenes de compra de tus alumnos y confirmación de los pagos recibidos." />
+      <PageHeader
+        title="Ventas y pagos"
+        icon={CreditCard}
+        subtitle="Órdenes de compra de tus alumnos y confirmación de los pagos recibidos."
+        action={<ExportButton path="/orders/export" params={{ search: search || undefined, status: status || undefined }} filename="ordenes.xlsx" />}
+      />
 
       <FilterCards cards={cards} active={status} label="Órdenes por estado" onSelect={(key) => filter(() => setStatus(key))} />
 

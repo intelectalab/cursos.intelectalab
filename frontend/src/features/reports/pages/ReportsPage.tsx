@@ -17,8 +17,10 @@ import {
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Card, CardHeader, EmptyState, ErrorState, IconChip, INPUT_CLASS, LoadingState, PageHeader, type Tone } from '../../../shared/ui';
 import { formatMoney } from '../../sales/api';
+import { useAuth } from '../../auth/AuthContext';
 import { bucketize, change, formatDay, isoDate, reportsApi, type Overview } from '../api';
 import { ColumnChart } from '../components/ColumnChart';
+import { ExportButton } from '../../../shared/ui/ExportButton';
 
 interface Range {
   from: string;
@@ -93,6 +95,7 @@ const TodayItem: React.FC<{ icon: LucideIcon; label: string; value: string; hint
 
 // Tablero de indicadores de la academia
 export const ReportsPage: React.FC = () => {
+  const { hasPermission } = useAuth();
   const [range, setRange] = useState<Range>(() => lastDays(30));
   const [result, setResult] = useState<{ key: string; data: Overview } | { key: string; error: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -129,7 +132,12 @@ export const ReportsPage: React.FC = () => {
 
   return (
     <div>
-      <PageHeader title="Reportes" icon={BarChart3} subtitle="Cómo van las ventas, las matrículas y el avance de tus alumnos." />
+      <PageHeader
+        title="Reportes"
+        icon={BarChart3}
+        subtitle="Cómo van las ventas, las matrículas y el avance de tus alumnos."
+        action={valid && hasPermission('reports.export') && <ExportButton path="/reports/overview/export" params={{ from: range.from, to: range.to }} filename={`reporte-${range.from}-a-${range.to}.xlsx`} />}
+      />
 
       {/* Filtros: una sola fila, sobre todo lo que filtran */}
       <Card className="mb-5">

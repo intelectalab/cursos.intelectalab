@@ -13,6 +13,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     Route::middleware('permission:enrollments.read,enrollments.support.read')->group(function () {
         Route::get('/enrollments', [EnrollmentController::class, 'all']);
         Route::get('/enrollments/options', [EnrollmentController::class, 'options']);
+        Route::get('/enrollments/export', [EnrollmentController::class, 'export']);
     });
 
     Route::post('/enrollments', [EnrollmentController::class, 'store'])->middleware('permission:enrollments.create');

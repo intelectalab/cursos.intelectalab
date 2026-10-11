@@ -28,6 +28,8 @@ class PagePresenter
             'updated_by' => self::name($page->editor),
             // Dirección pública, relativa al subdominio de la organización
             'path' => "/p/{$page->slug}",
+            // Paso de revisión del borrador: IN_REVIEW, CHANGES_REQUESTED o null
+            'review_status' => $page->review_status,
         ];
     }
 
@@ -40,6 +42,14 @@ class PagePresenter
     {
         return self::summary($page) + [
             'content' => $page->content,
+            'review' => $page->review_status ? [
+                'requested_by' => self::name($page->reviewRequester),
+                'requested_at' => $page->review_requested_at?->toIso8601String(),
+                // Observaciones de quien la devolvió
+                'comment' => $page->review_comment,
+                'reviewed_by' => $page->review_status === Page::REVIEW_CHANGES_REQUESTED ? self::name($page->reviewer) : null,
+                'reviewed_at' => $page->review_status === Page::REVIEW_CHANGES_REQUESTED ? $page->reviewed_at?->toIso8601String() : null,
+            ] : null,
             'versions' => $page->versions->map(fn (PageVersion $version) => [
                 'version' => $version->version,
                 'title' => $version->title,

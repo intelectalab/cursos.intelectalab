@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Certificates\Application\CertificatePdf;
 use App\Modules\Certificates\Application\CertificateService;
+use App\Modules\Certificates\Domain\CertificateLayout;
 use App\Modules\Certificates\Domain\Models\Certificate;
 use App\Modules\Certificates\Domain\Models\CertificateTemplate;
 use App\Modules\Certificates\Http\CertificatePresenter;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Files\Application\FileStorage;
+use App\Modules\Files\Domain\Models\File;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
@@ -33,6 +35,9 @@ class CertificateController extends Controller
     public const SIGNATURE_PURPOSE = 'certificate_signature';
 
     public const BACKGROUND_PURPOSE = 'certificate_background';
+
+    /** Imágenes que la organización coloca en el diseño libre */
+    public const IMAGE_PURPOSE = 'certificate_image';
 
     public function __construct(
         private readonly CertificateService $certificates,
@@ -171,7 +176,98 @@ class CertificateController extends Controller
                 'heights' => CertificateTemplate::HEIGHTS,
                 'sizes' => CertificateTemplate::SIZES,
             ],
+            // Editor visual: qué se puede colocar y desde dónde se parte
+            'canvas' => [
+                'sheets' => CertificateLayout::SHEETS,
+                'fields' => CertificateLayout::FIELDS,
+                'fonts' => array_keys(CertificateLayout::FONTS),
+                'max_elements' => CertificateLayout::MAX_ELEMENTS,
+                'defaults' => [
+                    CertificateLayout::LANDSCAPE => CertificateLayout::default(CertificateLayout::LANDSCAPE),
+                    CertificateLayout::PORTRAIT => CertificateLayout::default(CertificateLayout::PORTRAIT),
+                ],
+            ],
         ]);
+    }
+
+    /**
+     * Guarda el diseño libre del editor visual. Sin diseño (null) el
+     * certificado vuelve al diseño por opciones.
+     */
+    public function updateLayout(Request $request): JsonResponse
+    {
+        $template = $this->certificates->template();
+        $before = ['layout' => $template->layout];
+
+        $template->fill(['layout' => $request->input('layout') === null ? null : $this->validatedLayout($request)])->save();
+
+        if ($template->wasChanged() || $template->wasRecentlyCreated) {
+            $this->audit->record('certificate_templates.layout_updated', $template, $before, ['layout' => $template->layout]);
+        }
+
+        return ApiResponse::success($this->presentTemplate($template));
+    }
+
+    /**
+     * Sube una imagen para colocarla en el diseño (un sello, otro logo, otra firma).
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate(['file' => $this->storage->rules(self::IMAGE_PURPOSE)]);
+
+        $file = $this->storage->store($request->file('file'), self::IMAGE_PURPOSE);
+
+        return ApiResponse::success(['id' => $file->id, 'name' => $file->original_name], null, 201);
+    }
+
+    /**
+     * Imagen propia del diseño: solo la ve el personal que gestiona certificados.
+     */
+    public function image(string $file): StreamedResponse
+    {
+        $image = File::query()->where('purpose', self::IMAGE_PURPOSE)->findOrFail($file);
+
+        return $this->storage->response($image);
+    }
+
+    /**
+     * El fondo, para dibujarlo bajo el lienzo del editor.
+     */
+    public function background(): StreamedResponse
+    {
+        $file = $this->certificates->template()->background;
+
+        if (! $file || ! $this->storage->exists($file)) {
+            throw new ApiException(ErrorCode::NotFound, 'No hay un fondo cargado.', 404);
+        }
+
+        return $this->storage->response($file);
+    }
+
+    /**
+     * @return array{orientation: string, elements: list<array<string, mixed>>}
+     */
+    private function validatedLayout(Request $request): array
+    {
+        $data = $request->validate(CertificateLayout::rules(), [
+            'layout.elements.*.color.regex' => 'El color debe tener el formato #RRGGBB.',
+            'layout.elements.max' => 'El diseño admite hasta '.CertificateLayout::MAX_ELEMENTS.' elementos.',
+        ]);
+
+        $layout = CertificateLayout::clean($data['layout']);
+
+        if (! CertificateLayout::isVerifiable($layout)) {
+            throw ValidationException::withMessages(['layout.elements' => 'El certificado debe llevar el código de verificación y el QR: sin ellos no se puede comprobar su validez.']);
+        }
+
+        // Solo imágenes subidas para el certificado por esta organización
+        $fileIds = array_values(array_unique(array_filter(array_column($layout['elements'], 'file_id'))));
+
+        if (File::query()->where('purpose', self::IMAGE_PURPOSE)->whereIn('id', $fileIds)->count() !== count($fileIds)) {
+            throw ValidationException::withMessages(['layout.elements' => 'Una de las imágenes del diseño ya no existe. Quítala o súbela de nuevo.']);
+        }
+
+        return $layout;
     }
 
     public function updateTemplate(Request $request): JsonResponse
@@ -310,7 +406,10 @@ class CertificateController extends Controller
             ],
         ]);
 
-        return response($pdf->render($sample, $request->getSchemeAndHttpHost().'/verify/ABCD-EFGH-JKLM'), 200, [
+        // El editor visual previsualiza lo que tiene en pantalla, aunque no lo haya guardado
+        $layout = $request->isMethod('post') && $request->input('layout') !== null ? $this->validatedLayout($request) : null;
+
+        return response($pdf->render($sample, $request->getSchemeAndHttpHost().'/verify/ABCD-EFGH-JKLM', $layout), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="vista-previa-certificado.pdf"',
         ]);
@@ -356,6 +455,8 @@ class CertificateController extends Controller
             'has_signature' => $template->signature_file_id !== null,
             'has_background' => $template->background_file_id !== null,
             'design' => $template->resolvedDesign(),
+            // Diseño libre del editor visual; null = se usa el diseño por opciones
+            'layout' => $template->layout,
         ];
     }
 }

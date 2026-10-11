@@ -2,7 +2,7 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-10, tras el primer pago de prueba con Mercado Pago.
+Última actualización: 2026-10-10, al cerrar la entrega 1 del editor visual de certificados.
 
 ## Dónde estamos
 
@@ -53,6 +53,10 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Alumnos y docentes · entrega 1 | Pantalla "Alumnos" (tarjetas que filtran, buscador, alta) y ficha Alumno 360 con cursos, compras, certificados y consultas | Hecho |
 | Alumnos y docentes · entrega 2 | Pantalla "Docentes" (tarjetas que filtran, buscador, alta) y ficha del docente con sus cursos, alumnos y carga de calificación | Hecho |
 | Catálogo público | Buscador por texto y filtros por categoría, nivel y precio | Hecho |
+| Cierre de brechas del Maestro · entrega 1 | Exportar a Excel el tablero de reportes, las órdenes, los alumnos, las matrículas y los prospectos, con los filtros de la pantalla | Hecho |
+| Cierre de brechas del Maestro · entrega 2 | Paso de revisión en Páginas: quien redacta envía a revisión; quien publica aprueba publicando o devuelve con observaciones | Hecho |
+| Editor visual de certificados · entrega 1 | Lienzo donde cada dato, texto o imagen se arrastra, se redimensiona y se edita; hoja horizontal o vertical; vista previa en PDF | Hecho |
+| Editor visual de certificados · entrega 2 | Varias plantillas con una por curso, y diseño congelado al emitir | Pendiente |
 | Ajustes de evaluación | El cuestionario que vence califica lo guardado; nota mínima para aprobar el curso, que también exige el certificado | Hecho |
 | Planes de la plataforma · entrega 1 | Planes por tope de alumnos, prueba gratuita de 14 días y 10 alumnos para toda academia nueva, asignación de plan desde la ficha y tarjeta "Tu plan" en la academia | Hecho |
 | Planes de la plataforma · entrega 2 | "Mi plan": la academia elige plan, genera su orden de pago a IntelectaLab e informa su pago; el super administrador lo confirma en "Pagos" y el plan queda vigente | Hecho |
@@ -60,7 +64,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Consola de plataforma · ficha por academia | Datos editables, cifras y ventas de seis meses, administradores con restablecimiento de contraseña, historial de la plataforma y motivo obligatorio al suspender | Hecho |
 
 - **Avance del plan:** 12 de 14 sprints construidos (S0 a S8 y S10 a S12). **S6 Pagos tiene su primer pago de prueba** (un curso con tarjeta, en Mercado Pago, el 2026-10-10); faltan el reembolso, el pago de un plan y todo PayPal, que no tiene credenciales. Los comprobantes siguen fuera. Faltan S9, en espera de una decisión, y S13.
-- **Calidad:** 308 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que no se corren desde S12; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
+- **Calidad:** 314 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que no se corren desde S12; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
 - **Seguridad:** las pruebas revisan que las 277 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 65 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
@@ -74,7 +78,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 - **Qué no se puede hacer todavía:** reembolsar una parte, emitir comprobantes ni enviar correos de verdad (los avisos por correo ya se generan, pero quedan en el registro del servidor hasta definir el proveedor).
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
-El detalle de cada bloque terminado está en [avances/](avances/README.md). La comparación con el Documento Maestro (18 de 26 requisitos hechos, 5 a medias y 3 sin construir) está en [verificacion-maestro.md](verificacion-maestro.md). El manual de uso por rol está en `docs/manual-de-uso-por-rol.docx` y se actualiza con cada cambio. La documentación técnica que pide el Maestro (OpenAPI, diccionario de datos, catálogos de estados y de errores, y trazabilidad) está en [tecnica/](tecnica/README.md) y se regenera con `php artisan docs:technical`.
+El detalle de cada bloque terminado está en [avances/](avances/README.md). La comparación con el Documento Maestro (20 de 26 requisitos hechos, 3 a medias y 3 sin construir) está en [verificacion-maestro.md](verificacion-maestro.md). El manual de uso por rol está en `docs/manual-de-uso-por-rol.docx` y se actualiza con cada cambio. La documentación técnica que pide el Maestro (OpenAPI, diccionario de datos, catálogos de estados y de errores, y trazabilidad) está en [tecnica/](tecnica/README.md) y se regenera con `php artisan docs:technical`.
 
 **Terminado: el cobro de la plataforma a las academias, con pago por fuera.** Modelo descrito por el responsable del proyecto (falta confirmarlo con jefatura, decisión 16): la academia se registra en prueba gratuita, luego paga a IntelectaLab según su cantidad de alumnos, y sus alumnos le pagan los cursos a ella. Tres entregas hechas: (1) planes y prueba gratuita; (2) "Mi plan" en la academia con orden de pago y confirmación en la consola; (3) límites y vencimiento. **El plan ya limita:** con el cupo lleno no entran alumnos nuevos, y una academia vencida pasa por siete días de gracia y luego queda en solo lectura.
 
@@ -175,7 +179,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **De reportes (S7, entrega 2)**
 
-- Exportar a Excel o CSV.
+- Resuelto el 2026-10-10: exportar a Excel el tablero y los listados de órdenes, alumnos, matrículas y prospectos. Faltan: aviso cuando el archivo se corta en 5 000 filas, y exportar Docentes, Empresas, Oportunidades, Cotizaciones, Certificados, Soporte, Reclamos y Cupones.
 - Reportes por curso, por alumno y por vendedor; filtros por curso o categoría.
 - Reportes del profesor sobre sus cursos.
 - Indicadores de notas, de abandono y de pagos por medio.
@@ -246,6 +250,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **De páginas (S10, entrega 3)**
 
+- Resuelto el 2026-10-10: paso de revisión. Faltan: avisar a quien publica que hay algo por revisar (depende de la decisión 3), historial de observaciones, filtro «En revisión» y, si jefatura lo pide, impedir que alguien publique lo que escribió.
 - Ver una versión anterior y volver a ella.
 - Biblioteca de imágenes; tablas y videos en el contenido; descripción para buscadores.
 - Editar la portada y el menú del sitio público.
@@ -274,7 +279,8 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 **Del cobro en línea con Mercado Pago (S6, entrega 1)**
 
 - Hecho el 2026-10-10: pago de prueba de un curso con tarjeta (conectar, pagar, confirmar al abrir la orden). **Falta probar con la pasarela:** Yape, saldo en cuenta, el regreso automático y los avisos (necesitan servidor con HTTPS).
-- Marcar como «Cuenta de prueba» las cuentas de usuarios de prueba de Mercado Pago: sus claves empiezan con `APP_USR-` y el sistema solo reconoce las `TEST-`.
+- Resuelto el 2026-10-10: las cuentas de usuarios de prueba de Mercado Pago se muestran como «Cuenta de prueba».
+- Que la lista «Mis compras» también compruebe el pago; hoy lo hace la orden al abrirse.
 - Ver si Mercado Pago acepta el correo real del alumno cuando la cuenta que cobra es de prueba (en la prueba no dio problema).
 - Lista de cobros en revisión; hoy se ven como alerta en cada orden.
 - Botón para que el personal vuelva a consultar a la pasarela por una orden.
@@ -334,7 +340,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 - Actuar desde la ficha: matricular, editar la cuenta, responder una consulta; y enlazar cada compra, certificado y consulta a su detalle.
 - Limitar la ficha por bloques según el rol (por ejemplo, que Ventas no vea las consultas).
 - Rol Finanzas, que el backlog menciona y no existe.
-- Exportar la lista de alumnos a Excel y ordenar por otras columnas.
+- Ordenar la lista de alumnos por otras columnas (exportarla ya se puede).
 - Medir el listado con miles de alumnos.
 
 **Del avance secuencial y la vista previa (entrega 3, 2026-10-08)**
@@ -382,7 +388,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **De la plantilla de certificado y la consola de plataforma (revisión de jefatura, entrega 3)**
 
-- Editor libre de la plantilla (arrastrar cada dato), tipografías y textos fijos editables; una plantilla por curso.
+- Resuelto el 2026-10-10: editor visual de la plantilla (arrastrar cada dato, textos libres, imágenes propias, seis tipografías). Faltan: **varias plantillas y una por curso**; **congelar el diseño al emitir**; una tipografía caligráfica (exige instalar un archivo de fuente: necesita aprobación); deshacer, capas, guías entre elementos, formas y rotación; limpiar las imágenes subidas que ya no se usan; probarlo en pantalla táctil.
 - Decidir si el diseño debe congelarse al emitir cada certificado (hoy un cambio de diseño alcanza a los ya emitidos).
 - Consola: planes y límites por academia y cobro a las academias (esperan que jefatura defina los planes); crear o desactivar administradores de una academia desde su ficha; gestionar otros administradores de plataforma; ventas por mes en la zona horaria de cada academia. Editar los datos y el historial único ya están hechos (ficha por academia).
 - Modo soporte que oculte datos personales.

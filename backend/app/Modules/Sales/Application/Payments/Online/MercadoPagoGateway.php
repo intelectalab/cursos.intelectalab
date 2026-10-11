@@ -67,8 +67,10 @@ class MercadoPagoGateway implements OnlineGateway
         return [
             'name' => $response->json('nickname') ?: $response->json('email'),
             'country' => $response->json('site_id'),
-            // Las claves de prueba no mueven dinero
-            'test' => str_starts_with((string) $credentials['access_token'], 'TEST-'),
+            // Las claves de prueba no mueven dinero; las de un usuario de prueba empiezan con APP_USR- como las reales
+            'test' => $this->usesSandbox((string) $credentials['access_token'])
+                || str_starts_with((string) $response->json('nickname'), 'TESTUSER')
+                || in_array('test_user', (array) $response->json('tags'), true),
         ];
     }
 
@@ -104,7 +106,8 @@ class MercadoPagoGateway implements OnlineGateway
 
         return [
             'external_id' => (string) $response->json('id'),
-            'checkout_url' => (string) ($account->test ? ($response->json('sandbox_init_point') ?? $response->json('init_point')) : $response->json('init_point')),
+            // Un usuario de prueba paga en la página normal; la de sandbox es solo para las claves TEST-
+            'checkout_url' => (string) ($this->usesSandbox((string) $account->get('access_token')) ? ($response->json('sandbox_init_point') ?? $response->json('init_point')) : $response->json('init_point')),
         ];
     }
 
@@ -208,6 +211,11 @@ class MercadoPagoGateway implements OnlineGateway
             },
             paidAt: isset($payment['date_approved']) ? Carbon::parse($payment['date_approved'])->utc() : null,
         );
+    }
+
+    private function usesSandbox(string $accessToken): bool
+    {
+        return str_starts_with($accessToken, 'TEST-');
     }
 
     private function client(?string $accessToken): PendingRequest

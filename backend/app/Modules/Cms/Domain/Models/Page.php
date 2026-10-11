@@ -17,6 +17,12 @@ class Page extends Model
 
     public const STATUS_PUBLISHED = 'PUBLISHED';
 
+    /** El borrador espera a quien publica */
+    public const REVIEW_PENDING = 'IN_REVIEW';
+
+    /** Quien publica lo devolvió con observaciones */
+    public const REVIEW_CHANGES_REQUESTED = 'CHANGES_REQUESTED';
+
     /** Direcciones que no puede tomar una página */
     public const RESERVED_SLUGS = ['admin', 'api', 'login', 'nueva', 'new'];
 
@@ -32,6 +38,12 @@ class Page extends Model
         'draft_updated_at',
         'created_by',
         'updated_by',
+        'review_status',
+        'review_requested_by',
+        'review_requested_at',
+        'review_comment',
+        'reviewed_by',
+        'reviewed_at',
     ];
 
     protected function casts(): array
@@ -41,6 +53,8 @@ class Page extends Model
             'show_in_footer' => 'boolean',
             'published_at' => 'datetime',
             'draft_updated_at' => 'datetime',
+            'review_requested_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 
@@ -55,6 +69,24 @@ class Page extends Model
     public function hasPendingChanges(): bool
     {
         return $this->isPublished() && $this->draft_updated_at->gt($this->published_at);
+    }
+
+    /**
+     * Hay algo en el borrador que el público no ve: nunca se publicó o cambió después.
+     */
+    public function hasUnpublishedDraft(): bool
+    {
+        return ! $this->isPublished() || $this->hasPendingChanges();
+    }
+
+    public function reviewRequester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'review_requested_by');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function currentVersion(): BelongsTo

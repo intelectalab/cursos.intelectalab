@@ -44,12 +44,14 @@ class CertificateTemplate extends Model
         'signature_file_id',
         'background_file_id',
         'design',
+        'layout',
     ];
 
     protected function casts(): array
     {
         return [
             'design' => 'array',
+            'layout' => 'array',
         ];
     }
 

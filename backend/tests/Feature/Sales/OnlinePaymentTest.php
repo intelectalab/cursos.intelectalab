@@ -136,6 +136,7 @@ class OnlinePaymentTest extends TestCase
             ->assertJsonPath('data.0.connected', true)
             ->assertJsonPath('data.0.enabled', true)
             ->assertJsonPath('data.0.account.name', 'ACADEMIAACME')
+            ->assertJsonPath('data.0.account.test', false)
             ->assertJsonPath('data.0.has_webhook_secret', true);
 
         // Ni en la respuesta, ni en claro en la base, ni en la auditoría
@@ -230,6 +231,26 @@ class OnlinePaymentTest extends TestCase
         // La orden de otra persona no existe para quien pregunta
         $other = $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'beto@acme.com']);
         $this->withToken($this->login('acme', $other->email))->postJson($this->api("/me/orders/{$order}/pay/sync"))->assertNotFound();
+    }
+
+    public function test_a_mercado_pago_test_user_is_shown_as_a_test_account_and_pays_on_the_regular_page(): void
+    {
+        // Las claves de un usuario de prueba empiezan con APP_USR-, como las reales
+        $this->mercadoPago(['/users/me' => Http::response(['id' => 7, 'nickname' => 'TESTUSER811255', 'site_id' => 'MPE'])]);
+        $this->withToken($this->admin)->putJson($this->api('/settings/payment-gateways/mercadopago'), ['access_token' => 'APP_USR-de-un-usuario-de-prueba'])
+            ->assertOk()
+            ->assertJsonPath('data.0.account.test', true);
+
+        $order = $this->order();
+        $this->mercadoPago(['/checkout/preferences' => Http::response([
+            'id' => 'PREF-1',
+            'init_point' => 'https://www.mercadopago.com.pe/checkout?pref_id=PREF-1',
+            'sandbox_init_point' => 'https://sandbox.mercadopago.com.pe/checkout?pref_id=PREF-1',
+        ], 201)]);
+
+        $this->withToken($this->buyer)->postJson($this->api("/me/orders/{$order}/pay"), ['gateway' => 'MERCADOPAGO', 'return_url' => "https://acme.localhost/my-orders/{$order}"])
+            ->assertCreated()
+            ->assertJsonPath('data.checkout_url', 'https://www.mercadopago.com.pe/checkout?pref_id=PREF-1');
     }
 
     public function test_a_charge_that_does_not_match_the_order_is_left_for_a_person_to_review(): void

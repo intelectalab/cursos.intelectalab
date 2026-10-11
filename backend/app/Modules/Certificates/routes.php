@@ -23,6 +23,8 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::get('/certificates/template', [CertificateController::class, 'template']);
         Route::get('/certificates/template/signature', [CertificateController::class, 'signature']);
         Route::get('/certificates/template/preview', [CertificateController::class, 'previewTemplate']);
+        Route::get('/certificates/template/background', [CertificateController::class, 'background']);
+        Route::get('/certificates/template/images/{file}', [CertificateController::class, 'image'])->whereUuid('file');
         Route::get('/certificates/{certificate}/pdf', [CertificateController::class, 'pdf'])->whereUuid('certificate');
     });
 
@@ -43,5 +45,9 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::delete('/certificates/template/signature', [CertificateController::class, 'removeSignature']);
         Route::post('/certificates/template/background', [CertificateController::class, 'uploadBackground']);
         Route::delete('/certificates/template/background', [CertificateController::class, 'removeBackground']);
+        // Editor visual: diseño libre, sus imágenes y la vista previa de lo que hay en pantalla
+        Route::put('/certificates/template/layout', [CertificateController::class, 'updateLayout']);
+        Route::post('/certificates/template/images', [CertificateController::class, 'uploadImage']);
+        Route::post('/certificates/template/preview', [CertificateController::class, 'previewTemplate']);
     });
 });

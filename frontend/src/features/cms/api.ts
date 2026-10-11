@@ -22,10 +22,13 @@ export interface PageSummary {
   updated_by: string | null;
   // Dirección pública, relativa al subdominio de la academia
   path: string;
+  // Paso de revisión del borrador: espera a quien publica, o fue devuelto con observaciones
+  review_status: 'IN_REVIEW' | 'CHANGES_REQUESTED' | null;
 }
 
 export interface Page extends PageSummary {
   content: PageNode;
+  review: { requested_by: string | null; requested_at: string | null; comment: string | null; reviewed_by: string | null; reviewed_at: string | null } | null;
   versions: { version: number; title: string; published_at: string; published_by: string | null; current: boolean }[];
 }
 
@@ -68,6 +71,14 @@ export const cmsApi = {
   },
   async publish(id: string) {
     return (await api.post(`/pages/${id}/publish`)).data.data as Page;
+  },
+  // Quien redacta pide que publiquen su borrador
+  async submitReview(id: string) {
+    return (await api.post(`/pages/${id}/submit-review`)).data.data as Page;
+  },
+  // Quien publica lo devuelve con observaciones
+  async requestChanges(id: string, comment: string) {
+    return (await api.post(`/pages/${id}/request-changes`, { comment })).data.data as Page;
   },
   async unpublish(id: string) {
     return (await api.post(`/pages/${id}/unpublish`)).data.data as Page;

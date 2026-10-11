@@ -51,6 +51,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     Route::middleware('permission:orders.read,orders.support.read')->group(function () {
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/options', [OrderController::class, 'options']);
+        Route::get('/orders/export', [OrderController::class, 'export']);
         Route::get('/orders/{order}', [OrderController::class, 'show'])->whereUuid('order');
     });
 

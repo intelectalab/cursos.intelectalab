@@ -2,7 +2,7 @@
 
 Comparación del sistema con `ERP_SaaS_Cursos_Documento_Maestro_Integral_v2.docx` (versión 2.0), hecha el 2026-10-10 leyendo el documento completo y revisando el código. Se actualiza cuando cambie alguno de los dos.
 
-**Resultado:** el Maestro no está completo. De sus 26 requisitos funcionales, 18 están hechos, 5 a medias y 3 no existen. Además falta un flujo (asistencia), el último sprint y varios entregables de documentación.
+**Resultado:** el Maestro no está completo. De sus 26 requisitos funcionales, 20 están hechos, 3 a medias y 3 no existen. Además falta un flujo (asistencia), el último sprint y varios entregables de documentación.
 
 ## 1. Requisitos funcionales (sección 2.2)
 
@@ -30,12 +30,12 @@ Comparación del sistema con `ERP_SaaS_Cursos_Documento_Maestro_Integral_v2.docx
 | RF-WAL-001 | Wallet | **Falta** | Fase 3 del Maestro. Reglas sin definir (PD-012). Solo existe el permiso. |
 | RF-SUP-001 | Soporte | Hecho | Tickets y mensajes. |
 | RF-AI-001 | IA | **Falta** | Fase 3 del Maestro. Falta proveedor, modelo y política de datos (PD-016). Solo existe el permiso. |
-| RF-CMS-001 | CMS | A medias | Borrador, vista previa y publicación con versiones. **Falta un paso de revisión**; hoy se separa quién edita de quién publica. |
+| RF-CMS-001 | CMS | Hecho | Borrador, vista previa, paso de revisión (enviar, publicar o devolver con observaciones) y publicación con versiones (2026-10-10). |
 | RF-CLAIM-001 | Reclamaciones | Hecho | Registro y seguimiento. Formato y plazo sin revisión legal. |
-| RF-REP-001 | Reportes | A medias | Indicadores con filtros por periodo. **Faltan las exportaciones** (solo se exporta el libro de notas). |
+| RF-REP-001 | Reportes | Hecho | Indicadores con filtros por periodo y descarga en Excel del tablero, las órdenes, los alumnos, las matrículas, los prospectos y el libro de notas (2026-10-10). |
 | RF-AUD-001 | Auditoría | Hecho | Operaciones críticas registradas. |
 
-**Totales:** 18 hechos, 5 a medias, 3 faltan.
+**Totales:** 20 hechos, 3 a medias, 3 faltan.
 
 ## 2. Flujos (sección 10)
 

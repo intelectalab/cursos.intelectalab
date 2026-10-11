@@ -65,7 +65,7 @@ El `code` es lo que debe usar un programa; el `message` puede cambiar de redacci
 | `LICENSE_IN_USE` | 409 | «El trabajador ya empezó el curso: la licencia no se puede retirar.» |
 | `TICKET_CLOSED` | 409 | «Este ticket está cerrado. Si el problema continúa, abre uno nuevo.» |
 | `CLAIM_ALREADY_ANSWERED` | 409 | «Esta hoja ya fue respondida.» |
-| `PAGE_NOT_PUBLISHABLE` | 409 | «La página está vacía. Escribe su contenido antes de publicarla.»<br>«Retira la página del sitio antes de eliminarla.» |
+| `PAGE_NOT_PUBLISHABLE` | 409 | «La página está vacía. Escribe su contenido antes de publicarla.»<br>«La página está vacía. Escribe su contenido antes de enviarla a revisión.»<br>«No hay cambios por revisar: lo publicado ya es igual al borrador.» |
 | `NO_ATTEMPTS_LEFT` | 409 | «Ya usaste todos los intentos de este cuestionario.» |
 | `ATTEMPT_CLOSED` | 409 | «Este intento ya se cerró.»<br>«Se acabó el tiempo de este intento.» |
 | `SUBMISSION_GRADED` | 409 | «La tarea ya fue calificada y no se puede volver a entregar.» |

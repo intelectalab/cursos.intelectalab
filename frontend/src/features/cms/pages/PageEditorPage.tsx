@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, ExternalLink, Eye, EyeOff, PenLine, Rocket, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ExternalLink, Eye, EyeOff, PenLine, Rocket, Save, Send, Trash2, Undo2 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
-import { Alert, Badge, Button, Card, CardHeader, CHECKBOX_CLASS, ConfirmModal, ErrorState, Field, INPUT_CLASS, LoadingState } from '../../../shared/ui';
+import { Alert, Badge, Button, Card, CardHeader, CHECKBOX_CLASS, ConfirmModal, ErrorState, Field, INPUT_CLASS, LoadingState, Modal } from '../../../shared/ui';
 import { formatDateTime } from '../../sales/api';
 import { cmsApi, type ImageRules, type Page, type PageNode } from '../api';
 import { PageContentView } from '../components/PageContentView';
 import { PageEditor } from '../components/PageEditor';
 
-type Confirm = 'publish' | 'unpublish' | 'delete';
+type Confirm = 'publish' | 'unpublish' | 'delete' | 'review' | 'return';
 
 // Redacción de una página: borrador, vista previa y publicación
 export const PageEditorPage: React.FC = () => {
@@ -32,6 +32,8 @@ export const PageEditorPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [comment, setComment] = useState('');
+  const [returning, setReturning] = useState(false);
 
   const apply = (loaded: Page) => {
     setPage(loaded);
@@ -90,6 +92,23 @@ export const PageEditorPage: React.FC = () => {
     if (await save()) setNotice('Borrador guardado. El público todavía no ve estos cambios.');
   };
 
+  const returnWithComments = async (event: React.FormEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setReturning(true);
+    setError(null);
+    try {
+      apply(await cmsApi.requestChanges(pageId, comment.trim()));
+      setNotice('Página devuelta a quien la redactó, con tus observaciones.');
+      setComment('');
+    } catch (err) {
+      setError(apiErrorMessage(err, 'No se pudo devolver la página.'));
+    } finally {
+      setReturning(false);
+      setConfirm(null);
+    }
+  };
+
   if (loadError) {
     return (
       <Card>
@@ -108,6 +127,8 @@ export const PageEditorPage: React.FC = () => {
   const published = page.status === 'PUBLISHED';
   // Hay algo que publicar: nunca se publicó, o el borrador cambió desde entonces
   const publishable = !published || page.pending_changes || dirty;
+  const inReview = page.review_status === 'IN_REVIEW';
+  const returned = page.review_status === 'CHANGES_REQUESTED';
 
   return (
     <form onSubmit={onSave}>
@@ -124,6 +145,8 @@ export const PageEditorPage: React.FC = () => {
               {published ? 'Publicada' : 'Borrador'}
             </Badge>
             {(page.pending_changes || (published && dirty)) && <Badge tone="warning">Cambios sin publicar</Badge>}
+            {inReview && <Badge tone="info">En revisión</Badge>}
+            {returned && <Badge tone="danger">Devuelta con observaciones</Badge>}
             {published && (
               <a href={page.path} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800">
                 <ExternalLink className="w-3 h-3" />
@@ -142,6 +165,17 @@ export const PageEditorPage: React.FC = () => {
               Guardar borrador
             </Button>
           )}
+          {/* Quien solo redacta pide la publicación; quien publica puede devolver lo que le enviaron */}
+          {canEdit && !canPublish && (
+            <Button variant="primary" icon={<Send className="w-4 h-4" />} disabled={!publishable || (inReview && !dirty)} onClick={() => setConfirm('review')}>
+              {inReview && !dirty ? 'Enviada a revisión' : 'Enviar a revisión'}
+            </Button>
+          )}
+          {canPublish && inReview && (
+            <Button icon={<Undo2 className="w-4 h-4" />} onClick={() => setConfirm('return')}>
+              Devolver con observaciones
+            </Button>
+          )}
           {canPublish && (
             <Button variant="primary" icon={<Rocket className="w-4 h-4" />} disabled={!publishable} onClick={() => setConfirm('publish')}>
               {published ? 'Publicar cambios' : 'Publicar'}
@@ -149,6 +183,26 @@ export const PageEditorPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {inReview && page.review && (
+        <div className="mb-4">
+          <Alert tone="info">
+            {page.review.requested_at ? `${formatDateTime(page.review.requested_at)}: ` : ''}
+            {page.review.requested_by ?? 'alguien del equipo'} envió este borrador a revisión.{' '}
+            {canPublish ? 'Revísalo con la vista previa y publícalo, o devuélvelo con tus observaciones.' : 'Quien publica lo revisará. Si lo cambias, tendrás que enviarlo de nuevo.'}
+          </Alert>
+        </div>
+      )}
+      {returned && page.review && (
+        <div className="mb-4">
+          <Alert tone="warning">
+            <strong className="font-semibold">
+              {page.review.reviewed_by ?? 'Quien revisa'} devolvió esta página{page.review.reviewed_at ? ` el ${formatDateTime(page.review.reviewed_at)}` : ''}:
+            </strong>{' '}
+            {page.review.comment}
+          </Alert>
+        </div>
+      )}
 
       {(error || notice) && (
         <div className="mb-4">
@@ -256,6 +310,45 @@ export const PageEditorPage: React.FC = () => {
             setConfirm(null);
           }}
         />
+      )}
+      {confirm === 'review' && (
+        <ConfirmModal
+          title="Enviar a revisión"
+          text={`Quien publica las páginas revisará "${title}" y la pondrá a la vista o te la devolverá con observaciones${dirty ? '. Antes se guardarán los cambios que tienes sin guardar' : ''}.`}
+          confirmLabel="Enviar"
+          variant="primary"
+          onClose={() => setConfirm(null)}
+          onConfirm={async () => {
+            if (dirty && !(await save())) {
+              setConfirm(null);
+              return;
+            }
+            apply(await cmsApi.submitReview(pageId));
+            setNotice('Borrador enviado a revisión.');
+            setConfirm(null);
+          }}
+        />
+      )}
+      {confirm === 'return' && (
+        <Modal
+          title="Devolver con observaciones"
+          subtitle="La página no se publica. Quien la redactó verá lo que escribas aquí."
+          onClose={() => setConfirm(null)}
+          footer={
+            <>
+              <Button onClick={() => setConfirm(null)}>Cancelar</Button>
+              <Button variant="primary" type="submit" form="return-page-form" processing={returning}>
+                Devolver
+              </Button>
+            </>
+          }
+        >
+          <form id="return-page-form" onSubmit={returnWithComments}>
+            <Field label="Qué hay que corregir">
+              <textarea className={INPUT_CLASS} rows={4} required minLength={3} maxLength={1000} autoFocus value={comment} onChange={(event) => setComment(event.target.value)} />
+            </Field>
+          </form>
+        </Modal>
       )}
       {confirm === 'unpublish' && (
         <ConfirmModal

@@ -144,6 +144,8 @@ export const PagesPage: React.FC = () => {
                         {page.status === 'PUBLISHED' ? 'Publicada' : 'Borrador'}
                       </Badge>
                       {page.pending_changes && <Badge tone="warning">Cambios sin publicar</Badge>}
+                      {page.review_status === 'IN_REVIEW' && <Badge tone="info">En revisión</Badge>}
+                      {page.review_status === 'CHANGES_REQUESTED' && <Badge tone="danger">Devuelta</Badge>}
                     </div>
                   </Td>
                   <Td className="text-slate-700">{page.show_in_footer ? 'Sí' : 'No'}</Td>

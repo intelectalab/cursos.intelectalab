@@ -141,19 +141,38 @@ class Spreadsheet
      * Hoja de Excel con una fila de títulos y los datos recibidos.
      *
      * @param  list<string>  $headers
-     * @param  list<list<string|int|float|null>>  $rows
+     * @param  iterable<list<string|int|float|null>>  $rows
      * @return string ruta del archivo temporal generado
      */
-    public static function write(string $sheetName, array $headers, array $rows): string
+    public static function write(string $sheetName, array $headers, iterable $rows): string
+    {
+        return self::workbook([$sheetName => ['headers' => $headers, 'rows' => $rows]]);
+    }
+
+    /**
+     * Libro de Excel con varias hojas, cada una con su fila de títulos.
+     *
+     * @param  array<string, array{headers: list<string>, rows: iterable<list<string|int|float|null>>}>  $sheets  nombre de la hoja => contenido
+     * @return string ruta del archivo temporal generado
+     */
+    public static function workbook(array $sheets): string
     {
         $path = tempnam(sys_get_temp_dir(), 'xls').'.xlsx';
+        $bold = new Style(fontBold: true);
 
         $writer = new Writer;
         $writer->openToFile($path);
-        $writer->getCurrentSheet()->setName(mb_substr($sheetName, 0, 31));
-        $writer->addRow(Row::fromValuesWithStyle($headers, new Style(fontBold: true)));
-        foreach ($rows as $row) {
-            $writer->addRow(Row::fromValues($row));
+
+        $first = true;
+        foreach ($sheets as $name => $sheet) {
+            $current = $first ? $writer->getCurrentSheet() : $writer->addNewSheetAndMakeItCurrent();
+            $current->setName(mb_substr($name, 0, 31));
+            $first = false;
+
+            $writer->addRow(Row::fromValuesWithStyle($sheet['headers'], $bold));
+            foreach ($sheet['rows'] as $row) {
+                $writer->addRow(Row::fromValues($row));
+            }
         }
         $writer->close();
 

@@ -23,6 +23,7 @@ import { ImportModal } from '../../../shared/ui/ImportModal';
 import type { PageMeta } from '../../identity/api';
 import { crmApi, formatDay, LEAD_SOURCE_LABEL, LEAD_STATUS_LABEL, LEAD_STATUS_TONE, type Lead, type Person } from '../api';
 import { ConvertLeadModal, DiscardLeadModal, LeadFormModal } from './LeadDialogs';
+import { ExportButton } from '../../../shared/ui/ExportButton';
 
 type Dialog = { kind: 'create' } | { kind: 'import' } | { kind: 'edit' | 'convert' | 'discard'; lead: Lead };
 
@@ -98,16 +99,19 @@ export const LeadsTab: React.FC<{ canManage: boolean; owners: Person[] }> = ({ c
             text="Por trabajar reúne nuevos y contactados: los que todavía esperan una acción tuya. Las tarjetas de arriba separan cada estado."
             label="Qué significa el estado de un prospecto"
           />
-          {canManage && (
-            <div className="ml-auto flex flex-wrap gap-2">
-              <Button icon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setDialog({ kind: 'import' })}>
-                Importar
-              </Button>
-              <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setDialog({ kind: 'create' })}>
-                Nuevo prospecto
-              </Button>
-            </div>
-          )}
+          <div className="ml-auto flex flex-wrap gap-2">
+            <ExportButton path="/crm/leads/export" params={{ search: search || undefined, status: status || undefined }} filename="prospectos.xlsx" label="Exportar" />
+            {canManage && (
+              <>
+                <Button icon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setDialog({ kind: 'import' })}>
+                  Importar
+                </Button>
+                <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setDialog({ kind: 'create' })}>
+                  Nuevo prospecto
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {state === 'loading' && <LoadingState />}

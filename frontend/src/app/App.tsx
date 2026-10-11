@@ -27,6 +27,7 @@ const PackageCheckoutPage = lazyPage(() => import('../features/sales/pages/Packa
 const PublicPackagePage = lazyPage(() => import('../features/sales/pages/PackagePages'), 'PublicPackagePage');
 const MyOrderPage = lazyPage(() => import('../features/sales/pages/MyOrdersPages'), 'MyOrderPage');
 const VerifyPage = lazyPage(() => import('../features/certificates/pages/VerifyPage'), 'VerifyPage');
+const CertificateEditorPage = lazyPage(() => import('../features/certificates/pages/CertificateEditorPage'), 'CertificateEditorPage');
 const TeacherProfilePage = lazyPage(() => import('../features/teachers/pages/TeacherProfilePage'), 'TeacherProfilePage');
 const PlanPage = lazyPage(() => import('../features/settings/pages/PlanPage'), 'PlanPage');
 const StudentProfilePage = lazyPage(() => import('../features/students/pages/StudentProfilePage'), 'StudentProfilePage');
@@ -158,6 +159,14 @@ function TenantRoutes() {
               element={
                 <PermissionGate permission={['corporate_accounts.read', 'licenses.read']}>
                   <CorporateAccountPage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/certificates/design"
+              element={
+                <PermissionGate permission="tenant_settings.update">
+                  <CertificateEditorPage />
                 </PermissionGate>
               }
             />

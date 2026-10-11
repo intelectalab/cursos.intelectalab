@@ -8,6 +8,7 @@ import type { PageMeta } from '../../identity/api';
 import { enrollmentsApi, type EnrollableCourse, type Enrollment } from '../api';
 import { BulkValidityModal, EnrollModal } from '../components/EnrollmentDialogs';
 import { EnrollmentTable } from '../components/EnrollmentTable';
+import { ExportButton } from '../../../shared/ui/ExportButton';
 
 // Situaciones por las que se puede filtrar y qué significa cada una
 const SITUATIONS: { key: string; label: string; help: string }[] = [
@@ -95,11 +96,18 @@ export const EnrollmentsPage: React.FC = () => {
         icon={ClipboardList}
         subtitle="Quién está matriculado en qué curso, hasta cuándo y cuánto ha avanzado."
         action={
-          canEnroll && (
-            <Button variant="primary" icon={<UserPlus className="w-4 h-4" />} onClick={() => setDialog('enroll')}>
-              Matricular alumnos
-            </Button>
-          )
+          <>
+            <ExportButton
+              path="/enrollments/export"
+              params={{ search: search || undefined, course_id: courseId || undefined, state: stateFilter || undefined }}
+              filename="matriculas.xlsx"
+            />
+            {canEnroll && (
+              <Button variant="primary" icon={<UserPlus className="w-4 h-4" />} onClick={() => setDialog('enroll')}>
+                Matricular alumnos
+              </Button>
+            )}
+          </>
         }
       />
 

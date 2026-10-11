@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Eye, ImageUp, Palette, RotateCcw, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Eye, ImageUp, MousePointer2, Palette, RotateCcw, Trash2 } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, CHECKBOX_CLASS, Field, INPUT_CLASS } from '../../../shared/ui';
 import { HelpTip } from '../../../shared/ui/filters';
@@ -130,6 +131,24 @@ export const CertificateDesignSection: React.FC<{
           text="Sube tu propio fondo (hecho en Canva, PowerPoint o por tu diseñador) y elige dónde va cada dato. El sistema escribe encima el nombre, el curso, la fecha, la firma y el código."
           label="Cómo funciona el diseño propio"
         />
+      </div>
+
+      <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-3.5 py-3 flex flex-wrap items-center gap-3">
+        <p className="text-[13px] text-slate-700 flex-1 min-w-[220px]">
+          {template.layout ? (
+            <>
+              <strong className="font-semibold">Estás usando el diseño libre.</strong> Las opciones de abajo no se aplican mientras esté activo; el fondo sí.
+            </>
+          ) : (
+            <>
+              <strong className="font-semibold">¿Quieres mover cada dato a mano?</strong> El editor visual te deja arrastrar, cambiar letras y agregar textos e imágenes.
+            </>
+          )}
+        </p>
+        <Link to="/certificates/design" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-violet-800 underline">
+          <MousePointer2 className="w-3.5 h-3.5" />
+          {template.layout ? 'Abrir el editor visual' : 'Probar el editor visual'}
+        </Link>
       </div>
 
       {error && <Alert>{error}</Alert>}

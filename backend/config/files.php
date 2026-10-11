@@ -51,6 +51,12 @@ return [
             'limit' => 'image',
             'extensions' => ['png', 'jpg', 'jpeg'],
         ],
+        // Imagen que la organización coloca en su certificado: un sello, otro logo, otra firma
+        'certificate_image' => [
+            'visibility' => 'private',
+            'limit' => 'image',
+            'extensions' => ['png', 'jpg', 'jpeg'],
+        ],
         // Adjunto de un mensaje de soporte: capturas y documentos
         'ticket_attachment' => [
             'visibility' => 'private',

@@ -26,6 +26,7 @@ import { FilterCards, type FilterCard } from '../../../shared/ui/filters';
 import type { PageMeta } from '../../identity/api';
 import { NewPersonModal } from '../../identity/components/NewPersonModal';
 import { studentsApi, type StudentFilter, type StudentRow } from '../api';
+import { ExportButton } from '../../../shared/ui/ExportButton';
 
 function formatDate(value: string | null): string {
   if (!value) return 'Nunca';
@@ -89,11 +90,14 @@ export const StudentsPage: React.FC = () => {
         icon={GraduationCap}
         subtitle="Quiénes estudian en tu academia. Abre un alumno para ver sus cursos, compras, certificados y consultas en un solo lugar."
         action={
-          canCreate && (
-            <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
-              Nuevo alumno
-            </Button>
-          )
+          <>
+            <ExportButton path="/students/export" params={{ search: search || undefined, filter: filter || undefined }} filename="alumnos.xlsx" />
+            {canCreate && (
+              <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
+                Nuevo alumno
+              </Button>
+            )}
+          </>
         }
       />
 

@@ -482,6 +482,7 @@ Aislada por academia.
 | `updated_at` | fecha y hora |  | No | Última modificación |
 | `background_file_id` | UUID | FK files.id | No | Diseño propio de la organización: su imagen de fondo y dónde va cada dato |
 | `design` | JSON |  | No |  |
+| `layout` | JSON |  | No | Diseño libre del editor visual: orientación de la hoja y cada elemento con su posición en milímetros. NULL = se usa el diseño por opciones de la columna design |
 
 ### `certificate_verifications`
 
@@ -646,6 +647,12 @@ Aislada por academia.
 | `updated_by` | UUID | FK users.id | No | Referencia a `users` |
 | `created_at` | fecha y hora |  | No | Cuándo se creó |
 | `updated_at` | fecha y hora |  | No | Última modificación |
+| `review_status` | texto (20) |  | No | NULL = sin revisión pedida; IN_REVIEW = espera a quien publica; CHANGES_REQUESTED = devuelta con observaciones |
+| `review_requested_by` | UUID | FK users.id | No | Quién envió el borrador a revisión y cuándo |
+| `review_requested_at` | fecha y hora |  | No |  |
+| `review_comment` | texto largo |  | No | Observaciones de quien revisó, cuando devuelve la página |
+| `reviewed_by` | UUID | FK users.id | No | Quién devolvió la página y cuándo |
+| `reviewed_at` | fecha y hora |  | No |  |
 
 ## Cursos
 

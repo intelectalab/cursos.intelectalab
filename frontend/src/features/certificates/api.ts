@@ -58,6 +58,46 @@ export interface CertificateTemplate {
   // Con fondo propio, el certificado usa la imagen de la academia en vez del diseño del sistema
   has_background: boolean;
   design: CertificateDesign;
+  // Diseño libre del editor visual; null = se usa el diseño por opciones
+  layout: CertificateLayout | null;
+}
+
+export type Orientation = 'landscape' | 'portrait';
+export type Align = 'left' | 'center' | 'right';
+
+// Un elemento del diseño libre. Medidas en milímetros desde la esquina superior izquierda; letra en puntos
+export interface LayoutElement {
+  id: string;
+  type: 'field' | 'text' | 'image' | 'qr';
+  x: number;
+  y: number;
+  w: number;
+  h?: number;
+  field?: string;
+  text?: string;
+  source?: 'logo' | 'signature' | 'file';
+  file_id?: string | null;
+  font?: string;
+  size?: number;
+  color?: string;
+  bold?: boolean;
+  italic?: boolean;
+  uppercase?: boolean;
+  align?: Align;
+}
+
+export interface CertificateLayout {
+  orientation: Orientation;
+  elements: LayoutElement[];
+}
+
+// Lo que el editor visual puede colocar y desde dónde parte
+export interface CanvasOptions {
+  sheets: Record<Orientation, [number, number]>;
+  fields: Record<string, string>;
+  fonts: string[];
+  max_elements: number;
+  defaults: Record<Orientation, CertificateLayout>;
 }
 
 export interface SignatureRules {
@@ -143,7 +183,31 @@ export const certificatesApi = {
       template: response.data.data as CertificateTemplate,
       rules: response.data.meta.signature as SignatureRules,
       backgroundRules: response.data.meta.background as SignatureRules,
+      canvas: response.data.meta.canvas as CanvasOptions,
     };
+  },
+  // Editor visual: guarda el diseño libre; con null vuelve al diseño por opciones
+  async updateLayout(layout: CertificateLayout | null) {
+    return (await api.put('/certificates/template/layout', { layout })).data.data as CertificateTemplate;
+  },
+  // PDF de muestra con lo que hay en el lienzo, aunque no esté guardado
+  async layoutPreviewUrl(layout: CertificateLayout) {
+    const response = await api.post('/certificates/template/preview', { layout }, { responseType: 'blob' });
+    return URL.createObjectURL(new Blob([response.data as Blob], { type: 'application/pdf' }));
+  },
+  async uploadImage(file: File) {
+    const body = new FormData();
+    body.append('file', file);
+    return (await api.post('/certificates/template/images', body)).data.data as { id: string; name: string };
+  },
+  // Las imágenes del certificado son privadas: se piden con la sesión y se muestran desde memoria
+  async imageUrl(fileId: string) {
+    const response = await api.get(`/certificates/template/images/${fileId}`, { responseType: 'blob' });
+    return URL.createObjectURL(response.data as Blob);
+  },
+  async backgroundUrl() {
+    const response = await api.get('/certificates/template/background', { responseType: 'blob' });
+    return URL.createObjectURL(response.data as Blob);
   },
   async uploadBackground(file: File) {
     const body = new FormData();

@@ -49,6 +49,9 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-08 | S6 — Pagos · Entrega 2: cobro en línea con PayPal (en dólares, con tipo de cambio manual) | [2026-10-08-s6-entrega-2-paypal.md](2026-10-08-s6-entrega-2-paypal.md) |
 | 2026-10-09 | S6 — Pagos · Entrega 3: reembolso total de compras y de pagos de plan en línea | [2026-10-09-s6-entrega-3-reembolsos.md](2026-10-09-s6-entrega-3-reembolsos.md) |
 | 2026-10-10 | S6 — Pagos · Primer pago de prueba con Mercado Pago (curso pagado con tarjeta de prueba) y dos correcciones | [2026-10-10-s6-primer-pago-de-prueba-mercado-pago.md](2026-10-10-s6-primer-pago-de-prueba-mercado-pago.md) |
+| 2026-10-10 | Reportes: exportar a Excel el tablero, las órdenes, los alumnos, las matrículas y los prospectos (cierra RF-REP-001) | [2026-10-10-exportar-a-excel.md](2026-10-10-exportar-a-excel.md) |
+| 2026-10-10 | Páginas: paso de revisión (enviar a revisión, publicar o devolver con observaciones; cierra RF-CMS-001) | [2026-10-10-paginas-paso-de-revision.md](2026-10-10-paginas-paso-de-revision.md) |
+| 2026-10-10 | Certificados: editor visual, entrega 1 (lienzo donde cada dato, texto o imagen se arrastra y se edita) | [2026-10-10-certificados-editor-visual.md](2026-10-10-certificados-editor-visual.md) |
 
 Documentos relacionados:
 

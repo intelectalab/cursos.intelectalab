@@ -12,12 +12,15 @@
 module.exports = {
   titulo: 'Manual de uso por rol',
   producto: 'ERP SaaS IntelectaLab · Plataforma de cursos virtuales',
-  version: '1.1',
+  version: '1.4',
   fecha: '10 de octubre de 2026',
   // Qué cambió en cada versión del manual: se agrega una fila con cada cambio del sistema
   historial: [
     ['1.0', '10/10/2026', 'Primera versión. Cubre lo construido hasta la entrega 3 de pagos (reembolsos).'],
     ['1.1', '10/10/2026', 'Pago en línea: la orden comprueba sola si ya se pagó y tiene el enlace «Comprobar pago». Nota sobre las cuentas de prueba de Mercado Pago.'],
+    ['1.2', '10/10/2026', 'Botón «Exportar a Excel» en Reportes, Ventas y pagos, Alumnos, Matrículas y Prospectos.'],
+    ['1.3', '10/10/2026', 'Páginas: paso de revisión. Quien redacta envía a revisión; quien publica aprueba o devuelve con observaciones.'],
+    ['1.4', '10/10/2026', 'Certificados: editor visual para mover y editar cada elemento del diseño.'],
   ],
 
   capitulos: [
@@ -281,6 +284,22 @@ module.exports = {
           'Puedes anular un certificado con un motivo; al verificarlo figurará como no válido.',
           'El diseño es uno por academia: fondo propio, firma, colores y posición de los datos, con vista previa. Un cambio de diseño alcanza también a los ya emitidos.',
         ]],
+        ['h', 'Editor visual del certificado'],
+        ['p', 'Si la lista de opciones no te alcanza, el editor visual te deja colocar cada elemento a mano. Mientras no guardes un diseño ahí, vale el de la lista de opciones.'],
+        ['pasos', [
+          'En «Certificados» pulsa «Plantilla» y luego «Probar el editor visual». Se abre la hoja con el diseño de siempre, listo para moverlo.',
+          'Arrastra cada elemento a su sitio. Cerca del centro de la hoja se imanta y aparece una guía. Con las flechas del teclado lo mueves medio milímetro.',
+          'Toca un elemento para cambiar su tipografía, tamaño, color, negrita, cursiva, mayúsculas y alineación en el panel de la derecha. Tira del cuadradito del borde para cambiar su tamaño.',
+          'Agrega lo que falte con los botones de arriba: un dato del certificado, un texto libre, el logo, la firma o una imagen propia (un sello, otro logo).',
+          'Elige la hoja: A4 horizontal o vertical. Al cambiarla, la hoja empieza de nuevo.',
+          'Pulsa «Vista previa en PDF» para ver el resultado exacto, y «Guardar diseño» cuando te guste.',
+        ]],
+        ['lista', [
+          'El código de verificación y el QR se pueden mover y achicar, pero no quitar.',
+          'El fondo y la firma se cargan en «Plantilla», no en el editor.',
+          '«Volver al diseño por opciones» borra el diseño libre y regresa al anterior.',
+          'No hay «deshacer»: si te equivocas, usa «Empezar de nuevo» o sal sin guardar.',
+        ]],
 
         ['h', 'Soporte y reclamaciones'],
         ['lista', [
@@ -291,7 +310,9 @@ module.exports = {
         ['h', 'Reportes, páginas y auditoría'],
         ['lista', [
           '«Reportes»: ingresos, órdenes, matrículas, alumnos activos, cursos completados y certificados de un periodo, comparados con el periodo anterior.',
+          '«Exportar a Excel»: está en Reportes, Ventas y pagos, Alumnos, Matrículas y Prospectos. El archivo trae lo que ves en pantalla: si pusiste una búsqueda o un filtro, baja solo eso (hasta 5 000 filas). En Reportes baja el periodo elegido, con una hoja por bloque.',
           '«Páginas»: los textos públicos de la academia (términos, privacidad, preguntas frecuentes). Se editan como borrador, se ven en vista previa y se publican con versiones. Editar y publicar son permisos separados.',
+          'Revisión de páginas: quien solo puede editar pulsa «Enviar a revisión». Tú, que publicas, abres la página (en la lista sale «En revisión»), la miras en la vista previa y pulsas «Publicar» para aprobarla o «Devolver con observaciones» para escribir qué corregir. Si el borrador cambia después de enviado, hay que enviarlo de nuevo. Para tener redactores, crea en «Roles» un rol con «Ver páginas» y «Editar páginas».',
           '«Auditoría»: el registro de las operaciones sensibles: quién hizo qué y cuándo.',
         ]],
 

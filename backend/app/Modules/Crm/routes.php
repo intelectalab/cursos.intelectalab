@@ -11,6 +11,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->prefix('crm')->gro
         Route::get('/owners', [LeadController::class, 'owners']);
 
         Route::get('/leads', [LeadController::class, 'index']);
+        Route::get('/leads/export', [LeadController::class, 'export']);
         Route::get('/leads/{lead}', [LeadController::class, 'show'])->whereUuid('lead');
 
         Route::get('/opportunities/board', [OpportunityController::class, 'board']);

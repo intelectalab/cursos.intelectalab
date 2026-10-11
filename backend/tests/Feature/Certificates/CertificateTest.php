@@ -413,6 +413,76 @@ class CertificateTest extends TestCase
         $this->withToken($this->admin)->deleteJson($template.'/background')->assertOk()->assertJsonPath('data.has_background', false);
     }
 
+    public function test_the_organization_places_each_element_of_its_certificate_freely(): void
+    {
+        $template = $this->api('/certificates/template');
+        $admin = fn () => $this->withToken($this->admin);
+
+        // Sin diseño libre vale el de opciones; el editor recibe de dónde partir
+        $start = $admin()->getJson($template)->assertOk()
+            ->assertJsonPath('data.layout', null)
+            ->assertJsonPath('meta.canvas.sheets.landscape', [297, 210])
+            ->assertJsonPath('meta.canvas.fields.student_name', 'Nombre del alumno')
+            ->json('meta.canvas.defaults.landscape');
+        $this->assertContains('qr', array_column($start['elements'], 'type'));
+
+        // Una imagen propia: un sello
+        $path = tempnam(sys_get_temp_dir(), 'sello').'.png';
+        imagepng(imagecreatetruecolor(80, 40), $path);
+        $stamp = $admin()->post($template.'/images', ['file' => new UploadedFile($path, 'sello.png', null, null, true)], ['Accept' => 'application/json'])
+            ->assertCreated()->json('data.id');
+        $this->assertSame('image/png', $admin()->get($template."/images/{$stamp}")->assertOk()->headers->get('Content-Type'));
+
+        $layout = ['orientation' => 'portrait', 'elements' => [
+            ['id' => 'nombre', 'type' => 'field', 'field' => 'student_name', 'x' => 20.26, 'y' => 90, 'w' => 170, 'font' => 'DEJAVU_SERIF', 'size' => 28, 'color' => '#AA0000', 'bold' => true, 'align' => 'center'],
+            ['id' => 'libre', 'type' => 'text', 'text' => 'Otorgado con honores', 'x' => 20, 'y' => 120, 'w' => 170, 'size' => 14],
+            ['id' => 'sello', 'type' => 'image', 'source' => 'file', 'file_id' => $stamp, 'x' => 150, 'y' => 230, 'w' => 40, 'h' => 30],
+            ['id' => 'qr', 'type' => 'qr', 'x' => 20, 'y' => 240, 'w' => 28],
+            ['id' => 'codigo', 'type' => 'field', 'field' => 'code', 'x' => 52, 'y' => 250, 'w' => 80, 'font' => 'COURIER', 'size' => 12, 'align' => 'left'],
+            // Fuera de la hoja vertical: se trae al borde
+            ['id' => 'fuera', 'type' => 'text', 'text' => 'Al borde', 'x' => 290, 'y' => 10, 'w' => 60, 'size' => 9],
+        ]];
+
+        // Lo que hay en pantalla se previsualiza sin guardarlo
+        $this->assertStringStartsWith('%PDF', $admin()->postJson($template.'/preview', ['layout' => $layout])->assertOk()->getContent());
+        $admin()->getJson($template)->assertJsonPath('data.layout', null);
+
+        $admin()->putJson($template.'/layout', ['layout' => $layout])->assertOk()
+            ->assertJsonPath('data.layout.orientation', 'portrait')
+            ->assertJsonPath('data.layout.elements.0.x', 20.3)
+            ->assertJsonPath('data.layout.elements.0.color', '#aa0000')
+            ->assertJsonPath('data.layout.elements.1.font', 'HELVETICA')
+            ->assertJsonPath('data.layout.elements.2.file_id', $stamp)
+            ->assertJsonPath('data.layout.elements.5.x', 207);
+
+        // Sin código o sin QR no se puede verificar: no se guarda
+        $without = fn (string $id) => ['orientation' => 'portrait', 'elements' => array_values(array_filter($layout['elements'], fn (array $element) => $element['id'] !== $id))];
+        $admin()->putJson($template.'/layout', ['layout' => $without('qr')])->assertStatus(422)->assertJsonStructure(['details' => ['layout.elements']]);
+        $admin()->putJson($template.'/layout', ['layout' => $without('codigo')])->assertStatus(422);
+
+        // Ni una imagen que no es del certificado, ni un dato o una tipografía que no existen
+        $broken = fn (int $index, array $change) => ['orientation' => 'portrait', 'elements' => array_replace($layout['elements'], [$index => $change + $layout['elements'][$index]])];
+        $admin()->putJson($template.'/layout', ['layout' => $broken(2, ['file_id' => '01900000-0000-7000-8000-000000000000'])])->assertStatus(422);
+        $admin()->putJson($template.'/layout', ['layout' => $broken(0, ['field' => 'password'])])->assertStatus(422);
+        $admin()->putJson($template.'/layout', ['layout' => $broken(0, ['font' => 'COMIC'])])->assertStatus(422);
+
+        // Los certificados salen con el diseño libre, en la hoja vertical
+        ['course' => $course, 'resources' => $resources] = $this->publishedCourse();
+        ['token' => $token] = $this->enroll($this->student(), $course);
+        $this->complete($token, $course, $resources);
+        $id = $this->withToken($token)->getJson($this->api('/me/certificates'))->json('data.0.id');
+        $pdf = $this->withToken($token)->get($this->api("/me/certificates/{$id}/pdf"))->assertOk()->getContent();
+        $this->assertStringStartsWith('%PDF', $pdf);
+        $this->assertMatchesRegularExpression('/MediaBox \[0(\.0+)? 0(\.0+)? 595\.\d+ 841\.\d+\]/', $pdf);
+
+        // Quitar el diseño libre devuelve el de opciones
+        $this->withToken($this->admin)->putJson($template.'/layout', ['layout' => null])->assertOk()->assertJsonPath('data.layout', null);
+
+        // Un alumno no toca el diseño
+        $this->withToken($token)->putJson($template.'/layout', ['layout' => $layout])->assertForbidden();
+        $this->withToken($token)->get($template."/images/{$stamp}", ['Accept' => 'application/json'])->assertForbidden();
+    }
+
     public function test_certificates_are_isolated_and_require_permission(): void
     {
         ['course' => $course, 'resources' => $resources] = $this->publishedCourse();

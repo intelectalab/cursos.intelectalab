@@ -226,6 +226,59 @@ class PageTest extends TestCase
         $this->withToken($this->login('acme', 'sol@acme.com'))->getJson($this->api('/pages'))->assertStatus(403);
     }
 
+    public function test_a_draft_goes_through_review_before_someone_else_publishes_it(): void
+    {
+        $page = $this->page();
+
+        $editor = $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'eva@acme.com', 'first_name' => 'Eva', 'last_name' => 'Redacta']);
+        app(TenantContext::class)->runForTenant($this->tenant->id, function () use ($editor) {
+            $role = Role::create(['code' => 'EDITOR', 'name' => 'Redactor', 'is_system' => false]);
+            $role->permissions()->attach(Permission::query()->whereIn('code', ['cms.read', 'cms.update'])->pluck('id'));
+            $editor->roles()->sync([$role->id]);
+        });
+        $eva = $this->login('acme', 'eva@acme.com');
+        $submit = fn () => $this->withToken($eva)->postJson($this->api("/pages/{$page}/submit-review"));
+        $return = fn (string $token, array $body) => $this->withToken($token)->postJson($this->api("/pages/{$page}/request-changes"), $body);
+
+        // Una página vacía no se envía
+        $submit()->assertStatus(409)->assertJsonPath('code', 'PAGE_NOT_PUBLISHABLE');
+
+        $this->save($page, $this->doc('Primera redacción.'), [], $eva)->assertOk();
+        $submit()->assertOk()
+            ->assertJsonPath('data.review_status', 'IN_REVIEW')
+            ->assertJsonPath('data.review.requested_by', 'Eva Redacta');
+        $this->withToken($this->admin)->getJson($this->api('/pages'))->assertJsonPath('data.0.review_status', 'IN_REVIEW');
+
+        // Devolverla es de quien publica, y exige decir qué corregir
+        $return($eva, ['comment' => 'Me la devuelvo'])->assertStatus(403)->assertJsonPath('details.permission', 'cms.publish');
+        $return($this->admin, [])->assertStatus(422);
+        $return($this->admin, ['comment' => 'Falta el plazo de devolución.'])->assertOk()
+            ->assertJsonPath('data.review_status', 'CHANGES_REQUESTED')
+            ->assertJsonPath('data.review.comment', 'Falta el plazo de devolución.');
+        $return($this->admin, ['comment' => 'Otra vez'])->assertStatus(409);
+        $this->visit('/site/pages/terminos')->assertStatus(404);
+
+        // Corrige y la envía de nuevo; si la toca después, hay que volver a enviarla
+        $this->save($page, $this->doc('Segunda redacción, con plazo.'), [], $eva)->assertOk()->assertJsonPath('data.review_status', 'CHANGES_REQUESTED');
+        $submit()->assertOk()->assertJsonPath('data.review_status', 'IN_REVIEW')->assertJsonPath('data.review.comment', null);
+        $this->save($page, $this->doc('Tercera redacción.'), [], $eva)->assertOk()->assertJsonPath('data.review_status', null);
+        $submit()->assertOk();
+
+        // Publicar aprueba: la revisión se cierra y el público ve lo enviado
+        $this->withToken($this->admin)->postJson($this->api("/pages/{$page}/publish"))->assertOk()
+            ->assertJsonPath('data.status', 'PUBLISHED')
+            ->assertJsonPath('data.review_status', null);
+        $this->visit('/site/pages/terminos')->assertOk();
+
+        // Sin cambios nuevos no hay nada que revisar
+        $this->withToken($this->login('acme', 'eva@acme.com'))->postJson($this->api("/pages/{$page}/submit-review"))->assertStatus(409);
+
+        app(TenantContext::class)->runForTenant($this->tenant->id, function () {
+            $this->assertSame(3, AuditEvent::query()->where('action', 'pages.review_requested')->count());
+            $this->assertSame(1, AuditEvent::query()->where('action', 'pages.changes_requested')->count());
+        });
+    }
+
     public function test_pages_are_isolated_between_organizations(): void
     {
         $page = $this->page();

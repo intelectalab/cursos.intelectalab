@@ -7,6 +7,8 @@ use App\Modules\Crm\Application\CrmService;
 use App\Modules\Crm\Domain\Models\Lead;
 use App\Modules\Crm\Http\CrmPresenter;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantSettingsService;
+use App\Shared\Export\ExcelExport;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
@@ -16,6 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Prospectos: personas interesadas que el equipo comercial califica y
@@ -24,6 +27,10 @@ use Illuminate\Validation\Rule;
 class LeadController extends Controller
 {
     private const RELATIONS = ['owner', 'company'];
+
+    private const STATUS_LABELS = ['NEW' => 'Nuevo', 'CONTACTED' => 'Contactado', 'CONVERTED' => 'Convertido', 'DISCARDED' => 'Descartado'];
+
+    private const SOURCE_LABELS = ['WEB' => 'Sitio web', 'REFERRAL' => 'Referido', 'EVENT' => 'Evento', 'CALL' => 'Llamada', 'SOCIAL' => 'Redes sociales', 'OTHER' => 'Otro'];
 
     public function __construct(private readonly CrmService $crm) {}
 
@@ -35,9 +42,61 @@ class LeadController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $base = Lead::query()
+        $base = $this->search($filters['search'] ?? null);
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $counts = StateCounts::of($base, Lead::STATUSES, fn (Builder $q, string $status) => $q->where('status', $status));
+
+        $leads = $this->inStatus($base, $filters['status'] ?? null)
+            ->orderByDesc('created_at')
+            ->orderBy('id')
+            ->paginate($filters['per_page'] ?? 50);
+
+        return ApiResponse::paginated($leads, fn (Lead $lead) => CrmPresenter::lead($lead), ['counts' => $counts]);
+    }
+
+    /**
+     * Los prospectos del listado, con la misma búsqueda y estado, en Excel.
+     */
+    public function export(Request $request, TenantSettingsService $settings): BinaryFileResponse
+    {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', Rule::in([...Lead::STATUSES, 'OPEN'])],
+        ]);
+
+        $timezone = $settings->timezone();
+
+        return ExcelExport::download(
+            'prospectos',
+            $this->inStatus($this->search($filters['search'] ?? null), $filters['status'] ?? null)->orderByDesc('created_at')->orderBy('id'),
+            ['Nombres', 'Apellidos', 'Empresa', 'Cargo', 'Correo', 'Teléfono', 'Origen', 'Interés', 'Estado', 'Motivo de descarte', 'A cargo de', 'Registrado el', 'Convertido el'],
+            fn (Lead $lead) => [
+                $lead->first_name,
+                $lead->last_name,
+                $lead->company_name,
+                $lead->position,
+                $lead->email,
+                $lead->phone,
+                self::SOURCE_LABELS[$lead->source] ?? $lead->source,
+                $lead->interest,
+                self::STATUS_LABELS[$lead->status] ?? $lead->status,
+                $lead->discard_reason,
+                $lead->owner ? trim("{$lead->owner->first_name} {$lead->owner->last_name}") : null,
+                ExcelExport::date($lead->created_at, $timezone),
+                ExcelExport::date($lead->converted_at, $timezone),
+            ]
+        );
+    }
+
+    /**
+     * @return Builder<Lead>
+     */
+    private function search(?string $search): Builder
+    {
+        return Lead::query()
             ->with(self::RELATIONS)
-            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
+            ->when($search, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
 
                 $q->where(fn (Builder $match) => $match
@@ -45,19 +104,17 @@ class LeadController extends Controller
                     ->orWhereRaw('lower(company_name) like ?', [$like])
                     ->orWhereRaw('lower(email) like ?', [$like]));
             });
+    }
 
-        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
-        $counts = StateCounts::of($base, Lead::STATUSES, fn (Builder $q, string $status) => $q->where('status', $status));
-
-        $leads = $base
-            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $status === 'OPEN'
-                ? $q->whereIn('status', Lead::OPEN_STATUSES)
-                : $q->where('status', $status))
-            ->orderByDesc('created_at')
-            ->orderBy('id')
-            ->paginate($filters['per_page'] ?? 50);
-
-        return ApiResponse::paginated($leads, fn (Lead $lead) => CrmPresenter::lead($lead), ['counts' => $counts]);
+    /**
+     * @param  Builder<Lead>  $query
+     * @return Builder<Lead>
+     */
+    private function inStatus(Builder $query, ?string $status): Builder
+    {
+        return $query->when($status, fn (Builder $q, string $status) => $status === 'OPEN'
+            ? $q->whereIn('status', Lead::OPEN_STATUSES)
+            : $q->where('status', $status));
     }
 
     /**

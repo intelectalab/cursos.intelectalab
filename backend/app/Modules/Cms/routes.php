@@ -22,6 +22,8 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->prefix('pages')->g
         Route::post('/media', [PageController::class, 'uploadMedia']);
         Route::put('/{page}', [PageController::class, 'update'])->whereUuid('page');
         Route::delete('/{page}', [PageController::class, 'destroy'])->whereUuid('page');
+        // Paso de revisión: quien redacta pide que publiquen su borrador
+        Route::post('/{page}/submit-review', [PageController::class, 'submitForReview'])->whereUuid('page');
     });
 
     // Publicar es un permiso aparte (RN-017)
@@ -29,5 +31,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->prefix('pages')->g
         // Maestro §7.2
         Route::post('/{page}/publish', [PageController::class, 'publish'])->whereUuid('page');
         Route::post('/{page}/unpublish', [PageController::class, 'unpublish'])->whereUuid('page');
+        // Devolver el borrador con observaciones en vez de publicarlo
+        Route::post('/{page}/request-changes', [PageController::class, 'requestChanges'])->whereUuid('page');
     });
 });

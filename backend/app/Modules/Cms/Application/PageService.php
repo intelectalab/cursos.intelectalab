@@ -68,6 +68,11 @@ class PageService
         if ($draftChanged) {
             $page->content = $content;
             $page->draft_updated_at = now();
+
+            // Lo que se envió a revisión ya no es lo que hay: hay que volver a enviarlo
+            if ($page->review_status === Page::REVIEW_PENDING) {
+                $page->review_status = null;
+            }
         }
 
         if ($draftChanged || $page->isDirty()) {
@@ -98,16 +103,69 @@ class PageService
                 'published_at' => now(),
             ]);
 
+            // Publicar aprueba el borrador: la revisión queda cerrada
             $page->update([
                 'status' => Page::STATUS_PUBLISHED,
                 'current_version_id' => $version->id,
                 'published_at' => $version->published_at,
+                'review_status' => null,
+                'review_comment' => null,
             ]);
 
             $this->audit->record('pages.published', $page, null, ['slug' => $page->slug, 'version' => $version->version]);
 
             return $page;
         });
+    }
+
+    /**
+     * Quien redacta pide que publiquen su borrador.
+     */
+    public function submitForReview(Page $page, User $actor): Page
+    {
+        if (PageContent::text($page->content) === '') {
+            throw new ApiException(ErrorCode::PageNotPublishable, 'La página está vacía. Escribe su contenido antes de enviarla a revisión.', 409);
+        }
+
+        if (! $page->hasUnpublishedDraft()) {
+            throw new ApiException(ErrorCode::PageNotPublishable, 'No hay cambios por revisar: lo publicado ya es igual al borrador.', 409);
+        }
+
+        if ($page->review_status === Page::REVIEW_PENDING) {
+            return $page;
+        }
+
+        $page->update([
+            'review_status' => Page::REVIEW_PENDING,
+            'review_requested_by' => $actor->id,
+            'review_requested_at' => now(),
+            'review_comment' => null,
+        ]);
+
+        $this->audit->record('pages.review_requested', $page, null, ['slug' => $page->slug]);
+
+        return $page;
+    }
+
+    /**
+     * Quien publica devuelve el borrador con sus observaciones, sin publicarlo.
+     */
+    public function requestChanges(Page $page, User $actor, string $comment): Page
+    {
+        if ($page->review_status !== Page::REVIEW_PENDING) {
+            throw new ApiException(ErrorCode::PageNotPublishable, 'Esta página no está en revisión.', 409);
+        }
+
+        $page->update([
+            'review_status' => Page::REVIEW_CHANGES_REQUESTED,
+            'review_comment' => $comment,
+            'reviewed_by' => $actor->id,
+            'reviewed_at' => now(),
+        ]);
+
+        $this->audit->record('pages.changes_requested', $page, null, ['slug' => $page->slug, 'comment' => $comment]);
+
+        return $page;
     }
 
     /**

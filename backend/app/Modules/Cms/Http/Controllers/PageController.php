@@ -73,6 +73,24 @@ class PageController extends Controller
         return $this->respond($this->pages->publish($page, $request->user()));
     }
 
+    /**
+     * Quien redacta envía su borrador a quien publica.
+     */
+    public function submitForReview(Request $request, Page $page): JsonResponse
+    {
+        return $this->respond($this->pages->submitForReview($page, $request->user()));
+    }
+
+    /**
+     * Quien publica devuelve el borrador con observaciones.
+     */
+    public function requestChanges(Request $request, Page $page): JsonResponse
+    {
+        $data = $request->validate(['comment' => ['required', 'string', 'min:3', 'max:1000']]);
+
+        return $this->respond($this->pages->requestChanges($page, $request->user(), $data['comment']));
+    }
+
     public function unpublish(Page $page): JsonResponse
     {
         return $this->respond($this->pages->unpublish($page));
@@ -100,7 +118,7 @@ class PageController extends Controller
 
     private function respond(Page $page, int $status = 200): JsonResponse
     {
-        return ApiResponse::success(PagePresenter::make($page->load(['editor', 'versions.publisher'])), null, $status);
+        return ApiResponse::success(PagePresenter::make($page->load(['editor', 'versions.publisher', 'reviewRequester', 'reviewer'])), null, $status);
     }
 
     /**

@@ -1225,6 +1225,55 @@
             }
         },
         "/certificates/template/background": {
+            "get": {
+                "tags": [
+                    "Certificados"
+                ],
+                "summary": "El fondo, para dibujarlo bajo el lienzo del editor.",
+                "operationId": "certificates.CertificateController.background",
+                "x-scope": "academia",
+                "x-permission": [
+                    "certificates.read",
+                    "certificates.issue"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "tags": [
                     "Certificados"
@@ -1362,6 +1411,217 @@
                 }
             }
         },
+        "/certificates/template/images": {
+            "post": {
+                "tags": [
+                    "Certificados"
+                ],
+                "summary": "Sube una imagen para colocarla en el diseño (un sello, otro logo, otra firma).",
+                "operationId": "certificates.CertificateController.uploadImage",
+                "x-scope": "academia",
+                "x-permission": [
+                    "tenant_settings.update"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Las reglas de este cuerpo no se pudieron deducir del código: ver el controlador."
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "El estado actual no permite la operación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Datos no válidos: details indica el campo",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/certificates/template/images/{file}": {
+            "get": {
+                "tags": [
+                    "Certificados"
+                ],
+                "summary": "Imagen propia del diseño: solo la ve el personal que gestiona certificados.",
+                "operationId": "certificates.CertificateController.image",
+                "x-scope": "academia",
+                "x-permission": [
+                    "certificates.read",
+                    "certificates.issue"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "file",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No existe en esta organización",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/certificates/template/layout": {
+            "put": {
+                "tags": [
+                    "Certificados"
+                ],
+                "summary": "Guarda el diseño libre del editor visual. Sin diseño (null) el certificado vuelve al diseño por opciones.",
+                "operationId": "certificates.CertificateController.updateLayout",
+                "x-scope": "academia",
+                "x-permission": [
+                    "tenant_settings.update"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "El estado actual no permite la operación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/certificates/template/preview": {
             "get": {
                 "tags": [
@@ -1402,6 +1662,64 @@
                     },
                     "403": {
                         "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Certificados"
+                ],
+                "summary": "Cómo queda el certificado con la plantilla guardada, con datos de ejemplo.",
+                "operationId": "certificates.CertificateController.previewTemplate",
+                "x-scope": "academia",
+                "x-permission": [
+                    "tenant_settings.update"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "El estado actual no permite la operación",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -8240,6 +8558,56 @@
                 }
             }
         },
+        "/crm/leads/export": {
+            "get": {
+                "tags": [
+                    "CRM"
+                ],
+                "summary": "Los prospectos del listado, con la misma búsqueda y estado, en Excel.",
+                "operationId": "crm.LeadController.export",
+                "x-scope": "academia",
+                "x-permission": [
+                    "crm.read"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/crm/leads/import": {
             "post": {
                 "tags": [
@@ -9639,6 +10007,57 @@
                     },
                     "422": {
                         "description": "Datos no válidos: details indica el campo",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/enrollments/export": {
+            "get": {
+                "tags": [
+                    "Matrículas y aula"
+                ],
+                "summary": "Las matrículas del listado, con los mismos filtros, en Excel.",
+                "operationId": "enrollments.EnrollmentController.export",
+                "x-scope": "academia",
+                "x-permission": [
+                    "enrollments.read",
+                    "enrollments.support.read"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -13091,6 +13510,57 @@
                 }
             }
         },
+        "/orders/export": {
+            "get": {
+                "tags": [
+                    "Ventas y pagos"
+                ],
+                "summary": "Las órdenes del listado, con la misma búsqueda y estado, en Excel.",
+                "operationId": "sales.OrderController.export",
+                "x-scope": "academia",
+                "x-permission": [
+                    "orders.read",
+                    "orders.support.read"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/orders/options": {
             "get": {
                 "tags": [
@@ -14391,6 +14861,186 @@
                 "x-scope": "academia",
                 "x-permission": [
                     "cms.publish"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No existe en esta organización",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "El estado actual no permite la operación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pages/{page}/request-changes": {
+            "post": {
+                "tags": [
+                    "Páginas"
+                ],
+                "summary": "Quien publica devuelve el borrador con observaciones.",
+                "operationId": "cms.PageController.requestChanges",
+                "x-scope": "academia",
+                "x-permission": [
+                    "cms.publish"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Las reglas de este cuerpo no se pudieron deducir del código: ver el controlador."
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No existe en esta organización",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "El estado actual no permite la operación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Datos no válidos: details indica el campo",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pages/{page}/submit-review": {
+            "post": {
+                "tags": [
+                    "Páginas"
+                ],
+                "summary": "Quien redacta envía su borrador a quien publica.",
+                "operationId": "cms.PageController.submitForReview",
+                "x-scope": "academia",
+                "x-permission": [
+                    "cms.update"
                 ],
                 "security": [
                     {
@@ -19048,6 +19698,56 @@
                 }
             }
         },
+        "/reports/overview/export": {
+            "get": {
+                "tags": [
+                    "Reportes"
+                ],
+                "summary": "El tablero del periodo en Excel: una hoja por bloque.",
+                "operationId": "reports.ReportController.exportOverview",
+                "x-scope": "academia",
+                "x-permission": [
+                    "reports.read"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/roles": {
             "get": {
                 "tags": [
@@ -20497,6 +21197,56 @@
                 ],
                 "summary": "Index",
                 "operationId": "reports.StudentController.index",
+                "x-scope": "academia",
+                "x-permission": [
+                    "students.read"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/students/export": {
+            "get": {
+                "tags": [
+                    "Reportes"
+                ],
+                "summary": "Los alumnos del listado, con la misma búsqueda y filtro, en Excel.",
+                "operationId": "reports.StudentController.export",
                 "x-scope": "academia",
                 "x-permission": [
                     "students.read"

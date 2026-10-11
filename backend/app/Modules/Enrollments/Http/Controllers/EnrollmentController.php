@@ -9,10 +9,13 @@ use App\Modules\Enrollments\Application\EnrollmentService;
 use App\Modules\Enrollments\Application\ProgressService;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantSettingsService;
+use App\Shared\Export\ExcelExport;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Http\StateCounts;
+use App\Shared\Import\Spreadsheet;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +25,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Matrículas para el personal de la organización: de toda la academia o de
@@ -29,6 +33,10 @@ use Illuminate\Validation\Rule;
  */
 class EnrollmentController extends Controller
 {
+    private const STATE_LABELS = ['ACTIVE' => 'Activa', 'UPCOMING' => 'Por iniciar', 'EXPIRED' => 'Vencida', 'COMPLETED' => 'Completada', 'CANCELLED' => 'Cancelada'];
+
+    private const SOURCE_LABELS = ['MANUAL' => 'Matrícula del personal', 'PURCHASE' => 'Compra', 'LICENSE' => 'Licencia de empresa'];
+
     /** @var array<string, int> conteos por situación del último listado */
     private array $counts = [];
 
@@ -48,18 +56,41 @@ class EnrollmentController extends Controller
             ...$this->listRules(),
         ]);
 
-        $query = Enrollment::query()
-            ->when($filters['course_id'] ?? null, fn (Builder $q, string $course) => $q->where('course_id', $course))
-            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
-                $like = '%'.mb_strtolower($search).'%';
+        return $this->respond($this->paginate($this->search($filters), $filters));
+    }
 
-                $q->whereHas('student', fn (Builder $student) => $student
-                    ->whereRaw('lower(email) like ?', [$like])
-                    ->orWhereRaw('lower(first_name) like ?', [$like])
-                    ->orWhereRaw('lower(last_name) like ?', [$like]));
-            });
+    /**
+     * Las matrículas del listado, con los mismos filtros, en Excel.
+     */
+    public function export(Request $request, TenantSettingsService $settings): BinaryFileResponse
+    {
+        $filters = $request->validate([
+            'course_id' => ['nullable', 'uuid'],
+            'search' => ['nullable', 'string', 'max:100'],
+            ...$this->listRules(),
+        ]);
 
-        return $this->respond($this->paginate($query, $filters));
+        $enrollments = $this->ordered($this->search($filters), $filters)->limit(ExcelExport::MAX_ROWS)->get();
+        $progress = $this->progress->summariesAcrossCourses($enrollments);
+        $timezone = $settings->timezone();
+
+        return ExcelExport::send('matriculas', Spreadsheet::write(
+            'Matrículas',
+            ['Alumno', 'Correo', 'Curso', 'Situación', 'Origen', 'Avance (%)', 'Matriculado el', 'Acceso desde', 'Acceso hasta', 'Completado el', 'Cancelado el'],
+            $enrollments->map(fn (Enrollment $enrollment) => [
+                trim("{$enrollment->student->first_name} {$enrollment->student->last_name}"),
+                $enrollment->student->email,
+                $enrollment->course->title,
+                self::STATE_LABELS[$enrollment->state()] ?? $enrollment->state(),
+                self::SOURCE_LABELS[$enrollment->source] ?? $enrollment->source,
+                $progress[$enrollment->id]['percent'] ?? 0,
+                ExcelExport::date($enrollment->enrolled_at, $timezone),
+                $enrollment->starts_at?->toDateString(),
+                $enrollment->ends_at?->toDateString(),
+                ExcelExport::date($enrollment->completed_at, $timezone),
+                ExcelExport::date($enrollment->cancelled_at, $timezone),
+            ])->all()
+        ));
     }
 
     /**
@@ -260,14 +291,43 @@ class EnrollmentController extends Controller
         // Cuántas hay en cada situación con la búsqueda actual: alimenta las tarjetas que filtran
         $this->counts = StateCounts::of($query, Enrollment::FILTERS, fn (Builder $q, string $state) => $q->inState($state));
 
+        return $this->ordered($query, $filters)->paginate($filters['per_page'] ?? 50);
+    }
+
+    /**
+     * Matrículas de toda la organización que coinciden con el curso y lo buscado.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Enrollment>
+     */
+    private function search(array $filters): Builder
+    {
+        return Enrollment::query()
+            ->when($filters['course_id'] ?? null, fn (Builder $q, string $course) => $q->where('course_id', $course))
+            ->when($filters['search'] ?? null, function (Builder $q, string $search) {
+                $like = '%'.mb_strtolower($search).'%';
+
+                $q->whereHas('student', fn (Builder $student) => $student
+                    ->whereRaw('lower(email) like ?', [$like])
+                    ->orWhereRaw('lower(first_name) like ?', [$like])
+                    ->orWhereRaw('lower(last_name) like ?', [$like]));
+            });
+    }
+
+    /**
+     * @param  Builder<Enrollment>  $query
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Enrollment>
+     */
+    private function ordered(Builder $query, array $filters): Builder
+    {
         return $query
             ->with(['student', 'course.currentVersion'])
             ->when($filters['state'] ?? null, fn (Builder $q, string $state) => $q->inState($state))
             ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->where('status', $status))
             ->orderByRaw("status = 'ACTIVE' desc")
             ->orderByDesc('enrolled_at')
-            ->orderBy('id')
-            ->paginate($filters['per_page'] ?? 50);
+            ->orderBy('id');
     }
 
     /**
