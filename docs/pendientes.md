@@ -294,7 +294,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **De los reembolsos (S6, entrega 3)**
 
-- **Probar una devolución real** en Mercado Pago y en PayPal. El primer intento (2026-10-11, orden 00018) lo rechazó Mercado Pago con «Unauthorized use of live credentials»: **hay que activar las credenciales de producción de la aplicación en Mercado Pago Developers** y volver a intentarlo. El sistema ya explica ese motivo en vez de pedir reconectar la cuenta.
+- **Probar una devolución real** en Mercado Pago y en PayPal. El primer intento (2026-10-11, orden 00018) lo rechazó Mercado Pago con «Unauthorized use of live credentials»: con las credenciales de producción de la cuenta de prueba a la vista sigue igual, así que Mercado Pago no deja devolver por su API los pagos de esa cuenta. **Camino disponible:** devolver desde la cuenta de Mercado Pago y pulsar «Reembolsar» en el sistema, que ahora detecta la devolución y cierra la orden. Falta averiguar con Mercado Pago qué exige para aceptar devoluciones por API (o probarlo con una cuenta real y un pago pequeño).
 - Política de reembolsos: plazo, condiciones (por ejemplo, no si ya completó el curso) y quién autoriza. Hoy no hay ningún límite.
 - Reembolso parcial, y de un solo curso de un paquete.
 - Anular el certificado y liberar el cupón al reembolsar (hoy no se tocan).

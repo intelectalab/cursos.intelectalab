@@ -72,6 +72,9 @@ class RefundTest extends TestCase
         return $course;
     }
 
+    /** @var array<string, mixed> respuesta por defecto de Mercado Pago sobre el pago de la orden en curso */
+    private array $paidAtMercadoPago = [];
+
     /**
      * Lo que las pasarelas responderán desde ahora (reemplaza lo simulado antes).
      *
@@ -81,7 +84,19 @@ class RefundTest extends TestCase
     {
         Http::swap(new HttpFactory);
         Http::preventStrayRequests();
-        Http::fake($responses + [self::PP.'/v1/oauth2/token' => Http::response(['access_token' => 'token-temporal', 'expires_in' => 3600])]);
+        Http::fake($responses + [self::PP.'/v1/oauth2/token' => Http::response(['access_token' => 'token-temporal', 'expires_in' => 3600])] + $this->paidAtMercadoPago);
+    }
+
+    /**
+     * Lo que Mercado Pago dice del pago n.º 555001: antes de devolver, el sistema lo consulta.
+     *
+     * @return array<string, mixed>
+     */
+    private function mpPayment(string $order, string $status = 'approved'): array
+    {
+        return [self::MP.'/v1/payments/search*' => Http::response(['results' => [[
+            'id' => 555001, 'status' => $status, 'transaction_amount' => 120, 'currency_id' => 'PEN', 'external_reference' => $order, 'payment_type_id' => 'credit_card',
+        ]]])];
     }
 
     private function order(?string $course = null): string
@@ -101,9 +116,9 @@ class RefundTest extends TestCase
         $this->gateways([self::MP.'/checkout/preferences' => Http::response(['id' => 'PREF-1', 'init_point' => 'https://www.mercadopago.com.pe/checkout?pref_id=PREF-1'], 201)]);
         $this->withToken($this->buyer)->postJson($this->api("/me/orders/{$order}/pay"), ['gateway' => 'MERCADOPAGO', 'return_url' => "https://acme.localhost/my-orders/{$order}"])->assertCreated();
 
-        $this->gateways([self::MP.'/v1/payments/search*' => Http::response(['results' => [[
-            'id' => 555001, 'status' => 'approved', 'transaction_amount' => 120, 'currency_id' => 'PEN', 'external_reference' => $order, 'payment_type_id' => 'credit_card',
-        ]]])]);
+        // Desde aquí, salvo que una prueba diga otra cosa, Mercado Pago informa ese pago como aprobado
+        $this->paidAtMercadoPago = $this->mpPayment($order);
+        $this->gateways();
         $this->withToken($this->buyer)->postJson($this->api("/me/orders/{$order}/pay/sync"))->assertOk()->assertJsonPath('data.status', 'PAID');
 
         return $order;
@@ -189,7 +204,7 @@ class RefundTest extends TestCase
             ->assertStatus(409)->assertJsonPath('code', 'GATEWAY_NOT_AVAILABLE');
     }
 
-    public function test_a_refund_rejected_for_inactive_production_credentials_says_so_and_changes_nothing(): void
+    public function test_a_refund_the_gateway_refuses_is_explained_and_can_be_closed_after_refunding_in_its_panel(): void
     {
         $order = $this->orderPaidWithMercadoPago();
 
@@ -201,9 +216,21 @@ class RefundTest extends TestCase
         $message = $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno pidió su devolución.'])
             ->assertStatus(502)->assertJsonPath('code', 'GATEWAY_ERROR')->json('message');
 
-        $this->assertStringContainsString('credenciales de producción', (string) $message);
+        // No manda a reconectar la cuenta: dice cómo resolverlo
+        $this->assertStringContainsString('Devuelve el dinero desde tu cuenta de Mercado Pago', (string) $message);
         $this->assertStringNotContainsString('volver a conectar', (string) $message);
         $this->withToken($this->admin)->getJson($this->api("/orders/{$order}"))->assertJsonPath('data.status', 'PAID');
+
+        // La academia devuelve el dinero desde su cuenta de Mercado Pago y vuelve a pulsar «Reembolsar»:
+        // el sistema ve que ya está devuelto y solo lo registra, sin pedir otra devolución
+        $this->paidAtMercadoPago = $this->mpPayment($order, 'refunded');
+        $this->gateways();
+
+        $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno pidió su devolución.'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'REFUNDED')
+            ->assertJsonPath('data.payment.refund.reference', 'Devuelto desde la cuenta de Mercado Pago');
+        Http::assertNotSent(fn (GatewayRequest $request) => str_ends_with($request->url(), '/refunds'));
     }
 
     public function test_a_purchase_paid_with_paypal_refunds_the_capture(): void
@@ -222,7 +249,14 @@ class RefundTest extends TestCase
         ]]])]);
         $this->withToken($this->buyer)->postJson($this->api("/me/orders/{$order}/pay/sync"))->assertOk()->assertJsonPath('data.status', 'PAID');
 
-        $this->gateways([self::PP.'/v2/payments/captures/CAPTURA-77/refund' => Http::response(['id' => 'DEVOLUCION-5', 'status' => 'COMPLETED'], 201)]);
+        // Antes de devolver se consulta el pago: sigue cobrado
+        $this->gateways([
+            self::PP.'/v2/payments/captures/CAPTURA-77/refund' => Http::response(['id' => 'DEVOLUCION-5', 'status' => 'COMPLETED'], 201),
+            self::PP.'/v2/checkout/orders/PP-1' => Http::response(['id' => 'PP-1', 'status' => 'COMPLETED', 'purchase_units' => [[
+                'custom_id' => $order,
+                'payments' => ['captures' => [['id' => 'CAPTURA-77', 'status' => 'COMPLETED', 'amount' => ['currency_code' => 'USD', 'value' => '32.00'], 'custom_id' => $order]]],
+            ]]]),
+        ]);
         $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno pidió su devolución.'])
             ->assertOk()
             ->assertJsonPath('data.status', 'REFUNDED')

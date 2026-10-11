@@ -267,13 +267,13 @@ class MercadoPagoGateway implements OnlineGateway
             // Lo que dijo Mercado Pago queda en el registro del servidor: sin eso no se sabe por qué rechazó
             Log::warning('Mercado Pago rechazó una operación.', ['status' => $response->status(), 'body' => mb_substr($response->body(), 0, 500)]);
 
-            // La clave es válida, pero la aplicación de Mercado Pago aún no tiene activadas sus credenciales de producción
+            // La clave es válida, pero Mercado Pago no deja usarla para esta operación (pasa con las cuentas de prueba y con aplicaciones sin habilitar)
             $notActivated = $response->status() === 401 && str_contains((string) $response->json('message'), 'live credentials');
 
             throw new ApiException(
                 ErrorCode::GatewayError,
                 match (true) {
-                    $notActivated => 'Mercado Pago no permite esta operación porque las credenciales de producción de tu aplicación no están activadas. Actívalas en Mercado Pago Developers (Tus integraciones → tu aplicación → Credenciales de producción) y vuelve a intentarlo. Mientras tanto puedes hacer la devolución desde tu cuenta de Mercado Pago.',
+                    $notActivated => 'Mercado Pago no permite hacer esta operación desde el sistema con esta cuenta (respondió «Unauthorized use of live credentials»). Devuelve el dinero desde tu cuenta de Mercado Pago, en el detalle del pago, y vuelve a pulsar «Reembolsar» aquí: el sistema verá que ya está devuelto y dejará la orden reembolsada.',
                     $response->status() === 401 => 'Mercado Pago rechazó la clave guardada. Hay que volver a conectar la cuenta.',
                     default => 'Mercado Pago no pudo atender la operación. Inténtalo de nuevo en unos minutos.',
                 },

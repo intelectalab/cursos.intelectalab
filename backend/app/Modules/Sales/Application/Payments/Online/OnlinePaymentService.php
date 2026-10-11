@@ -287,10 +287,38 @@ class OnlinePaymentService
             );
         }
 
+        $gateway = $this->gateway($payment->gateway);
+
+        // El dinero ya se devolvió desde la cuenta de la pasarela: aquí solo falta registrarlo
+        if ($this->alreadyRefundedAtGateway($gateway, $account, $order, (string) $payment->reference)) {
+            return $this->orders->markRefunded($order, $actor, $reason, 'Devuelto desde la cuenta de '.$gateway->label());
+        }
+
         // Primero el dinero: si la pasarela no devuelve, la orden queda como estaba
-        $refundId = $this->gateway($payment->gateway)->refund($account->forGateway(), (string) $payment->reference);
+        $refundId = $gateway->refund($account->forGateway(), (string) $payment->reference);
 
         return $this->orders->markRefunded($order, $actor, $reason, $refundId);
+    }
+
+    /**
+     * La pasarela informa que ese pago ya está devuelto por completo. Si no
+     * se puede consultar, se sigue con la devolución normal.
+     */
+    private function alreadyRefundedAtGateway(OnlineGateway $gateway, GatewayAccount $account, Order $order, string $paymentId): bool
+    {
+        $checkoutId = PaymentAttempt::query()->where('order_id', $order->id)->where('external_payment_id', $paymentId)->value('external_id');
+
+        try {
+            foreach ($gateway->paymentsFor($account->forGateway(), $order->id, $checkoutId) as $found) {
+                if ($found->id === $paymentId) {
+                    return $found->status === GatewayPayment::REFUNDED;
+                }
+            }
+        } catch (ApiException) {
+            // La devolución dirá qué pasa con la pasarela
+        }
+
+        return false;
     }
 
     /**

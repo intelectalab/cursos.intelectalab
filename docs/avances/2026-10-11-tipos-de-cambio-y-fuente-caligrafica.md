@@ -59,7 +59,11 @@ El responsable intentó reembolsar la orden 00018 (S/ 150, pagada con saldo de M
 - El mensaje ya no manda a reconectar la cuenta: explica que faltan activar las credenciales de producción y dónde se hace, y recuerda que la devolución se puede hacer desde la cuenta de Mercado Pago.
 - Lo que responde Mercado Pago cuando rechaza una operación queda en el registro del servidor. Antes no quedaba, y por eso el motivo no se veía.
 
-**El reembolso sigue sin probarse de punta a punta.** Falta activar las credenciales en Mercado Pago y volver a intentarlo.
+**Segundo intento, mismo resultado.** Con la cuenta vendedora de prueba conectada y sus credenciales de producción a la vista, Mercado Pago siguió respondiendo lo mismo: activar las credenciales no era la solución, o no basta. Mercado Pago no deja devolver por su API los pagos de esa cuenta de prueba.
+
+**Lo que eso dejó ver:** si el dinero se devolvía desde la cuenta de Mercado Pago, la orden no se podía cerrar en el sistema, porque «Reembolsar» siempre pedía la devolución a la pasarela. **Ahora, antes de pedirla, el sistema consulta el pago: si la pasarela dice que ya está devuelto, solo lo registra** (la orden pasa a «Reembolsada», el alumno pierde la matrícula y la referencia dice «Devuelto desde la cuenta de Mercado Pago»). El mensaje del rechazo ya indica ese camino.
+
+**El reembolso pedido desde el sistema sigue sin probarse contra Mercado Pago.** Lo que sí se puede probar hoy es devolver desde la cuenta de Mercado Pago y cerrar la orden en el sistema.
 
 ## Archivos
 
