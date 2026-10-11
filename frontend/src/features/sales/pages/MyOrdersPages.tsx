@@ -5,6 +5,7 @@ import { apiError, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, Card, ConfirmModal, EmptyState, ErrorState, LoadingState, PageHeader } from '../../../shared/ui';
 import { formatDateTime, formatMoney, orderCode, salesApi, type MyOrder, type Order } from '../api';
 import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
+import { closeCheckoutTab, openCheckoutTab, sendToCheckout, useCheckoutTab } from '../../../shared/payments/checkoutTab';
 
 // "Mis compras": las órdenes del comprador
 export const MyOrdersPage: React.FC = () => {
@@ -105,6 +106,8 @@ export const MyOrderPage: React.FC = () => {
   const [paying, setPaying] = useState<string | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  // El pago se abrió en otra pestaña y esta espera: guarda qué se estaba pagando, para notar cuando cambia
+  const [waitingFor, setWaitingFor] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -134,20 +137,30 @@ export const MyOrderPage: React.FC = () => {
   const dueNow = next ? next.amount : (order?.total_amount ?? '0');
   const dueLabel = next && order ? ` de la cuota ${next.number} de ${order.installments.length}` : '';
 
+  // Qué toca pagar: cambia cuando la cuota o la orden quedan pagadas
+  const dueKey = order ? `${order.status}:${next?.number ?? ''}` : '';
+  const waiting = waitingFor !== null && waitingFor === dueKey && payable;
+  const paidInTab = waitingFor !== null && waitingFor !== dueKey;
+
   const payWith = async (gateway: string) => {
     if (!order) return;
     setPaying(gateway);
     setPayError(null);
+    const tab = openCheckoutTab();
     try {
       const { checkout_url } = await salesApi.payOnline(order.id, gateway, `${window.location.origin}/my-orders/${order.id}`);
-      window.location.assign(checkout_url);
+      if (sendToCheckout(tab, checkout_url)) {
+        setWaitingFor(dueKey);
+        setPaying(null);
+      }
     } catch (err) {
+      closeCheckoutTab(tab);
       setPayError(apiErrorMessage(err, 'No se pudo abrir el pago en línea. Inténtalo de nuevo.'));
       setPaying(null);
     }
   };
 
-  const checkAgain = async () => {
+  const checkAgain = useCallback(async () => {
     setChecking(true);
     setPayError(null);
     try {
@@ -157,7 +170,9 @@ export const MyOrderPage: React.FC = () => {
     } finally {
       setChecking(false);
     }
-  };
+  }, [orderId]);
+
+  const spareTab = useCheckoutTab({ key: orderId, waiting, returned: returned && state === 'ready', onCheck: checkAgain });
 
   return (
     <div className="max-w-3xl">
@@ -243,7 +258,20 @@ export const MyOrderPage: React.FC = () => {
             </Card>
           )}
 
-          {payable && returned && (
+          {spareTab && <Alert tone="success">Listo: ya puedes cerrar esta pestaña. Tu orden quedó actualizada en la pestaña donde iniciaste el pago.</Alert>}
+
+          {paidInTab && <Alert tone="success">Pago confirmado. Ya puedes cerrar la pestaña del medio de pago si sigue abierta.</Alert>}
+
+          {waiting && (
+            <Alert tone="info">
+              Abrimos el pago en otra pestaña. Complétalo ahí: esta página se actualiza sola cuando vuelvas.{' '}
+              <button type="button" className="font-semibold underline cursor-pointer disabled:opacity-60" disabled={checking} onClick={checkAgain}>
+                {checking ? 'Comprobando…' : 'Ya pagué: comprobar'}
+              </button>
+            </Alert>
+          )}
+
+          {payable && returned && !spareTab && (
             <Alert tone="info">
               Todavía no vemos tu pago. Si acabas de pagar, puede tardar unos minutos en confirmarse; si lo dejaste a medias, puedes intentarlo otra vez.{' '}
               <button type="button" className="font-semibold underline cursor-pointer disabled:opacity-60" disabled={checking} onClick={checkAgain}>
@@ -262,7 +290,7 @@ export const MyOrderPage: React.FC = () => {
                   <h2 className="text-sm font-semibold text-slate-900">Paga en línea</h2>
                   <p className="text-[13px] text-slate-500">
                     Paga <strong className="text-slate-900 tnum">{formatMoney(dueNow, order.currency)}</strong>
-                    {dueLabel} ahora{order.status === 'PENDING' ? ' y tu acceso se activa al momento' : ''}. Te llevamos a la página segura del medio de pago y vuelves aquí.
+                    {dueLabel} ahora{order.status === 'PENDING' ? ' y tu acceso se activa al momento' : ''}. La página segura del medio de pago se abre en otra pestaña; esta se queda aquí.
                   </p>
                 </div>
               </div>
@@ -274,7 +302,7 @@ export const MyOrderPage: React.FC = () => {
                   </Button>
                 ))}
               </div>
-              {!returned && (
+              {!returned && !waiting && (
                 <p className="text-xs text-slate-500">
                   ¿Ya pagaste y sigue pendiente?{' '}
                   <button type="button" className="font-semibold underline cursor-pointer disabled:opacity-60" disabled={checking} onClick={checkAgain}>

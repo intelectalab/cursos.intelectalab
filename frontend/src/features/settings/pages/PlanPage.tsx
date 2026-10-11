@@ -6,6 +6,7 @@ import { api, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CardHeader, ConfirmModal, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, PageHeader, Table, TBody, Td, Th, THead, Tr, type Tone } from '../../../shared/ui';
 import { formatMoney, type OnlineGatewayOption } from '../../sales/api';
 import { PlanCard, type AcademySubscription } from '../components/PlanCard';
+import { closeCheckoutTab, openCheckoutTab, sendToCheckout, useCheckoutTab } from '../../../shared/payments/checkoutTab';
 
 interface OfferedPlan {
   id: string;
@@ -69,7 +70,9 @@ const PendingOrder: React.FC<{
   proofRules: MyPlan['proof'];
   editable: boolean;
   onChanged: () => Promise<void>;
-}> = ({ order, instructions, gateways, proofRules, editable, onChanged }) => {
+  // El pago se abrió en otra pestaña
+  onCheckoutOpened: () => void;
+}> = ({ order, instructions, gateways, proofRules, editable, onChanged, onCheckoutOpened }) => {
   const [reference, setReference] = useState(order.payer_reference ?? '');
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
@@ -98,10 +101,15 @@ const PendingOrder: React.FC<{
   const payWith = async (gateway: string) => {
     setPaying(gateway);
     setPayError(null);
+    const tab = openCheckoutTab();
     try {
       const response = await api.post(`/subscription/orders/${order.id}/pay`, { gateway, return_url: `${window.location.origin}/settings/plan` });
-      window.location.assign(response.data.data.checkout_url);
+      if (sendToCheckout(tab, response.data.data.checkout_url)) {
+        onCheckoutOpened();
+        setPaying(null);
+      }
     } catch (err) {
+      closeCheckoutTab(tab);
       setPayError(apiErrorMessage(err, 'No se pudo abrir el pago en línea. Inténtalo de nuevo.'));
       setPaying(null);
     }
@@ -175,7 +183,7 @@ const PendingOrder: React.FC<{
         {gateways.length > 0 && editable && (
           <div>
             <h3 className="text-[13px] font-semibold text-slate-900 mb-1">Paga en línea</h3>
-            <p className="text-[13px] text-slate-600 mb-3">Tu plan queda vigente al momento. Te llevamos a la página segura del medio de pago y vuelves aquí.</p>
+            <p className="text-[13px] text-slate-600 mb-3">Tu plan queda vigente al momento. La página segura del medio de pago se abre en otra pestaña; esta se queda aquí.</p>
             {payError && (
               <div className="mb-3">
                 <Alert>{payError}</Alert>
@@ -291,6 +299,8 @@ export const PlanPage: React.FC = () => {
   // Vuelve de la pasarela: en vez de esperar su aviso, se le pregunta si ya pagó
   const [returned] = useState(() => ['payment_id', 'collection_status', 'status', 'token', 'PayerID'].some((key) => searchParams.has(key)));
   const [checking, setChecking] = useState(false);
+  // Orden cuyo pago se abrió en otra pestaña
+  const [waitingFor, setWaitingFor] = useState<string | null>(null);
 
   const fetchPlan = async () => (await api.get('/subscription/plans')).data.data as MyPlan;
 
@@ -328,6 +338,9 @@ export const PlanPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [load, checkPayment, returned]);
 
+  const waiting = waitingFor !== null && data?.pending_order?.id === waitingFor;
+  const spareTab = useCheckoutTab({ key: 'plan', waiting, returned: returned && data !== null && !checking, onCheck: checkPayment });
+
   const back = (
     <Link to="/settings" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-brand-700 mb-4">
       <ArrowLeft className="w-4 h-4" /> Configuración
@@ -360,7 +373,22 @@ export const PlanPage: React.FC = () => {
           <Alert tone="success">{notice}</Alert>
         </div>
       )}
-      {returned && data.pending_order && (
+      {spareTab && (
+        <div className="mb-4">
+          <Alert tone="success">Listo: ya puedes cerrar esta pestaña. Tu plan quedó actualizado en la pestaña donde iniciaste el pago.</Alert>
+        </div>
+      )}
+      {waiting && (
+        <div className="mb-4">
+          <Alert tone="info">
+            Abrimos el pago en otra pestaña. Complétalo ahí: esta página se actualiza sola cuando vuelvas.{' '}
+            <button type="button" className="font-semibold underline cursor-pointer disabled:opacity-60" disabled={checking} onClick={checkPayment}>
+              {checking ? 'Comprobando…' : 'Ya pagué: comprobar'}
+            </button>
+          </Alert>
+        </div>
+      )}
+      {returned && data.pending_order && !spareTab && (
         <div className="mb-4">
           <Alert tone="info">
             Todavía no vemos tu pago. Si acabas de pagar, puede tardar unos minutos en confirmarse; si lo dejaste a medias, puedes intentarlo otra vez.{' '}
@@ -382,6 +410,7 @@ export const PlanPage: React.FC = () => {
           proofRules={data.proof}
           editable={editable}
           onChanged={load}
+          onCheckoutOpened={() => setWaitingFor(data.pending_order?.id ?? null)}
         />
       )}
 
