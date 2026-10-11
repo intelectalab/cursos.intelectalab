@@ -103,6 +103,8 @@ export interface CanvasOptions {
   sheets: Record<Orientation, [number, number]>;
   fields: Record<string, string>;
   fonts: string[];
+  // Tipografías sin negrita ni cursiva
+  single_style_fonts: string[];
   max_elements: number;
   defaults: Record<Orientation, CertificateLayout>;
 }

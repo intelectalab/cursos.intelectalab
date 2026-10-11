@@ -24,6 +24,7 @@ Es la primera versión completa de la plataforma de cursos virtuales para varias
 - Catálogo público con buscador, registro del comprador y compra de cursos y paquetes.
 - Cupones de descuento.
 - Pago en línea con Mercado Pago y PayPal, pago por fuera con confirmación del personal, y reembolso total.
+- Tipo de cambio manual o automático con SUNAT, con recargo opcional e historial.
 - Venta a empresas: prospectos, oportunidades, cotizaciones, licencias y portal del responsable de la empresa.
 
 **Operación**
@@ -47,17 +48,17 @@ Es la primera versión completa de la plataforma de cursos virtuales para varias
 
 ### Qué falta probar
 
-- **Pagos:** se hizo un pago de prueba de un curso con tarjeta en Mercado Pago. Faltan su reembolso, Yape, los avisos automáticos, el pago de un plan y todo PayPal.
+- **Pagos:** se hizo un pago de prueba de un curso con tarjeta en Mercado Pago. El reembolso se intentó y Mercado Pago lo rechazó porque la aplicación de prueba no tiene activadas sus credenciales de producción; falta activarlas y repetirlo. Faltan también Yape, los avisos automáticos, el pago de un plan y todo PayPal.
 - **En un servidor:** nada se probó fuera del equipo de desarrollo. Faltan las pruebas de aceptación, de carga y de penetración.
 - **En dispositivos reales:** la revisión en teléfono y tableta se hizo por medidas, no con equipos.
 
 ### Contra el Documento Maestro
 
-De 26 requisitos funcionales: **20 hechos, 3 a medias y 3 sin construir**. El detalle está en [verificacion-maestro.md](verificacion-maestro.md).
+De 26 requisitos funcionales: **21 hechos, 2 a medias y 3 sin construir**. El detalle está en [verificacion-maestro.md](verificacion-maestro.md).
 
 ### Calidad
 
-- 315 pruebas automáticas del backend pasan.
+- 319 pruebas automáticas del backend pasan.
 - Cinco recorridos automáticos en navegador: acceso, compra con cupón, cuestionario, certificado y licencia.
 - Dependencias sin avisos de seguridad al 2026-10-10.
 - Revisión de seguridad en [reporte-de-seguridad.md](reporte-de-seguridad.md).
@@ -73,7 +74,7 @@ Los pasos están en [instalacion-y-despliegue.md](instalacion-y-despliegue.md). 
 
 ### Documentación de esta versión
 
-- Manual de uso por rol: `docs/manual-de-uso-por-rol.docx` (versión 1.5).
+- Manual de uso por rol: `docs/manual-de-uso-por-rol.docx` (versión 1.6).
 - Documentación técnica: [tecnica/](tecnica/README.md) (contrato de la API, diccionario de datos, catálogos de estados y de errores, trazabilidad).
 - Historial de entregas: [avances/](avances/README.md).
 - Pendientes y decisiones abiertas: [pendientes.md](pendientes.md).

@@ -2,7 +2,7 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-10, al cerrar los documentos del Maestro y la revisión de calidad.
+Última actualización: 2026-10-11, al cerrar los tipos de cambio.
 
 ## Dónde estamos
 
@@ -58,8 +58,8 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Editor visual de certificados · entrega 1 | Lienzo donde cada dato, texto o imagen se arrastra, se redimensiona y se edita; hoja horizontal o vertical; vista previa en PDF | Hecho |
 | Editor visual de certificados · entrega 2 | Varias plantillas con una por curso, y diseño congelado al emitir (los ya emitidos conservan el suyo) | Hecho |
 | Cierre de brechas del Maestro · entrega 5 | Reporte de seguridad, notas de versión, diccionario de datos completo y los cinco recorridos automáticos corridos otra vez | Hecho |
-| Cierre de brechas del Maestro · entrega 3 | Tipos de cambio: manual y automático | Pendiente (espera dos respuestas) |
-| Cierre de brechas del Maestro · entrega 4 | Pagos parciales y deudas; el alumno entra con el primer pago | Pendiente (espera tres respuestas) |
+| Cierre de brechas del Maestro · entrega 3 | Tipos de cambio: manual o automático con SUNAT cada día, recargo opcional e historial | Hecho |
+| Cierre de brechas del Maestro · entrega 4 | Pagos parciales y deudas: el personal arma las cuotas, el alumno entra con el primer pago, cada cuota se paga en línea o por fuera, y la cuota vencida avisa al personal con una notificación emergente | Pendiente (ya respondido, por construir) |
 | Ajustes de evaluación | El cuestionario que vence califica lo guardado; nota mínima para aprobar el curso, que también exige el certificado | Hecho |
 | Planes de la plataforma · entrega 1 | Planes por tope de alumnos, prueba gratuita de 14 días y 10 alumnos para toda academia nueva, asignación de plan desde la ficha y tarjeta "Tu plan" en la academia | Hecho |
 | Planes de la plataforma · entrega 2 | "Mi plan": la academia elige plan, genera su orden de pago a IntelectaLab e informa su pago; el super administrador lo confirma en "Pagos" y el plan queda vigente | Hecho |
@@ -67,7 +67,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Consola de plataforma · ficha por academia | Datos editables, cifras y ventas de seis meses, administradores con restablecimiento de contraseña, historial de la plataforma y motivo obligatorio al suspender | Hecho |
 
 - **Avance del plan:** 12 de 14 sprints construidos (S0 a S8 y S10 a S12). **S6 Pagos tiene su primer pago de prueba** (un curso con tarjeta, en Mercado Pago, el 2026-10-10); faltan el reembolso, el pago de un plan y todo PayPal, que no tiene credenciales. Los comprobantes siguen fuera. Faltan S9, en espera de una decisión, y S13.
-- **Calidad:** 315 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que pasaron el 2026-10-10; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
+- **Calidad:** 319 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que pasaron el 2026-10-10; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
 - **Seguridad:** las pruebas revisan que las 277 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 65 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
@@ -81,7 +81,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 - **Qué no se puede hacer todavía:** reembolsar una parte, emitir comprobantes ni enviar correos de verdad (los avisos por correo ya se generan, pero quedan en el registro del servidor hasta definir el proveedor).
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
-El detalle de cada bloque terminado está en [avances/](avances/README.md). La comparación con el Documento Maestro (20 de 26 requisitos hechos, 3 a medias y 3 sin construir) está en [verificacion-maestro.md](verificacion-maestro.md). El manual de uso por rol está en `docs/manual-de-uso-por-rol.docx` y se actualiza con cada cambio. La documentación técnica que pide el Maestro (OpenAPI, diccionario de datos, catálogos de estados y de errores, y trazabilidad) está en [tecnica/](tecnica/README.md) y se regenera con `php artisan docs:technical`. El [reporte de seguridad](reporte-de-seguridad.md) y las [notas de versión](notas-de-version.md) están en esta carpeta.
+El detalle de cada bloque terminado está en [avances/](avances/README.md). La comparación con el Documento Maestro (21 de 26 requisitos hechos, 2 a medias y 3 sin construir) está en [verificacion-maestro.md](verificacion-maestro.md). El manual de uso por rol está en `docs/manual-de-uso-por-rol.docx` y se actualiza con cada cambio. La documentación técnica que pide el Maestro (OpenAPI, diccionario de datos, catálogos de estados y de errores, y trazabilidad) está en [tecnica/](tecnica/README.md) y se regenera con `php artisan docs:technical`. El [reporte de seguridad](reporte-de-seguridad.md) y las [notas de versión](notas-de-version.md) están en esta carpeta.
 
 **Terminado: el cobro de la plataforma a las academias, con pago por fuera.** Modelo descrito por el responsable del proyecto (falta confirmarlo con jefatura, decisión 16): la academia se registra en prueba gratuita, luego paga a IntelectaLab según su cantidad de alumnos, y sus alumnos le pagan los cursos a ella. Tres entregas hechas: (1) planes y prueba gratuita; (2) "Mi plan" en la academia con orden de pago y confirmación en la consola; (3) límites y vencimiento. **El plan ya limita:** con el cupo lleno no entran alumnos nuevos, y una academia vencida pasa por siete días de gracia y luego queda en solo lectura.
 
@@ -294,7 +294,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **De los reembolsos (S6, entrega 3)**
 
-- **Probar una devolución real** en Mercado Pago y en PayPal, sobre un pago de prueba.
+- **Probar una devolución real** en Mercado Pago y en PayPal. El primer intento (2026-10-11, orden 00018) lo rechazó Mercado Pago con «Unauthorized use of live credentials»: **hay que activar las credenciales de producción de la aplicación en Mercado Pago Developers** y volver a intentarlo. El sistema ya explica ese motivo en vez de pedir reconectar la cuenta.
 - Política de reembolsos: plazo, condiciones (por ejemplo, no si ya completó el curso) y quién autoriza. Hoy no hay ningún límite.
 - Reembolso parcial, y de un solo curso de un paquete.
 - Anular el certificado y liberar el cupón al reembolsar (hoy no se tocan).
@@ -306,7 +306,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 **Del cobro en línea con PayPal (S6, entrega 2)**
 
 - **Hacer un pago de prueba de punta a punta con una aplicación Sandbox de PayPal** (conectar, tipo de cambio, pagar, aprobar, volver, aviso). Todo está probado con respuestas simuladas.
-- Avisar cuando el tipo de cambio lleva muchos días sin actualizarse, o tomarlo de una fuente oficial.
+- Resuelto el 2026-10-11: tipo de cambio automático con SUNAT y aviso cuando lleva más de tres días sin cambiar. Faltan: otra fuente (un banco), otras monedas, aviso por correo si la fuente falla, y tipo de cambio automático también para la plataforma.
 - Registrar el webhook en PayPal desde el sistema (hoy se hace a mano en su panel).
 - Mostrar en Ventas y pagos y en Reportes lo cobrado en dólares (hoy queda como nota del pago; los reportes suman soles).
 - Otras conversiones además de soles a dólares.
@@ -391,7 +391,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 **De la plantilla de certificado y la consola de plataforma (revisión de jefatura, entrega 3)**
 
-- Resuelto el 2026-10-10: editor visual de la plantilla (arrastrar cada dato, textos libres, imágenes propias, seis tipografías). Resuelto también: varias plantillas con una por curso y diseño congelado al emitir. Faltan: mostrar en la ficha del curso qué plantilla usa; elegir plantilla al emitir a mano; miniaturas en el selector; una tipografía caligráfica (exige instalar un archivo de fuente: necesita aprobación); deshacer, capas, guías entre elementos, formas y rotación; limpiar las imágenes subidas que ya no se usan; probarlo en pantalla táctil.
+- Resuelto el 2026-10-10: editor visual de la plantilla (arrastrar cada dato, textos libres, imágenes propias, seis tipografías). Resuelto también: varias plantillas con una por curso y diseño congelado al emitir. Faltan: mostrar en la ficha del curso qué plantilla usa; elegir plantilla al emitir a mano; miniaturas en el selector; más tipografías (ya hay una caligráfica, Great Vibes); deshacer, capas, guías entre elementos, formas y rotación; limpiar las imágenes subidas que ya no se usan; probarlo en pantalla táctil.
 - Resuelto el 2026-10-10: el diseño se congela al emitir. Falta confirmar con jefatura que así lo quieren, y una forma de regenerar un certificado emitido con el diseño nuevo sin anularlo.
 - Consola: planes y límites por academia y cobro a las academias (esperan que jefatura defina los planes); crear o desactivar administradores de una academia desde su ficha; gestionar otros administradores de plataforma; ventas por mes en la zona horaria de cada academia. Editar los datos y el historial único ya están hechos (ficha por academia).
 - Modo soporte que oculte datos personales.

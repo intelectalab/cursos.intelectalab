@@ -14,6 +14,9 @@ use App\Modules\Certificates\Application\IssueCertificateOnGrade;
 use App\Modules\Courses\Application\CourseContentExtension;
 use App\Modules\Enrollments\Application\EnrollmentQuota;
 use App\Modules\Enrollments\Domain\Events\EnrollmentCompleted;
+use App\Modules\Sales\Application\Exchange\ExchangeRateService;
+use App\Modules\Sales\Application\Exchange\ExchangeRateSource;
+use App\Modules\Sales\Application\Exchange\SunatExchangeRateSource;
 use App\Modules\Sales\Application\Payments\ManualPaymentGateway;
 use App\Modules\Sales\Application\Payments\Online\MercadoPagoGateway;
 use App\Modules\Sales\Application\Payments\Online\OnlineGateway;
@@ -51,6 +54,9 @@ class AppServiceProvider extends ServiceProvider
         // Pasarelas de cobro en línea: cada organización conecta su cuenta en las que quiera
         $this->app->tag([MercadoPagoGateway::class, PayPalGateway::class], OnlineGateway::TAG);
         $this->app->when(OnlinePaymentService::class)->needs('$gateways')->giveTagged(OnlineGateway::TAG);
+        // Fuentes del tipo de cambio automático; otra fuente se suma a esta lista
+        $this->app->tag([SunatExchangeRateSource::class], ExchangeRateSource::TAG);
+        $this->app->when(ExchangeRateService::class)->needs('$sources')->giveTagged(ExchangeRateSource::TAG);
         // La plataforma cobra los planes con las mismas pasarelas, con su propia cuenta
         $this->app->when(PlatformGateways::class)->needs('$gateways')->giveTagged(OnlineGateway::TAG);
 

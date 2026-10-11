@@ -4,6 +4,7 @@ namespace App\Modules\Sales\Application\Payments\Online;
 
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Sales\Application\Exchange\ExchangeRateService;
 use App\Modules\Sales\Application\OrderService;
 use App\Modules\Sales\Domain\Models\GatewayAccount;
 use App\Modules\Sales\Domain\Models\Order;
@@ -36,6 +37,7 @@ class OnlinePaymentService
         private readonly OrderService $orders,
         private readonly TenantSettingsService $settings,
         private readonly AuditLogger $audit,
+        private readonly ExchangeRateService $rates,
     ) {}
 
     /**
@@ -82,7 +84,7 @@ class OnlinePaymentService
                 'currency_supported' => $gateway->chargeCurrency($currency) !== null,
                 // Cobra en otra moneda: hace falta el tipo de cambio para ofrecerla
                 'needs_exchange_rate' => ChargeQuote::needsRate($gateway, $currency),
-                'exchange_rate' => $account?->exchangeRate(),
+                'exchange_rate' => $account ? $this->rateFor($account) : null,
                 'has_webhook_secret' => filled($account?->credential('webhook_secret')) || filled($account?->credential('webhook_id')),
                 'connected_at' => $account?->updated_at?->toIso8601String(),
             ];
@@ -130,15 +132,12 @@ class OnlinePaymentService
      * Tipo de cambio con el que la organización cobra en dólares lo que
      * vende en soles: cuántos soles vale un dólar.
      */
-    public function setExchangeRate(string $code, float $penPerUsd): GatewayAccount
+    public function setExchangeRate(string $code, float $penPerUsd, User $actor): GatewayAccount
     {
         $account = $this->connected($code);
-        $before = $account->exchangeRate();
 
-        if ($before !== $penPerUsd) {
-            $account->update(['settings' => ['exchange_rate' => $penPerUsd] + ($account->settings ?? [])]);
-            $this->audit->record('payment_gateways.exchange_rate_changed', $account, ['exchange_rate' => $before], ['gateway' => $code, 'exchange_rate' => $penPerUsd]);
-        }
+        // Queda en el historial de tipos de cambio de la organización, que es de donde se lee
+        $this->rates->recordManual($penPerUsd, $actor);
 
         return $account;
     }
@@ -172,7 +171,7 @@ class OnlinePaymentService
 
         foreach ($this->gateways as $gateway) {
             $account = $accounts->get($gateway->code());
-            $quote = $account ? ChargeQuote::for($gateway, (string) $order->total_amount, $order->currency->code, $account->exchangeRate()) : null;
+            $quote = $account ? ChargeQuote::for($gateway, (string) $order->total_amount, $order->currency->code, $this->rateFor($account)) : null;
 
             if ($quote !== null) {
                 $available[] = [
@@ -202,7 +201,7 @@ class OnlinePaymentService
         $order->loadMissing(['items', 'customer', 'currency']);
         $gateway = $this->gateway($code);
         $account = $this->account($code);
-        $quote = ChargeQuote::for($gateway, (string) $order->total_amount, $order->currency->code, $account->exchangeRate());
+        $quote = ChargeQuote::for($gateway, (string) $order->total_amount, $order->currency->code, $this->rateFor($account));
 
         $checkout = $gateway->startCheckout($account->forGateway(), new Charge(
             reference: $order->id,
@@ -398,6 +397,15 @@ class OnlinePaymentService
                 'amount' => $order->total_amount,
                 'currency' => $order->currency->code,
             ]);
+    }
+
+    /**
+     * Soles por dólar con los que cobra la organización: el vigente de su
+     * historial; si aún no tiene ninguno, el que quedó escrito en la cuenta.
+     */
+    private function rateFor(GatewayAccount $account): ?float
+    {
+        return $this->rates->currentRate() ?? $account->exchangeRate();
     }
 
     private function account(string $code): ?GatewayAccount

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Sales\Http\Controllers\ExchangeRateController;
 use App\Modules\Sales\Http\Controllers\OrderController;
 use App\Modules\Sales\Http\Controllers\PackageController;
 use App\Modules\Sales\Http\Controllers\PaymentGatewayController;
@@ -45,6 +46,14 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     Route::middleware('permission:tenant_settings.update')->group(function () {
         Route::put('/settings/payment-gateways/{gateway}', [PaymentGatewayController::class, 'update']);
         Route::delete('/settings/payment-gateways/{gateway}', [PaymentGatewayController::class, 'destroy']);
+    });
+
+    // Tipo de cambio de la organización: cómo se obtiene, el vigente y su historial
+    Route::get('/settings/exchange-rate', [ExchangeRateController::class, 'show'])->middleware('permission:tenant_settings.read');
+    Route::middleware('permission:tenant_settings.update')->group(function () {
+        Route::put('/settings/exchange-rate', [ExchangeRateController::class, 'update']);
+        Route::post('/settings/exchange-rate/manual', [ExchangeRateController::class, 'store']);
+        Route::post('/settings/exchange-rate/refresh', [ExchangeRateController::class, 'refresh'])->middleware('throttle:10,1');
     });
 
     // Personal: todas las órdenes de la organización. Soporte las consulta en solo lectura (Maestro §8.1).

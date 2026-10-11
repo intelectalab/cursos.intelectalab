@@ -249,7 +249,19 @@ const GatewayCard: React.FC<{ gateway: Gateway; audience: Audience; editable: bo
         </div>
       )}
 
-      {gateway.connected && gateway.needs_exchange_rate && !editing && <ExchangeRate gateway={gateway} path={path} editable={editable} onChanged={onChanged} />}
+      {gateway.connected && gateway.needs_exchange_rate && !editing && audience === 'platform' && (
+        <ExchangeRate gateway={gateway} path={path} editable={editable} onChanged={onChanged} />
+      )}
+      {/* La academia lleva su tipo de cambio aparte, con historial y actualización automática */}
+      {gateway.connected && gateway.needs_exchange_rate && !editing && audience === 'academy' && (
+        <div className="mt-4">
+          <Alert tone="info">
+            {gateway.exchange_rate === null
+              ? `${gateway.label} cobra en dólares y tus precios están en soles: define el tipo de cambio en la sección «Tipo de cambio», más arriba. Mientras falte, no se muestra a quien paga.`
+              : `Cobra en dólares con el tipo de cambio de la academia: S/ ${gateway.exchange_rate.toFixed(4)} por dólar. Un precio de S/ 100 se cobra como US$ ${(100 / gateway.exchange_rate).toFixed(2)}. Se cambia en la sección «Tipo de cambio», más arriba.`}
+          </Alert>
+        </div>
+      )}
 
       {editing && (
         <form className="mt-4 space-y-3" onSubmit={connect}>

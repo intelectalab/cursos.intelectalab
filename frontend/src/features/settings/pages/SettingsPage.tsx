@@ -34,6 +34,7 @@ import {
   PageHeader,
   type Tone,
 } from '../../../shared/ui';
+import { ExchangeRateSection } from '../components/ExchangeRateSection';
 import { HolidaysSection } from '../components/HolidaysSection';
 import { PaymentGatewaysSection } from '../components/PaymentGatewaysSection';
 import { PlanCard } from '../components/PlanCard';
@@ -311,6 +312,7 @@ export const SettingsPage: React.FC = () => {
   const { setLogoUrl } = useTenant();
   const editable = hasPermission('tenant_settings.update');
 
+  const [rateVersion, setRateVersion] = useState(0);
   const [form, setForm] = useState<Settings | null>(null);
   const [currencies, setCurrencies] = useState<string[]>([]);
   const [sessionLimits, setSessionLimits] = useState<Limits>({
@@ -699,7 +701,12 @@ export const SettingsPage: React.FC = () => {
       </form>
 
       <div className="mt-5">
-        <PaymentGatewaysSection editable={editable} />
+        <ExchangeRateSection editable={editable} onChanged={() => setRateVersion((version) => version + 1)} />
+      </div>
+
+      <div className="mt-5">
+        {/* Vuelve a cargar al cambiar el tipo de cambio, que decide si PayPal se ofrece */}
+        <PaymentGatewaysSection key={rateVersion} editable={editable} />
       </div>
 
       <div className="mt-5">

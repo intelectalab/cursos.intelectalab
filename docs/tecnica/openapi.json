@@ -20600,6 +20600,289 @@
                 }
             }
         },
+        "/settings/exchange-rate": {
+            "get": {
+                "tags": [
+                    "Ventas y pagos"
+                ],
+                "summary": "Show",
+                "operationId": "sales.ExchangeRateController.show",
+                "x-scope": "academia",
+                "x-permission": [
+                    "tenant_settings.read"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Ventas y pagos"
+                ],
+                "summary": "Cambia entre manual y automático, la fuente y el recargo.",
+                "operationId": "sales.ExchangeRateController.update",
+                "x-scope": "academia",
+                "x-permission": [
+                    "tenant_settings.update"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "mode": {
+                                        "type": "string"
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "margin_percent": {
+                                        "type": "number",
+                                        "nullable": true
+                                    }
+                                },
+                                "required": [
+                                    "mode"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "El estado actual no permite la operación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Datos no válidos: details indica el campo",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/settings/exchange-rate/manual": {
+            "post": {
+                "tags": [
+                    "Ventas y pagos"
+                ],
+                "summary": "Registra a mano el tipo de cambio de hoy.",
+                "operationId": "sales.ExchangeRateController.store",
+                "x-scope": "academia",
+                "x-permission": [
+                    "tenant_settings.update"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Las reglas de este cuerpo no se pudieron deducir del código: ver el controlador."
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "El estado actual no permite la operación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Datos no válidos: details indica el campo",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/settings/exchange-rate/refresh": {
+            "post": {
+                "tags": [
+                    "Ventas y pagos"
+                ],
+                "summary": "Trae ahora el valor de la fuente, sin esperar a la actualización diaria.",
+                "operationId": "sales.ExchangeRateController.refresh",
+                "x-scope": "academia",
+                "x-permission": [
+                    "tenant_settings.update"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación correcta",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Sin sesión o sesión vencida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permiso, o academia en solo lectura",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "El estado actual no permite la operación",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/settings/grade-scales": {
             "get": {
                 "tags": [

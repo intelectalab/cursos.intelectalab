@@ -2,7 +2,7 @@
 
 Comparación del sistema con `ERP_SaaS_Cursos_Documento_Maestro_Integral_v2.docx` (versión 2.0), hecha el 2026-10-10 leyendo el documento completo y revisando el código. Se actualiza cuando cambie alguno de los dos.
 
-**Resultado:** el Maestro no está completo. De sus 26 requisitos funcionales, 20 están hechos, 3 a medias y 3 no existen. Además falta un flujo (asistencia), el último sprint y varios entregables de documentación.
+**Resultado:** el Maestro no está completo. De sus 26 requisitos funcionales, 21 están hechos, 2 a medias y 3 no existen. Además falta un flujo (asistencia), el último sprint y varios entregables de documentación.
 
 ## 1. Requisitos funcionales (sección 2.2)
 
@@ -25,7 +25,7 @@ Comparación del sistema con `ERP_SaaS_Cursos_Documento_Maestro_Integral_v2.docx
 | RF-PKG-001 | Paquetes | Hecho | Conjuntos de cursos a un precio. |
 | RF-PROMO-001 | Promociones | Hecho | Cupones validados en el servidor. |
 | RF-FIN-001 | Finanzas | A medias | Órdenes y pagos sí. **Faltan comprobantes y deudas** (pagos parciales, RN-012). Espera PD-003. |
-| RF-CUR-001 | Monedas | A medias | Una moneda por academia (soles o dólares) y tipo de cambio manual para PayPal. **Faltan los tipos de cambio como dato propio** (fuente y frecuencia, PD-011). |
+| RF-CUR-001 | Monedas | Hecho | Una moneda por academia y tipos de cambio como dato propio: manual o automático con SUNAT cada día, recargo opcional e historial con su fuente (2026-10-11). Solo soles por dólar. |
 | RF-PAY-001 | Pagos | A medias | Mercado Pago, PayPal y reembolsos construidos detrás de un adaptador. **Primer pago de prueba hecho el 2026-10-10** (un curso, con tarjeta, en Mercado Pago). Faltan: su reembolso, Yape, los avisos, el pago de un plan y todo PayPal (sin credenciales). |
 | RF-WAL-001 | Wallet | **Falta** | Fase 3 del Maestro. Reglas sin definir (PD-012). Solo existe el permiso. |
 | RF-SUP-001 | Soporte | Hecho | Tickets y mensajes. |
@@ -35,7 +35,7 @@ Comparación del sistema con `ERP_SaaS_Cursos_Documento_Maestro_Integral_v2.docx
 | RF-REP-001 | Reportes | Hecho | Indicadores con filtros por periodo y descarga en Excel del tablero, las órdenes, los alumnos, las matrículas, los prospectos y el libro de notas (2026-10-10). |
 | RF-AUD-001 | Auditoría | Hecho | Operaciones críticas registradas. |
 
-**Totales:** 20 hechos, 3 a medias, 3 faltan.
+**Totales:** 21 hechos, 2 a medias, 3 faltan.
 
 ## 2. Flujos (sección 10)
 
@@ -77,7 +77,7 @@ No aplican todavía, porque su módulo no existe: RN-012 (deuda), RN-013 (wallet
 | PD-008 LinkedIn | Resuelta: enlace para añadir al perfil. |
 | PD-009 Tiempos de respuesta de soporte | Abierta. |
 | PD-010 Acumulación de promociones | Resuelta: no se acumulan; un cupón por orden. |
-| PD-011 Tipo de cambio | **Asumida**: manual, fijado por quien cobra. |
+| PD-011 Tipo de cambio | Resuelta por el responsable del proyecto (2026-10-10): manual o automático con SUNAT, con recargo opcional. Falta confirmarla con jefatura. |
 | PD-012 Wallet | Abierta. |
 | PD-013 Libro de Reclamaciones | Resuelta en operativa (plazo configurable); falta revisión legal. |
 | PD-014 Compromisos de servicio y respaldos | Abierta. |

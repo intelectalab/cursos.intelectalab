@@ -187,6 +187,7 @@ class CertificateController extends Controller
                 'sheets' => CertificateLayout::SHEETS,
                 'fields' => CertificateLayout::FIELDS,
                 'fonts' => array_keys(CertificateLayout::FONTS),
+                'single_style_fonts' => CertificateLayout::SINGLE_STYLE_FONTS,
                 'max_elements' => CertificateLayout::MAX_ELEMENTS,
                 'defaults' => [
                     CertificateLayout::LANDSCAPE => CertificateLayout::default(CertificateLayout::LANDSCAPE),

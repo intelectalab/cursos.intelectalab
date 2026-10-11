@@ -19,6 +19,9 @@ Schedule::command('tickets:close-resolved')->daily();
 // Claves de idempotencia vencidas (S12)
 Schedule::command('idempotency:prune')->daily();
 
+// Tipo de cambio de las organizaciones que lo tienen en automático. SUNAT lo publica a primera hora
+Schedule::command('exchange-rates:sync')->dailyAt('07:00');
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');

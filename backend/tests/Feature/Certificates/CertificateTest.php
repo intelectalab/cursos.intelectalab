@@ -435,7 +435,7 @@ class CertificateTest extends TestCase
         $this->assertSame('image/png', $admin()->get($template."/images/{$stamp}")->assertOk()->headers->get('Content-Type'));
 
         $layout = ['orientation' => 'portrait', 'elements' => [
-            ['id' => 'nombre', 'type' => 'field', 'field' => 'student_name', 'x' => 20.26, 'y' => 90, 'w' => 170, 'font' => 'DEJAVU_SERIF', 'size' => 28, 'color' => '#AA0000', 'bold' => true, 'align' => 'center'],
+            ['id' => 'nombre', 'type' => 'field', 'field' => 'student_name', 'x' => 20.26, 'y' => 90, 'w' => 170, 'font' => 'GREAT_VIBES', 'size' => 28, 'color' => '#AA0000', 'bold' => true, 'align' => 'center'],
             ['id' => 'libre', 'type' => 'text', 'text' => 'Otorgado con honores', 'x' => 20, 'y' => 120, 'w' => 170, 'size' => 14],
             ['id' => 'sello', 'type' => 'image', 'source' => 'file', 'file_id' => $stamp, 'x' => 150, 'y' => 230, 'w' => 40, 'h' => 30],
             ['id' => 'qr', 'type' => 'qr', 'x' => 20, 'y' => 240, 'w' => 28],
@@ -452,6 +452,8 @@ class CertificateTest extends TestCase
             ->assertJsonPath('data.layout.orientation', 'portrait')
             ->assertJsonPath('data.layout.elements.0.x', 20.3)
             ->assertJsonPath('data.layout.elements.0.color', '#aa0000')
+            // La caligráfica tiene un solo trazo: no admite negrita
+            ->assertJsonPath('data.layout.elements.0.bold', false)
             ->assertJsonPath('data.layout.elements.1.font', 'HELVETICA')
             ->assertJsonPath('data.layout.elements.2.file_id', $stamp)
             ->assertJsonPath('data.layout.elements.5.x', 207);
@@ -474,6 +476,8 @@ class CertificateTest extends TestCase
         $id = $this->withToken($token)->getJson($this->api('/me/certificates'))->json('data.0.id');
         $pdf = $this->withToken($token)->get($this->api("/me/certificates/{$id}/pdf"))->assertOk()->getContent();
         $this->assertStringStartsWith('%PDF', $pdf);
+        // La caligráfica del proyecto va incrustada en el PDF
+        $this->assertStringContainsString('GreatVibes', $pdf);
         $this->assertMatchesRegularExpression('/MediaBox \[0(\.0+)? 0(\.0+)? 595\.\d+ 841\.\d+\]/', $pdf);
 
         // Quitar el diseño libre devuelve el de opciones

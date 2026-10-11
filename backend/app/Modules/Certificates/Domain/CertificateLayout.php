@@ -44,7 +44,7 @@ class CertificateLayout
 
     public const FIELD_CODE = 'code';
 
-    /** Tipografías que el PDF puede usar sin instalar nada: clave => familia para el PDF */
+    /** Tipografías que el PDF puede usar: clave => familia para el PDF */
     public const FONTS = [
         'HELVETICA' => 'Helvetica',
         'TIMES' => 'Times',
@@ -52,7 +52,12 @@ class CertificateLayout
         'DEJAVU_SANS' => 'DejaVu Sans',
         'DEJAVU_SERIF' => 'DejaVu Serif',
         'DEJAVU_MONO' => 'DejaVu Sans Mono',
+        // Caligráfica, instalada en resources/fonts (licencia OFL). Solo tiene un trazo: no hay negrita ni cursiva
+        'GREAT_VIBES' => 'Great Vibes',
     ];
+
+    /** Tipografías de un solo trazo: pedirles negrita o cursiva haría que el PDF las cambie por otra */
+    public const SINGLE_STYLE_FONTS = ['GREAT_VIBES'];
 
     public const SOURCE_LOGO = 'logo';
 
@@ -112,6 +117,7 @@ class CertificateLayout
 
         foreach ($layout['elements'] as $element) {
             $w = min(round((float) $element['w'], 1), $width);
+            $plain = in_array($element['font'] ?? null, self::SINGLE_STYLE_FONTS, true);
             $base = [
                 'id' => (string) $element['id'],
                 'type' => $element['type'],
@@ -132,8 +138,8 @@ class CertificateLayout
                     'font' => $element['font'] ?? 'HELVETICA',
                     'size' => round((float) ($element['size'] ?? 12), 1),
                     'color' => strtolower($element['color'] ?? '#0a2540'),
-                    'bold' => (bool) ($element['bold'] ?? false),
-                    'italic' => (bool) ($element['italic'] ?? false),
+                    'bold' => ! $plain && ($element['bold'] ?? false),
+                    'italic' => ! $plain && ($element['italic'] ?? false),
                     'uppercase' => (bool) ($element['uppercase'] ?? false),
                     'align' => $element['align'] ?? 'center',
                 ],

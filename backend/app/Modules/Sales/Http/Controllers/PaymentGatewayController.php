@@ -44,7 +44,7 @@ class PaymentGatewayController extends Controller
         }
 
         if (isset($data['exchange_rate'])) {
-            $this->payments->setExchangeRate($gateway, (float) $data['exchange_rate']);
+            $this->payments->setExchangeRate($gateway, (float) $data['exchange_rate'], $request->user());
         }
 
         return $this->index();

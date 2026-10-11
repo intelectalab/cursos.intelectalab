@@ -31,6 +31,7 @@ const FONT_CSS: Record<string, string> = {
   DEJAVU_SANS: '"DejaVu Sans", Verdana, sans-serif',
   DEJAVU_SERIF: '"DejaVu Serif", Georgia, serif',
   DEJAVU_MONO: '"DejaVu Sans Mono", Consolas, monospace',
+  GREAT_VIBES: '"Great Vibes", cursive',
 };
 
 const FONT_LABEL: Record<string, string> = {
@@ -40,6 +41,7 @@ const FONT_LABEL: Record<string, string> = {
   DEJAVU_SANS: 'DejaVu Sans · redonda',
   DEJAVU_SERIF: 'DejaVu Serif · con remates',
   DEJAVU_MONO: 'DejaVu Mono · ancho fijo',
+  GREAT_VIBES: 'Great Vibes · caligráfica',
 };
 
 // Datos de ejemplo con los que se dibuja el lienzo
@@ -611,7 +613,7 @@ export const CertificateEditorPage: React.FC = () => {
                 {isText(current) && (
                   <>
                     <Field label="Tipografía">
-                      <select className={INPUT_CLASS} value={current.font ?? 'HELVETICA'} onChange={(event) => update(current.id, { font: event.target.value })}>
+                      <select className={INPUT_CLASS} value={current.font ?? 'HELVETICA'} onChange={(event) => update(current.id, canvas.single_style_fonts.includes(event.target.value) ? { font: event.target.value, bold: false, italic: false } : { font: event.target.value })}>
                         {canvas.fonts.map((font) => (
                           <option key={font} value={font}>
                             {FONT_LABEL[font] ?? font}
@@ -631,8 +633,8 @@ export const CertificateEditorPage: React.FC = () => {
                       </Field>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {toggle('bold', 'Negrita', <Bold className="w-4 h-4" />)}
-                      {toggle('italic', 'Cursiva', <Italic className="w-4 h-4" />)}
+                      {!canvas.single_style_fonts.includes(current.font ?? '') && toggle('bold', 'Negrita', <Bold className="w-4 h-4" />)}
+                      {!canvas.single_style_fonts.includes(current.font ?? '') && toggle('italic', 'Cursiva', <Italic className="w-4 h-4" />)}
                       {toggle('uppercase', 'Mayúsculas', <CaseUpper className="w-4 h-4" />)}
                       <span className="w-px bg-slate-200 mx-1" />
                       {alignButton('left', 'Alinear a la izquierda', <AlignLeft className="w-4 h-4" />)}

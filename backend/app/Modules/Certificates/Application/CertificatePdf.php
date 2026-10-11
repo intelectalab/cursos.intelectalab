@@ -70,6 +70,9 @@ class CertificatePdf
         $options->setIsPhpEnabled(false);
         $options->setDefaultFont('Helvetica');
         $options->setFontCache(storage_path('framework/cache'));
+        // Tipografías propias del proyecto (resources/fonts): dompdf las registra la primera vez que las usa
+        $options->setFontDir(storage_path('framework/cache'));
+        $options->setChroot([base_path('resources/fonts'), base_path('vendor/dompdf/dompdf')]);
         $options->setTempDir(storage_path('framework/cache'));
 
         $pdf = new Dompdf($options);
@@ -152,6 +155,7 @@ class CertificatePdf
             'width' => $width,
             'height' => $height,
             'background' => $this->dataUri($background),
+            'fontsPath' => str_replace(chr(92), '/', base_path('resources/fonts')),
             'elements' => $elements,
         ];
     }

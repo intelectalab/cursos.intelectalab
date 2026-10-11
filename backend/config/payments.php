@@ -27,6 +27,21 @@ return [
         'base_url' => env('MERCADOPAGO_BASE_URL', 'https://api.mercadopago.com'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tipo de cambio automático
+    |--------------------------------------------------------------------------
+    |
+    | SUNAT no ofrece un servicio propio: su tipo de cambio se lee de un
+    | servicio de terceros que lo republica. Si el servicio pide una clave,
+    | va en EXCHANGE_SUNAT_TOKEN.
+    */
+
+    'exchange' => [
+        'sunat_url' => env('EXCHANGE_SUNAT_URL', 'https://api.apis.net.pe/v1/tipo-cambio-sunat'),
+        'sunat_token' => env('EXCHANGE_SUNAT_TOKEN'),
+    ],
+
     // Cada cuenta dice si sus claves son de pruebas (sandbox) o reales
     'paypal' => [
         'live_url' => env('PAYPAL_LIVE_URL', 'https://api-m.paypal.com'),

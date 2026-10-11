@@ -12,8 +12,8 @@
 module.exports = {
   titulo: 'Manual de uso por rol',
   producto: 'ERP SaaS IntelectaLab · Plataforma de cursos virtuales',
-  version: '1.5',
-  fecha: '10 de octubre de 2026',
+  version: '1.6',
+  fecha: '11 de octubre de 2026',
   // Qué cambió en cada versión del manual: se agrega una fila con cada cambio del sistema
   historial: [
     ['1.0', '10/10/2026', 'Primera versión. Cubre lo construido hasta la entrega 3 de pagos (reembolsos).'],
@@ -22,6 +22,7 @@ module.exports = {
     ['1.3', '10/10/2026', 'Páginas: paso de revisión. Quien redacta envía a revisión; quien publica aprueba o devuelve con observaciones.'],
     ['1.4', '10/10/2026', 'Certificados: editor visual para mover y editar cada elemento del diseño.'],
     ['1.5', '10/10/2026', 'Certificados: varias plantillas con una por curso; el certificado emitido conserva su diseño.'],
+    ['1.6', '11/10/2026', 'Tipo de cambio manual o automático (SUNAT) con historial. Tipografía caligráfica en el editor de certificados.'],
   ],
 
   capitulos: [
@@ -189,13 +190,23 @@ module.exports = {
           '«Cobros en línea», «Tu plan» y los feriados, que se explican más abajo.',
         ]],
 
+        ['h', 'Tipo de cambio'],
+        ['p', 'Son los soles por dólar con los que se cobra en dólares lo que vendes en soles. Hoy lo usa PayPal.'],
+        ['lista', [
+          '«Manual»: lo escribes tú en «Tipo de cambio (soles por dólar)» y pulsas «Registrar». Vale hasta que lo cambies.',
+          '«Automático: SUNAT»: cada mañana se toma el tipo de cambio oficial del día. «Actualizar ahora» lo trae en el momento. Si un día la fuente no responde, se conserva el último valor.',
+          '«Recargo»: en automático puedes sumar un porcentaje para cubrir la comisión de la pasarela. Con 2 %, lo que se cobraría como US$ 100 se cobra como US$ 102.',
+          'La pantalla muestra el valor vigente, de qué día es y cuántos dólares se cobran por S/ 100, y debajo el historial con cada valor y quién lo registró.',
+          'Si aparece «Sin cambios hace más de 3 días», revísalo: en manual toca actualizarlo; en automático puede que la fuente esté fallando.',
+        ]],
+
         ['h', 'Cobros en línea (Mercado Pago y PayPal)'],
         ['p', 'Sirve para que tus alumnos paguen al momento, con tu propia cuenta. El dinero llega a tu cuenta de la pasarela; la plataforma no lo toca.'],
         ['pasos', [
           'En «Configuración», baja a «Cobros en línea» y pulsa «Conectar» en la pasarela.',
           'Mercado Pago: pega el Access Token de tu aplicación. PayPal: pega el Client ID y el Secret, y marca la casilla si son claves de prueba.',
           'Pulsa «Comprobar y conectar». El sistema verifica las claves con la pasarela; si no son válidas, no las guarda.',
-          'Solo PayPal: escribe el tipo de cambio (soles por dólar) y guárdalo. Sin él, PayPal no se ofrece. Actualízalo cuando cambie el dólar: no se actualiza solo.',
+          'Solo PayPal: necesita el tipo de cambio de la academia. Se define en «Tipo de cambio», en la misma pantalla de Configuración. Sin él, PayPal no se ofrece.',
         ]],
         ['lista', [
           'Las claves se guardan cifradas y no se vuelven a mostrar.',
@@ -301,6 +312,7 @@ module.exports = {
           'El fondo y la firma se cargan en «Plantilla», no en el editor.',
           '«Volver al diseño por opciones» borra el diseño libre y regresa al anterior.',
           'No hay «deshacer»: si te equivocas, usa «Empezar de nuevo» o sal sin guardar.',
+          'Hay siete tipografías. «Great Vibes» es caligráfica, pensada para el nombre del alumno; no tiene negrita ni cursiva.',
         ]],
 
         ['h', 'Soporte y reclamaciones'],

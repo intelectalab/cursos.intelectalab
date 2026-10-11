@@ -6,6 +6,7 @@
     <title>Certificado {{ $code }}</title>
     <style>
         @page { margin: 0; }
+        @font-face { font-family: 'Great Vibes'; font-weight: normal; font-style: normal; src: url('file://{{ $fontsPath }}/GreatVibes-Regular.ttf') format('truetype'); }
         body { margin: 0; font-family: Helvetica, Arial, sans-serif; }
         .sheet { position: relative; width: {{ $width }}mm; height: {{ $height }}mm; overflow: hidden; }
         .background { position: absolute; left: 0; top: 0; width: {{ $width }}mm; height: {{ $height }}mm; }

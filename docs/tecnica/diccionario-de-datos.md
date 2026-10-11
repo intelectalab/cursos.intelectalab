@@ -1239,6 +1239,25 @@ Sin aislamiento por academia (dato de plataforma o del framework).
 | `created_at` | fecha y hora |  | No | Cuándo se creó |
 | `updated_at` | fecha y hora |  | No | Última modificación |
 
+### `exchange_rates`
+
+Aislada por academia.
+
+| Columna | Tipo | Clave | Oblig. | Descripción |
+| --- | --- | --- | :---: | --- |
+| `id` | UUID | PK | Sí | Identificador del registro |
+| `tenant_id` | UUID | FK tenants.id | Sí | Academia a la que pertenece el registro |
+| `base_currency` | texto fijo (3) |  | Sí | Moneda que se convierte: con USD, el valor dice cuánto cuesta un dólar |
+| `quote_currency` | texto fijo (3) |  | Sí | Moneda en la que se expresa el valor: con PEN, soles por dólar |
+| `rate` | decimal (12,4) |  | Sí | Tipo de cambio con el que se cobra, ya con el ajuste aplicado |
+| `source` | texto (20) |  | Sí | MANUAL = lo escribió una persona; SUNAT = tomado del tipo de cambio oficial |
+| `official_rate` | decimal (12,4) |  | No | Valor que publicó la fuente, antes del ajuste; vacío en los manuales |
+| `margin_percent` | decimal (5,2) |  | No | Recargo sobre lo que se cobra en dólares que se aplicó a ese valor |
+| `effective_date` | fecha |  | Sí | Día al que corresponde el tipo de cambio |
+| `created_by` | UUID | FK users.id | No | Quién lo registró; vacío = la actualización automática |
+| `created_at` | fecha y hora |  | No | Cuándo se creó |
+| `updated_at` | fecha y hora |  | No | Última modificación |
+
 ### `order_items`
 
 Aislada por academia.

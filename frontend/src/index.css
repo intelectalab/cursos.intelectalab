@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
 
+/* Caligráfica del editor de certificados: la misma que usa el PDF (backend/resources/fonts) */
+@font-face {
+  font-family: "Great Vibes";
+  src: url("/fonts/GreatVibes-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
 /*
   Tokens de marca IntelectaLab. Los componentes usan estos nombres
   (brand-*, canvas, shadow-card…) en lugar de colores sueltos.

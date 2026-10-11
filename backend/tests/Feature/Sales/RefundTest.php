@@ -189,6 +189,23 @@ class RefundTest extends TestCase
             ->assertStatus(409)->assertJsonPath('code', 'GATEWAY_NOT_AVAILABLE');
     }
 
+    public function test_a_refund_rejected_for_inactive_production_credentials_says_so_and_changes_nothing(): void
+    {
+        $order = $this->orderPaidWithMercadoPago();
+
+        // La clave sirve para cobrar y consultar, pero Mercado Pago no deja devolver con credenciales de producción sin activar
+        $this->gateways([self::MP.'/v1/payments/555001/refunds' => Http::response([
+            'message' => 'Unauthorized use of live credentials', 'error' => 'unauthorized', 'status' => 401,
+        ], 401)]);
+
+        $message = $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno pidió su devolución.'])
+            ->assertStatus(502)->assertJsonPath('code', 'GATEWAY_ERROR')->json('message');
+
+        $this->assertStringContainsString('credenciales de producción', (string) $message);
+        $this->assertStringNotContainsString('volver a conectar', (string) $message);
+        $this->withToken($this->admin)->getJson($this->api("/orders/{$order}"))->assertJsonPath('data.status', 'PAID');
+    }
+
     public function test_a_purchase_paid_with_paypal_refunds_the_capture(): void
     {
         $this->gateways();

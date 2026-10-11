@@ -243,6 +243,13 @@ Valores fijos que el sistema guarda o calcula: estados, tipos, orígenes y medio
 
 ## Ventas y pagos
 
+### ExchangeRate
+
+| Constante | Valor | Significado |
+| --- | --- | --- |
+| `SOURCE_MANUAL` | `MANUAL` | Lo escribió una persona |
+| `SOURCE_SUNAT` | `SUNAT` | Tipo de cambio oficial publicado por SUNAT |
+
 ### Order
 
 | Constante | Valor | Significado |
