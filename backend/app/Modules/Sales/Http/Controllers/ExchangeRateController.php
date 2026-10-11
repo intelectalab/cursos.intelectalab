@@ -4,12 +4,14 @@ namespace App\Modules\Sales\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Application\Exchange\ExchangeRateService;
+use App\Modules\Sales\Application\Exchange\SunatExchangeRateSource;
 use App\Modules\Sales\Domain\Models\ExchangeRate;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Validation\Rule;
 
 /**
@@ -69,7 +71,7 @@ class ExchangeRateController extends Controller
         }
 
         if ($this->rates->refresh($request->user()) === null) {
-            throw new ApiException(ErrorCode::GatewayError, 'La fuente del tipo de cambio no respondió. Se mantiene el último valor; inténtalo de nuevo en unos minutos.', 502);
+            throw new ApiException(ErrorCode::GatewayError, (Context::getHidden(SunatExchangeRateSource::FAILURE) ?? 'La fuente del tipo de cambio no respondió.').' Se mantiene el último valor.', 502);
         }
 
         return $this->respond();

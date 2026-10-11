@@ -12,7 +12,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -170,16 +169,9 @@ class PayPalGateway implements OnlineGateway
             ->withBody('{}', 'application/json')
             ->post("/v2/payments/captures/{$paymentId}/refund"));
 
-        if ($response->clientError() && $response->status() !== 401) {
-            throw new ApiException(
-                ErrorCode::GatewayError,
-                'PayPal no aceptó la devolución'.(($reason = $response->json('details.0.description') ?? $response->json('message')) ? " ({$reason})" : '').'. Revisa el pago en tu cuenta de PayPal.',
-                502,
-                ['gateway_status' => $response->status()]
-            );
+        if ($response->failed()) {
+            throw GatewayErrors::payPal($response, refund: true);
         }
-
-        $this->assertOk($response);
 
         return (string) $response->json('id');
     }
@@ -302,24 +294,14 @@ class PayPalGateway implements OnlineGateway
         try {
             return $call();
         } catch (ConnectionException $e) {
-            // La causa (sin conexión, certificados, tiempo agotado) queda en el registro del servidor
-            Log::warning('PayPal no respondió: '.$e->getMessage());
-
-            throw new ApiException(ErrorCode::GatewayError, 'PayPal no respondió. Inténtalo de nuevo en unos minutos.', 502);
+            throw GatewayErrors::connection('PayPal', $e);
         }
     }
 
     private function assertOk(Response $response): void
     {
         if ($response->failed()) {
-            throw new ApiException(
-                ErrorCode::GatewayError,
-                $response->status() === 401
-                    ? 'PayPal rechazó las claves guardadas. Hay que volver a conectar la cuenta.'
-                    : 'PayPal no pudo atender la operación. Inténtalo de nuevo en unos minutos.',
-                502,
-                ['gateway_status' => $response->status()]
-            );
+            throw GatewayErrors::payPal($response);
         }
     }
 }

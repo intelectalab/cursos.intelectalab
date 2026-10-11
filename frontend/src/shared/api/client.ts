@@ -45,15 +45,44 @@ export function apiError(error: unknown): ApiError | null {
   return null;
 }
 
+// Lo que falló cuando el servidor no llegó a explicar el error: sin red, sin respuesta o una respuesta que no es de la API.
+// Devuelve null si no se reconoce la causa.
+function transportProblem(error: unknown): string | null {
+  if (!axios.isAxiosError(error)) return null;
+
+  if (!error.response) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'No hay conexión a internet. Revisa tu red e inténtalo de nuevo.';
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') return 'El servidor tardó demasiado en responder. Antes de repetir la operación, comprueba si ya se hizo.';
+    if (error.code === 'ERR_CANCELED') return null;
+    return 'No se pudo conectar con el servidor. Puede ser tu conexión o que el sistema no esté disponible: inténtalo de nuevo en un momento.';
+  }
+
+  const status = error.response.status;
+  if (status === 401) return 'Tu sesión venció. Vuelve a iniciar sesión.';
+  if (status === 413) return 'Lo que intentas enviar es demasiado grande. Reduce el tamaño del archivo e inténtalo de nuevo.';
+  if (status === 429) return 'Hiciste demasiados intentos seguidos. Espera un minuto y vuelve a intentarlo.';
+  if (status === 502 || status === 503 || status === 504) return 'El sistema no está respondiendo en este momento. Inténtalo de nuevo en unos minutos.';
+  if (status >= 500) return `El servidor tuvo un problema (error ${status}). Inténtalo de nuevo; si se repite, avisa a soporte.`;
+  return null;
+}
+
+// Código corto de la petición: el mismo que queda en el registro del servidor, para ubicar qué pasó
+const reference = (traceId: string | null | undefined) => (traceId ? ` Código: ${traceId.slice(0, 8)}.` : '');
+
+// Mensaje para mostrar a la persona. `fallback` nombra la acción que falló y solo se usa si no se sabe nada más.
 export function apiErrorMessage(error: unknown, fallback: string): string {
   const data = apiError(error);
-  if (!data) return fallback;
+  if (!data) return transportProblem(error) ?? fallback;
 
   if (data.code === 'VALIDATION_ERROR' && data.details) {
     const first = Object.values(data.details)[0];
     if (Array.isArray(first) && typeof first[0] === 'string') return first[0];
   }
-  return data.message || fallback;
+
+  // Un error que el servidor no esperaba, o una falla con un servicio externo: el código permite buscarlo
+  const unexpected = axios.isAxiosError(error) && (error.response?.status ?? 0) >= 500;
+
+  return (data.message || fallback) + (unexpected ? reference(data.trace_id) : '');
 }
 
 // Claves de las operaciones cuyo resultado no se llegó a conocer (se cortó la conexión)

@@ -5,6 +5,7 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Sales\Application\OrderService;
+use App\Modules\Sales\Application\Payments\Online\GatewayErrors;
 use App\Modules\Sales\Application\Payments\Online\OnlinePaymentService;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Models\Order;
@@ -111,11 +112,11 @@ class OrderController extends Controller
             throw new ApiException(ErrorCode::ValidationError, 'Los datos no son válidos.', 422, ['return_url' => ['La dirección de retorno no es de esta academia.']]);
         }
 
-        $attempt = $this->online->start($this->own($request, $order), $data['gateway'], [
+        $attempt = GatewayErrors::forPayer(fn () => $this->online->start($this->own($request, $order), $data['gateway'], [
             'return' => $data['return_url'],
             // Los avisos solo llegan a una dirección pública con HTTPS
             'webhook' => str_starts_with($data['return_url'], 'https://') ? "https://{$host}/api/v1/payments/webhooks/".strtolower($data['gateway']) : null,
-        ]);
+        ]), 'No pudimos abrir el pago en este momento. No se te cobró nada. Inténtalo de nuevo en unos minutos; si sigue igual, avisa a la academia e indica el código de este mensaje.');
 
         return ApiResponse::success(['checkout_url' => $attempt->checkout_url], null, 201);
     }
@@ -125,7 +126,7 @@ class OrderController extends Controller
      */
     public function syncPayment(Request $request, string $order): JsonResponse
     {
-        return $this->respondToCustomer($this->online->sync($this->own($request, $order)));
+        return $this->respondToCustomer(GatewayErrors::forPayer(fn () => $this->online->sync($this->own($request, $order)), 'No pudimos comprobar tu pago en este momento. Si ya pagaste, no vuelvas a pagar: inténtalo de nuevo en unos minutos o avisa a la academia con el código de este mensaje.'));
     }
 
     public function index(Request $request): JsonResponse

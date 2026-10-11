@@ -11,7 +11,6 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Mercado Pago, con su checkout alojado (Checkout Pro): quien paga lo hace
@@ -236,10 +235,7 @@ class MercadoPagoGateway implements OnlineGateway
         try {
             return $call();
         } catch (ConnectionException $e) {
-            // La causa (sin conexión, certificados, tiempo agotado) queda en el registro del servidor
-            Log::warning('Mercado Pago no respondió: '.$e->getMessage());
-
-            throw new ApiException(ErrorCode::GatewayError, 'Mercado Pago no respondió. Inténtalo de nuevo en unos minutos.', 502);
+            throw GatewayErrors::connection('Mercado Pago', $e);
         }
     }
 
@@ -249,37 +245,15 @@ class MercadoPagoGateway implements OnlineGateway
      */
     private function assertRefunded(Response $response): void
     {
-        if ($response->clientError() && $response->status() !== 401) {
-            throw new ApiException(
-                ErrorCode::GatewayError,
-                'Mercado Pago no aceptó la devolución'.(($reason = $response->json('message')) ? " ({$reason})" : '').'. Revisa el pago en tu cuenta de Mercado Pago.',
-                502,
-                ['gateway_status' => $response->status()]
-            );
+        if ($response->failed()) {
+            throw GatewayErrors::mercadoPago($response, refund: true);
         }
-
-        $this->assertOk($response);
     }
 
     private function assertOk(Response $response): void
     {
         if ($response->failed()) {
-            // Lo que dijo Mercado Pago queda en el registro del servidor: sin eso no se sabe por qué rechazó
-            Log::warning('Mercado Pago rechazó una operación.', ['status' => $response->status(), 'body' => mb_substr($response->body(), 0, 500)]);
-
-            // La clave es válida, pero Mercado Pago no deja usarla para esta operación (pasa con las cuentas de prueba y con aplicaciones sin habilitar)
-            $notActivated = $response->status() === 401 && str_contains((string) $response->json('message'), 'live credentials');
-
-            throw new ApiException(
-                ErrorCode::GatewayError,
-                match (true) {
-                    $notActivated => 'Mercado Pago no permite hacer esta operación desde el sistema con esta cuenta (respondió «Unauthorized use of live credentials»). Devuelve el dinero desde tu cuenta de Mercado Pago, en el detalle del pago, y vuelve a pulsar «Reembolsar» aquí: el sistema verá que ya está devuelto y dejará la orden reembolsada.',
-                    $response->status() === 401 => 'Mercado Pago rechazó la clave guardada. Hay que volver a conectar la cuenta.',
-                    default => 'Mercado Pago no pudo atender la operación. Inténtalo de nuevo en unos minutos.',
-                },
-                502,
-                ['gateway_status' => $response->status()]
-            );
+            throw GatewayErrors::mercadoPago($response);
         }
     }
 }

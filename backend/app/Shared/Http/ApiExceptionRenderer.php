@@ -37,7 +37,10 @@ class ApiExceptionRenderer
                 404 => [ErrorCode::NotFound, 'El recurso solicitado no existe.'],
                 405 => [ErrorCode::MethodNotAllowed, 'Método no permitido.'],
                 429 => [ErrorCode::TooManyRequests, 'Demasiadas solicitudes. Intente nuevamente más tarde.'],
-                default => [ErrorCode::HttpError, 'No se pudo procesar la solicitud.'],
+                413 => [ErrorCode::HttpError, 'Lo que intentas enviar es demasiado grande para el servidor. Reduce el tamaño del archivo e inténtalo de nuevo.'],
+                419 => [ErrorCode::HttpError, 'La página estuvo abierta demasiado tiempo. Recárgala e inténtalo de nuevo.'],
+                503 => [ErrorCode::HttpError, 'El sistema está en mantenimiento. Vuelve a intentarlo en unos minutos.'],
+                default => [ErrorCode::HttpError, "No se pudo procesar la solicitud (error {$status})."],
             };
 
             return ApiResponse::error($code, $message, $status);
@@ -45,7 +48,7 @@ class ApiExceptionRenderer
 
         return ApiResponse::error(
             ErrorCode::InternalError,
-            config('app.debug') ? $e->getMessage() : 'Ocurrió un error interno.',
+            config('app.debug') ? $e->getMessage() : 'Ocurrió un error inesperado en el sistema. Inténtalo de nuevo; si se repite, avisa a soporte e indica el código de este mensaje.',
             500
         );
     }

@@ -11,6 +11,7 @@ use App\Modules\Billing\Application\SubscriptionService;
 use App\Modules\Billing\Domain\Models\Plan;
 use App\Modules\Billing\Domain\Models\PlanOrder;
 use App\Modules\Files\Application\FileStorage;
+use App\Modules\Sales\Application\Payments\Online\GatewayErrors;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
@@ -138,13 +139,14 @@ class SubscriptionController extends Controller
             throw new ApiException(ErrorCode::ValidationError, 'Los datos no son válidos.', 422, ['return_url' => ['La dirección de retorno no es de esta academia.']]);
         }
 
-        $checkoutUrl = $this->online->start($this->own($order), $data['gateway'], $request->user(), [
+        // La cuenta que cobra es de la plataforma: la academia no puede hacer nada con sus fallas
+        $checkoutUrl = GatewayErrors::forPayer(fn () => $this->online->start($this->own($order), $data['gateway'], $request->user(), [
             'return' => $data['return_url'],
             // Los avisos van a la plataforma, y solo llegan a una dirección pública con HTTPS
             'webhook' => str_starts_with($data['return_url'], 'https://')
                 ? 'https://'.config('tenancy.central_domain').'/api/v1/platform/payments/webhooks/'.strtolower($data['gateway'])
                 : null,
-        ]);
+        ]), 'No pudimos abrir el pago en este momento. No se te cobró nada. Inténtalo de nuevo en unos minutos; si sigue igual, avisa a IntelectaLab e indica el código de este mensaje.');
 
         return ApiResponse::success(['checkout_url' => $checkoutUrl], null, 201);
     }
@@ -154,7 +156,7 @@ class SubscriptionController extends Controller
      */
     public function syncPayment(string $order): JsonResponse
     {
-        return ApiResponse::success($this->orders->present($this->online->sync($this->own($order))));
+        return ApiResponse::success($this->orders->present(GatewayErrors::forPayer(fn () => $this->online->sync($this->own($order)), 'No pudimos comprobar tu pago en este momento. Si ya pagaste, no vuelvas a pagar: inténtalo de nuevo en unos minutos o avisa a IntelectaLab con el código de este mensaje.')));
     }
 
     /**
