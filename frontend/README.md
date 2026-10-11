@@ -1,75 +1,44 @@
-# React + TypeScript + Vite
+# Frontend · ERP SaaS IntelectaLab
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web de la plataforma de cursos virtuales: el sitio público de cada academia, el aula del alumno, el back-office del personal y la consola de la plataforma. React 19, TypeScript, Vite y Tailwind CSS 4.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node 22.
+- El backend en marcha (ver `../backend/README.md`).
 
-## React Compiler
+## Puesta en marcha
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Vite sirve en el puerto 5173 y reenvía `/api` al backend en el 8000. Si el backend corre en otro puerto, indícalo con la variable `API_PORT`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Cada academia se abre por su subdominio (`http://demo.localhost:5173`); la consola de la plataforma y el registro de academias, por el dominio central (`http://localhost:5173/platform`, `http://localhost:5173/register`).
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Estructura
 
+| Carpeta | Contenido |
+| --- | --- |
+| `src/app` | Arranque, rutas y carga diferida de pantallas |
+| `src/config` | Módulos del menú y sus permisos |
+| `src/layouts` | Marcos del back-office, del alumno y del sitio público |
+| `src/features` | Una carpeta por módulo: sus pantallas, componentes y llamadas a la API |
+| `src/shared` | Cliente de la API, componentes de interfaz, academia en uso y piezas comunes |
+| `e2e` | Recorridos automáticos en navegador (Playwright) |
+
+## Verificación
+
+```bash
+npx tsc -b
+npm run lint
+npm run build
+```
+
+Los recorridos de punta a punta necesitan una academia levantada:
+
+```bash
+E2E_BASE_URL=http://demo.localhost:5173 E2E_PASSWORD=<clave de la demo> npx playwright test
 ```

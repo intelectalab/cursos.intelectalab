@@ -97,13 +97,19 @@ export interface Order {
   expires_at: string | null;
   paid_at: string | null;
   cancelled_at: string | null;
+  refunded_at: string | null;
   // Venta a empresa cuyas licencias se entregaron antes del pago
   licenses_released_at: string | null;
   licenses_release_reason: string | null;
   items: OrderItem[];
   payment: OrderPayment | null;
   // Cobros que una pasarela hizo y no se aplicaron a la orden: los resuelve una persona
-  payment_reviews: { gateway: string; payment_id: string | null; reason: string | null; at: string }[];
+  payment_reviews: PaymentReview[];
+  // Veces que el comprador fue a pagarla a una pasarela: si hay alguna, se le puede volver a preguntar
+  online_attempts: number;
+  // Lo cobrado que sigue en pie (es lo que devolvería un reembolso): el pago único o el de cada cuota
+  collected: { amount: string; payments: number; online_amount: string; manual_amount: string; gateways: string[] };
+  refunded_amount: string;
   // Plan de pagos; vacío = la orden se paga de una vez
   installments: Installment[];
   debt: OrderDebt | null;
@@ -120,7 +126,29 @@ export interface Installment {
   // Sin pagar y con su fecha ya pasada
   overdue: boolean;
   paid_at: string | null;
-  payment: { method: PaymentMethod; gateway: string; reference: string | null; confirmed_by: string | null } | null;
+  payment: {
+    method: PaymentMethod;
+    gateway: string;
+    reference: string | null;
+    confirmed_by: string | null;
+    // La cuota se pagó y después se devolvió
+    refund: { at: string; reason: string | null; reference: string | null } | null;
+  } | null;
+}
+
+// Un cobro que una pasarela hizo y no se aplicó a la orden
+export interface PaymentReview {
+  id: string;
+  gateway: string;
+  payment_id: string | null;
+  reason: string | null;
+  amount: string;
+  currency: string;
+  at: string;
+}
+
+export interface PaymentReviewRow extends PaymentReview {
+  order: { id: string; number: number; status: OrderStatus; title: string; customer: { name: string; email: string } | null };
 }
 
 export interface OrderDebt {
@@ -306,13 +334,24 @@ export const salesApi = {
   async installmentAlerts() {
     return (await api.get('/orders/installments/alerts')).data.data as DueInstallment[];
   },
+  // Cobros en revisión de toda la academia
+  async paymentReviews() {
+    return (await api.get('/orders/payment-reviews')).data.data as PaymentReviewRow[];
+  },
+  async resolvePaymentReview(review: string, note: string) {
+    return (await api.post(`/orders/payment-reviews/${review}/resolve`, { note })).data.data as Order;
+  },
+  // Vuelve a preguntar a la pasarela por una orden
+  async recheckPayment(order: string) {
+    return (await api.post(`/orders/${order}/recheck-payment`)).data.data as Order;
+  },
   async confirmPayment(order: string, input: ConfirmPaymentInput) {
     return (await postIdempotent(`/orders/${order}/confirm-payment`, input)).data.data as Order;
   },
   async releaseLicenses(order: string, reason: string) {
     return (await api.post(`/orders/${order}/release-licenses`, { reason })).data.data as Order;
   },
-  // Reembolso total: en línea lo devuelve la pasarela; por fuera, se registra cómo se devolvió
+  // Reembolso de lo cobrado: en línea lo devuelve la pasarela; por fuera, se registra cómo se devolvió
   async refundOrder(order: string, reason: string, reference: string | null) {
     return (await postIdempotent(`/orders/${order}/refund`, { reason, reference })).data.data as Order;
   },

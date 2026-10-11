@@ -18,7 +18,10 @@ function formatDay(value: string): string {
   return new Date(year, month - 1, day).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function InstallmentBadge({ installment }: { installment: Installment }) {
+function InstallmentBadge({ installment, refunded }: { installment: Installment; refunded: boolean }) {
+  if (installment.payment?.refund) return <Badge tone="info">Devuelta</Badge>;
+  // Reembolsada la orden, lo que faltaba ya no se debe
+  if (refunded && installment.status !== 'PAID') return <Badge tone="neutral">Sin efecto</Badge>;
   if (installment.status === 'PAID') return <Badge tone="success">Pagada</Badge>;
   if (installment.overdue) return <Badge tone="danger">Vencida</Badge>;
   return <Badge tone="warning">Por pagar</Badge>;
@@ -33,7 +36,9 @@ export const InstallmentList: React.FC<{ order: Order }> = ({ order }) => {
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
         <h3 className="text-[13px] font-semibold text-slate-900">Plan de pagos · {order.installments.length} cuotas</h3>
         <p className="text-xs text-slate-500 tnum">
-          Pagado {formatMoney(order.debt.paid_amount, order.currency)} · Falta {formatMoney(order.debt.pending_amount, order.currency)}
+          {order.status === 'REFUNDED'
+            ? `Devuelto ${formatMoney(order.refunded_amount, order.currency)}`
+            : `Pagado ${formatMoney(order.debt.paid_amount, order.currency)} · Falta ${formatMoney(order.debt.pending_amount, order.currency)}`}
         </p>
       </div>
       <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100">
@@ -51,11 +56,12 @@ export const InstallmentList: React.FC<{ order: Order }> = ({ order }) => {
                         installment.payment.gateway !== 'MANUAL' && PAYMENT_GATEWAY_LABEL[installment.payment.gateway] ? ` · ${PAYMENT_GATEWAY_LABEL[installment.payment.gateway]}` : ''
                       }${installment.payment.reference ? ` · n.º ${installment.payment.reference}` : ''}`
                     : ''}
+                  {installment.payment?.refund ? ` · devuelta el ${formatDateTime(installment.payment.refund.at)}${installment.payment.refund.reference ? ` (${installment.payment.refund.reference})` : ''}` : ''}
                 </p>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <InstallmentBadge installment={installment} />
+              <InstallmentBadge installment={installment} refunded={order.status === 'REFUNDED'} />
               <span className="font-medium text-slate-900 tnum whitespace-nowrap">{formatMoney(installment.amount, order.currency)}</span>
             </div>
           </li>

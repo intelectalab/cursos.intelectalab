@@ -2,6 +2,7 @@
 
 namespace App\Modules\Sales\Domain\Models;
 
+use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,9 @@ class PaymentAttempt extends Model
     /** La pasarela cobró, pero el pago no se pudo aplicar a la orden: lo resuelve una persona */
     public const STATUS_NEEDS_REVIEW = 'NEEDS_REVIEW';
 
+    /** Estuvo en revisión y una persona ya lo resolvió (devolvió el cobro o lo aplicó a mano) */
+    public const STATUS_RESOLVED = 'RESOLVED';
+
     protected $fillable = [
         'tenant_id',
         'order_id',
@@ -36,13 +40,22 @@ class PaymentAttempt extends Model
         'exchange_rate',
         'checkout_url',
         'review_reason',
+        'resolved_at',
+        'resolved_by',
+        'resolution_note',
     ];
 
     protected function casts(): array
     {
         return [
             'amount' => 'decimal:2',
+            'resolved_at' => 'datetime',
         ];
+    }
+
+    public function resolver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'resolved_by');
     }
 
     public function order(): BelongsTo

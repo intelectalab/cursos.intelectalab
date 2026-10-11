@@ -6,8 +6,11 @@ use App\Modules\Certificates\Domain\Models\Certificate;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Domain\Models\EnrollmentProgress;
+use App\Modules\Sales\Domain\Models\Currency;
 use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\OrderItem;
+use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use Carbon\CarbonImmutable;
@@ -55,7 +58,7 @@ class OverviewReport
             'currency' => $currency,
             'totals' => $this->totals($start, $end, $currency),
             'previous' => $this->totals($previousStart, $previousEnd, $currency),
-            'today' => $this->today($currency),
+            'today' => $this->today($currency, now($timezone)->toDateString()),
             'series' => $this->series($localStart, $localEnd, $start, $end, $timezone, $currency),
             'top_courses' => $this->topCourses($start, $end, $currency),
             'completion' => $this->completion(),
@@ -70,12 +73,15 @@ class OverviewReport
     private function totals(CarbonImmutable $start, CarbonImmutable $end, string $currency): array
     {
         $paid = $this->paidOrders($currency)->whereBetween('paid_at', [$start, $end]);
+        $collected = $this->collected($currency)->whereBetween('paid_at', [$start, $end]);
         $enrollments = Enrollment::query()->whereBetween('enrolled_at', [$start, $end]);
 
         return [
-            // Órdenes pagadas en el periodo, en la moneda de la organización
+            // Órdenes que quedaron pagadas por completo en el periodo, en la moneda de la organización
             'paid_orders' => (clone $paid)->count(),
-            'revenue' => self::money((clone $paid)->sum('total_amount')),
+            // Lo cobrado en el periodo, pago a pago: una venta en cuotas cuenta cada cuota el día en que entra
+            'revenue' => self::money((clone $collected)->sum('amount')),
+            'installment_revenue' => self::money((clone $collected)->whereNotNull('installment_id')->sum('amount')),
             // Matrículas creadas en el periodo, sin importar si luego se cancelaron
             'new_enrollments' => (clone $enrollments)->count(),
             'purchased_enrollments' => (clone $enrollments)->where('source', Enrollment::SOURCE_PURCHASE)->count(),
@@ -97,13 +103,23 @@ class OverviewReport
      *
      * @return array<string, int|string>
      */
-    private function today(string $currency): array
+    private function today(string $currency, string $today): array
     {
         $pending = Order::query()->inState(Order::STATUS_PENDING)->whereHas('currency', fn ($q) => $q->where('code', $currency));
+        // Cuotas sin pagar de las ventas en cuotas en curso: lo que falta cobrar de lo ya vendido
+        $receivable = OrderInstallment::query()
+            ->where('status', OrderInstallment::STATUS_PENDING)
+            ->whereIn('order_id', Order::query()->where('status', Order::STATUS_PARTIAL)->whereHas('currency', fn ($q) => $q->where('code', $currency))->select('id'));
+        $overdue = (clone $receivable)->where('due_date', '<', $today);
 
         return [
             'pending_orders' => (clone $pending)->count(),
             'pending_amount' => self::money((clone $pending)->sum('total_amount')),
+            'receivable_installments' => (clone $receivable)->count(),
+            'receivable_amount' => self::money((clone $receivable)->sum('amount')),
+            // De eso, lo que ya pasó su fecha
+            'overdue_installments' => (clone $overdue)->count(),
+            'overdue_amount' => self::money((clone $overdue)->sum('amount')),
             // Alumnos distintos con al menos una matrícula que hoy les da acceso
             'students_with_access' => (int) Enrollment::query()->accessible()->distinct()->count('student_id'),
             'published_courses' => Course::query()->where('status', Course::STATUS_PUBLISHED)->count(),
@@ -112,7 +128,7 @@ class OverviewReport
     }
 
     /**
-     * Ingreso, órdenes pagadas y matrículas nuevas por día, con los días sin movimiento en cero.
+     * Lo cobrado, las órdenes pagadas y las matrículas nuevas por día, con los días sin movimiento en cero.
      *
      * @return list<array{date: string, revenue: string, paid_orders: int, new_enrollments: int}>
      */
@@ -127,10 +143,15 @@ class OverviewReport
         // El día de cada registro es el de la organización, no el del servidor
         $sales = $this->paidOrders($currency)
             ->whereBetween('paid_at', [$start, $end])
-            ->selectRaw('((paid_at at time zone ?)::date)::text as day, count(*) as orders, sum(total_amount) as revenue', [$timezone])
+            ->selectRaw('((paid_at at time zone ?)::date)::text as day, count(*) as total', [$timezone])
             ->groupBy('day')
-            ->get()
-            ->keyBy('day');
+            ->pluck('total', 'day');
+
+        $revenue = $this->collected($currency)
+            ->whereBetween('paid_at', [$start, $end])
+            ->selectRaw('((paid_at at time zone ?)::date)::text as day, sum(amount) as total', [$timezone])
+            ->groupBy('day')
+            ->pluck('total', 'day');
 
         $enrollments = Enrollment::query()
             ->whereBetween('enrolled_at', [$start, $end])
@@ -145,8 +166,8 @@ class OverviewReport
 
             $series[] = [
                 'date' => $key,
-                'revenue' => self::money($sales[$key]->revenue ?? 0),
-                'paid_orders' => (int) ($sales[$key]->orders ?? 0),
+                'revenue' => self::money($revenue[$key] ?? 0),
+                'paid_orders' => (int) ($sales[$key] ?? 0),
                 'new_enrollments' => (int) ($enrollments[$key] ?? 0),
             ];
         }
@@ -217,6 +238,16 @@ class OverviewReport
         return Order::query()
             ->where('status', Order::STATUS_PAID)
             ->whereHas('currency', fn ($q) => $q->where('code', $currency));
+    }
+
+    /**
+     * Pagos recibidos y no devueltos, en la moneda de la organización. Un pago reembolsado deja de contar.
+     */
+    private function collected(string $currency)
+    {
+        return Payment::query()
+            ->where('status', Payment::STATUS_CONFIRMED)
+            ->whereIn('currency_id', Currency::query()->where('code', $currency)->select('id'));
     }
 
     private static function money(mixed $amount): string

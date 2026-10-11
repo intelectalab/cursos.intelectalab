@@ -64,6 +64,8 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         // Cuotas por cobrar y aviso de las vencidas
         Route::get('/orders/installments', [OrderController::class, 'installments']);
         Route::get('/orders/installments/alerts', [OrderController::class, 'installmentAlerts']);
+        // Cobros de una pasarela que no se aplicaron a su orden
+        Route::get('/orders/payment-reviews', [OrderController::class, 'paymentReviews']);
         Route::get('/orders/{order}', [OrderController::class, 'show'])->whereUuid('order');
     });
 
@@ -75,6 +77,11 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         ->whereUuid('order')->middleware('permission:payments.confirm');
     Route::delete('/orders/{order}/installments', [OrderController::class, 'removeInstallments'])
         ->whereUuid('order')->middleware('permission:payments.confirm');
+    // Volver a preguntar a la pasarela por una orden y dar por resuelto un cobro en revisión
+    Route::post('/orders/{order}/recheck-payment', [OrderController::class, 'recheckPayment'])
+        ->whereUuid('order')->middleware(['permission:payments.confirm', 'throttle:30,1']);
+    Route::post('/orders/payment-reviews/{attempt}/resolve', [OrderController::class, 'resolvePaymentReview'])
+        ->whereUuid('attempt')->middleware('permission:payments.confirm');
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])
         ->whereUuid('order')->middleware('permission:orders.cancel');
     // Reembolso total de una compra pagada: devuelve el dinero y retira la matrícula

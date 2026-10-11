@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   Award,
@@ -9,6 +10,7 @@ import {
   Clock,
   CreditCard,
   GraduationCap,
+  HandCoins,
   Minus,
   Receipt,
   Users,
@@ -80,9 +82,9 @@ const Kpi: React.FC<{ label: string; value: string; delta: number | null; hint?:
   );
 };
 
-const TodayItem: React.FC<{ icon: LucideIcon; label: string; value: string; hint?: string }> = ({ icon: Icon, label, value, hint }) => (
-  <div className="flex items-center gap-3 px-5 py-4">
-    <Icon className="w-4.5 h-4.5 shrink-0 text-slate-500" />
+const TodayItem: React.FC<{ icon: LucideIcon; label: string; value: string; hint?: string; alert?: boolean }> = ({ icon: Icon, label, value, hint, alert }) => (
+  <div className="flex items-center gap-3 px-5 py-4 bg-white">
+    <Icon className={`w-4.5 h-4.5 shrink-0 ${alert ? 'text-rose-600' : 'text-slate-500'}`} />
     <div className="min-w-0">
       <p className="text-xs text-slate-500">{label}</p>
       <p className="text-[15px] font-semibold text-slate-900 tnum">
@@ -202,7 +204,11 @@ export const ReportsPage: React.FC = () => {
               label="Ingresos"
               value={money(report.totals.revenue)}
               delta={change(Number(report.totals.revenue), Number(report.previous.revenue))}
-              hint="Suma de las órdenes pagadas."
+              hint={
+                Number(report.totals.installment_revenue) > 0
+                  ? `Lo cobrado en el periodo; ${money(report.totals.installment_revenue)} entraron por cuotas.`
+                  : 'Lo cobrado en el periodo, pago a pago.'
+              }
               icon={CreditCard}
               tone="success"
             />
@@ -210,7 +216,7 @@ export const ReportsPage: React.FC = () => {
               label="Órdenes pagadas"
               value={String(report.totals.paid_orders)}
               delta={change(report.totals.paid_orders, report.previous.paid_orders)}
-              hint="Incluye las inscripciones a cursos gratuitos."
+              hint="Las que quedaron pagadas por completo. Incluye las inscripciones a cursos gratuitos."
               icon={Receipt}
               tone="brand"
             />
@@ -249,7 +255,7 @@ export const ReportsPage: React.FC = () => {
 
           <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <Card>
-              <CardHeader title="Ingresos" text={`Órdenes pagadas, por ${revenue?.unit}.`} />
+              <CardHeader title="Ingresos" text={`Lo cobrado, por ${revenue?.unit}. Cada cuota cuenta el día en que se paga.`} />
               <div className="px-5 pb-5 pt-8">
                 {revenue && <ColumnChart buckets={revenue.buckets} color="bg-brand-500" format={(value) => money(value)} measure="Ingresos" />}
               </div>
@@ -314,12 +320,25 @@ export const ReportsPage: React.FC = () => {
 
           <Card>
             <CardHeader title="Situación de hoy" text="Cifras al momento de consultar; no dependen del periodo elegido." />
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-px bg-slate-100 rounded-b-2xl overflow-hidden">
               <TodayItem
                 icon={Clock}
                 label="Órdenes pendientes de pago"
                 value={String(report.today.pending_orders)}
                 hint={report.today.pending_orders > 0 ? money(report.today.pending_amount) : undefined}
+              />
+              <TodayItem
+                icon={HandCoins}
+                label="Por cobrar en cuotas"
+                value={money(report.today.receivable_amount)}
+                hint={report.today.receivable_installments > 0 ? `${report.today.receivable_installments} ${report.today.receivable_installments === 1 ? 'cuota' : 'cuotas'}` : undefined}
+              />
+              <TodayItem
+                icon={AlertTriangle}
+                label="Cuotas vencidas"
+                value={money(report.today.overdue_amount)}
+                hint={report.today.overdue_installments > 0 ? `${report.today.overdue_installments} ${report.today.overdue_installments === 1 ? 'cuota' : 'cuotas'}` : undefined}
+                alert={report.today.overdue_installments > 0}
               />
               <TodayItem icon={Users} label="Alumnos con acceso vigente" value={String(report.today.students_with_access)} />
               <TodayItem icon={BookOpen} label="Cursos publicados" value={String(report.today.published_courses)} />

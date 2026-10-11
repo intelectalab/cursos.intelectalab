@@ -292,36 +292,103 @@ class OnlinePaymentService
      */
     public function refund(Order $order, User $actor, string $reason, ?string $manualReference = null): Order
     {
-        $order->loadMissing('payment');
         $this->orders->assertRefundable($order);
 
-        $payment = $order->payment;
+        // Lo cobrado en línea que falta devolver: uno si la orden se pagó de una vez, uno por cuota si fue en cuotas
+        $online = $order->payments()->where('status', Payment::STATUS_CONFIRMED)->orderBy('paid_at')->orderBy('id')->get()
+            ->filter(fn (Payment $payment) => $payment->isOnline())->values();
 
-        if (! $payment->isOnline()) {
-            return $this->orders->markRefunded($order, $actor, $reason, $manualReference);
-        }
+        // Antes de mover dinero: las cuentas con las que se cobró deben seguir conectadas
+        $accounts = [];
 
-        $account = $this->account($payment->gateway);
-
-        if ($account === null) {
-            throw new ApiException(
+        foreach ($online->pluck('gateway')->unique() as $code) {
+            $accounts[$code] = $this->account($code) ?? throw new ApiException(
                 ErrorCode::GatewayNotAvailable,
                 'La cuenta con la que se cobró este pago ya no está conectada. Vuelve a conectarla en Configuración para poder devolverlo.',
                 409
             );
         }
 
-        $gateway = $this->gateway($payment->gateway);
+        foreach ($online as $index => $payment) {
+            $gateway = $this->gateway($payment->gateway);
+            $account = $accounts[$payment->gateway];
 
-        // El dinero ya se devolvió desde la cuenta de la pasarela: aquí solo falta registrarlo
-        if ($this->alreadyRefundedAtGateway($gateway, $account, $order, (string) $payment->reference)) {
-            return $this->orders->markRefunded($order, $actor, $reason, 'Devuelto desde la cuenta de '.$gateway->label());
+            try {
+                // Si el dinero ya se devolvió desde la cuenta de la pasarela, aquí solo falta registrarlo
+                $refundId = $this->alreadyRefundedAtGateway($gateway, $account, $order, (string) $payment->reference)
+                    ? 'Devuelto desde la cuenta de '.$gateway->label()
+                    : $gateway->refund($account->forGateway(), (string) $payment->reference);
+            } catch (ApiException $error) {
+                // Primero el dinero: si la pasarela no devuelve, la orden queda como estaba. Lo ya devuelto queda registrado
+                throw $index === 0 ? $error : new ApiException(
+                    $error->errorCode,
+                    "Se devolvieron {$index} de {$online->count()} pagos en línea y el siguiente no se pudo devolver: {$error->getMessage()} La orden sigue como estaba: vuelve a pulsar «Reembolsar» para continuar con lo que falta.",
+                    $error->status,
+                    $error->details
+                );
+            }
+
+            $this->orders->markPaymentRefunded($payment, $actor, $reason, $refundId);
         }
 
-        // Primero el dinero: si la pasarela no devuelve, la orden queda como estaba
-        $refundId = $gateway->refund($account->forGateway(), (string) $payment->reference);
+        // Los pagos recibidos por fuera los devuelve la organización: aquí quedan registrados
+        return $this->orders->markRefunded($order, $actor, $reason, $manualReference);
+    }
 
-        return $this->orders->markRefunded($order, $actor, $reason, $refundId);
+    /**
+     * El personal pide volver a preguntar a las pasarelas por una orden, esté
+     * como esté: aplica un pago que no se había registrado y deja en revisión
+     * lo que no cuadra (un cobro que llegó tarde, una devolución hecha desde
+     * el panel de la pasarela).
+     */
+    public function recheck(Order $order): Order
+    {
+        $attempts = PaymentAttempt::query()->where('order_id', $order->id)->latest()->orderByDesc('id')->limit(self::ATTEMPTS_TO_CHECK)->get()
+            ->unique(fn (PaymentAttempt $attempt) => $this->gateway($attempt->gateway)->tracksByCheckout() ? $attempt->id : $attempt->gateway);
+
+        foreach ($attempts as $attempt) {
+            $account = $this->account($attempt->gateway);
+
+            if ($account === null) {
+                continue;
+            }
+
+            foreach ($this->gateway($attempt->gateway)->paymentsFor($account->forGateway(), $order->id, $attempt->external_id) as $payment) {
+                if ($payment->isApproved() ? ! $this->alreadyApplied($order, $payment, $attempt->gateway) : $payment->status === GatewayPayment::REFUNDED) {
+                    $this->apply($order, $payment, $attempt->gateway);
+                }
+            }
+        }
+
+        return $order->refresh();
+    }
+
+    /**
+     * Una persona ya resolvió un cobro en revisión (lo devolvió en la
+     * pasarela o lo aplicó a mano): deja de avisar y queda quién y cómo.
+     */
+    public function resolveReview(PaymentAttempt $attempt, User $actor, string $note): PaymentAttempt
+    {
+        if ($attempt->status !== PaymentAttempt::STATUS_NEEDS_REVIEW) {
+            throw new ApiException(ErrorCode::PaymentReviewClosed, 'Este cobro ya no está en revisión.', 409);
+        }
+
+        $attempt->update([
+            'status' => PaymentAttempt::STATUS_RESOLVED,
+            'resolved_at' => now(),
+            'resolved_by' => $actor->id,
+            'resolution_note' => $note,
+        ]);
+
+        $this->audit->record('payments.online_review_resolved', $attempt, ['status' => PaymentAttempt::STATUS_NEEDS_REVIEW], [
+            'status' => PaymentAttempt::STATUS_RESOLVED,
+            'order' => $attempt->order->number,
+            'gateway' => $attempt->gateway,
+            'payment' => $attempt->external_payment_id,
+            'note' => $note,
+        ]);
+
+        return $attempt;
     }
 
     /**
@@ -386,8 +453,8 @@ class OnlinePaymentService
                     $attempt->update(['status' => PaymentAttempt::STATUS_REJECTED, 'external_payment_id' => $payment->id]);
                 }
 
-                // Alguien devolvió el pago en la pasarela sin pasar por el sistema: la orden sigue pagada aquí
-                if ($payment->status === GatewayPayment::REFUNDED && $order->status === Order::STATUS_PAID && $order->payment?->reference === $payment->id && $attempt->status !== PaymentAttempt::STATUS_NEEDS_REVIEW) {
+                // Alguien devolvió el pago en la pasarela sin pasar por el sistema: aquí sigue contando como cobrado
+                if ($payment->status === GatewayPayment::REFUNDED && $this->stillCounted($order, $payment, $code) && ! $this->underReview($attempt, $payment)) {
                     $problem = 'La pasarela informa que este pago se devolvió desde su panel, pero la orden sigue pagada: reembólsala también aquí.';
                     $attempt->update(['status' => PaymentAttempt::STATUS_NEEDS_REVIEW, 'external_payment_id' => $payment->id, 'review_reason' => $problem]);
                     $this->audit->record('payments.online_needs_review', $attempt, null, ['order' => $order->number, 'gateway' => $code, 'payment' => $payment->id, 'reason' => $problem]);
@@ -409,7 +476,7 @@ class OnlinePaymentService
             };
 
             if ($problem !== null) {
-                if ($attempt->status !== PaymentAttempt::STATUS_NEEDS_REVIEW) {
+                if (! $this->underReview($attempt, $payment)) {
                     $attempt->update(['status' => PaymentAttempt::STATUS_NEEDS_REVIEW, 'external_payment_id' => $payment->id, 'review_reason' => $problem]);
                     $this->audit->record('payments.online_needs_review', $attempt, null, ['order' => $order->number, 'gateway' => $code, 'payment' => $payment->id, 'reason' => $problem]);
                 }
@@ -428,6 +495,24 @@ class OnlinePaymentService
                 'notes' => $attempt->exchange_rate !== null ? (new ChargeQuote($attempt->currency, (string) $attempt->amount, (string) $attempt->exchange_rate))->note() : null,
             ]);
         });
+    }
+
+    /**
+     * El pago sigue contando como cobrado en una orden que no se ha reembolsado.
+     */
+    private function stillCounted(Order $order, GatewayPayment $payment, string $code): bool
+    {
+        return in_array($order->status, [Order::STATUS_PAID, Order::STATUS_PARTIAL], true)
+            && Payment::query()->where('order_id', $order->id)->where('gateway', $code)->where('reference', $payment->id)->where('status', Payment::STATUS_CONFIRMED)->exists();
+    }
+
+    /**
+     * El intento ya está en revisión, o una persona ya resolvió ese mismo cobro: no se vuelve a avisar.
+     */
+    private function underReview(PaymentAttempt $attempt, GatewayPayment $payment): bool
+    {
+        return $attempt->status === PaymentAttempt::STATUS_NEEDS_REVIEW
+            || ($attempt->status === PaymentAttempt::STATUS_RESOLVED && $attempt->external_payment_id === $payment->id);
     }
 
     /**

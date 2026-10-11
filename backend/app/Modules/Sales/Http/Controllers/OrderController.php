@@ -11,6 +11,7 @@ use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
+use App\Modules\Sales\Domain\Models\PaymentAttempt;
 use App\Modules\Sales\Http\OrderPresenter;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Export\ExcelExport;
@@ -33,7 +34,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class OrderController extends Controller
 {
-    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer', 'payment.refunder', 'attemptsToReview', 'installments.payment.confirmer'];
+    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer', 'payment.refunder', 'attempts', 'installments.payment.confirmer'];
 
     private const STATUS_LABELS = ['PENDING' => 'Pendiente de pago', 'PARTIAL' => 'En cuotas', 'PAID' => 'Pagada', 'CANCELLED' => 'Cancelada', 'EXPIRED' => 'Vencida', 'REFUNDED' => 'Reembolsada'];
 
@@ -166,7 +167,7 @@ class OrderController extends Controller
         return ExcelExport::download(
             'ordenes',
             $query,
-            ['N.º', 'Estado', 'Fecha', 'Comprador', 'Correo', 'Empresa', 'Detalle', 'Moneda', 'Subtotal', 'Descuento', 'Cupón', 'Total', 'Fecha de pago', 'Medio de pago', 'Cobrado por', 'N.º de operación', 'Reembolsada el', 'Motivo del reembolso'],
+            ['N.º', 'Estado', 'Fecha', 'Comprador', 'Correo', 'Empresa', 'Detalle', 'Moneda', 'Subtotal', 'Descuento', 'Cupón', 'Total', 'Fecha de pago', 'Medio de pago', 'Cobrado por', 'N.º de operación', 'Reembolsada el', 'Motivo del reembolso', 'Cobrado', 'Por cobrar en cuotas'],
             fn (Order $order) => [
                 $order->number,
                 self::STATUS_LABELS[$order->state()] ?? $order->state(),
@@ -184,8 +185,11 @@ class OrderController extends Controller
                 $order->payment ? (self::METHOD_LABELS[$order->payment->method] ?? $order->payment->method) : null,
                 $order->payment ? (self::GATEWAY_LABELS[$order->payment->gateway] ?? $order->payment->gateway) : null,
                 $order->payment?->reference,
-                ExcelExport::dateTime($order->payment?->refunded_at, $timezone),
-                $order->payment?->refund_reason,
+                ExcelExport::dateTime($order->payment?->refunded_at ?? $order->refunded_at, $timezone),
+                $order->payment?->refund_reason ?? $order->installments->pluck('payment.refund_reason')->filter()->first(),
+                (float) OrderPresenter::make($order)['collected']['amount'],
+                // Solo debe la orden que ya recibió un pago
+                $order->status === Order::STATUS_PARTIAL ? (float) $order->installments->where('status', OrderInstallment::STATUS_PENDING)->sum('amount') : 0.0,
             ]
         );
     }
@@ -353,9 +357,61 @@ class OrderController extends Controller
     }
 
     /**
-     * Reembolso total: si el pago fue en línea se devuelve en la pasarela;
-     * si fue por fuera, se registra que el dinero ya se devolvió. El
-     * comprador pierde la matrícula que le dio la compra.
+     * Cobros que una pasarela hizo y no se aplicaron a su orden: esperan que
+     * una persona los resuelva.
+     */
+    public function paymentReviews(): JsonResponse
+    {
+        $attempts = PaymentAttempt::query()
+            ->where('status', PaymentAttempt::STATUS_NEEDS_REVIEW)
+            ->with(['order.customer', 'order.currency', 'order.items'])
+            ->orderBy('updated_at')
+            ->orderBy('id')
+            ->limit(100)
+            ->get();
+
+        return ApiResponse::success($attempts->map(fn (PaymentAttempt $attempt) => OrderPresenter::review($attempt) + [
+            'order' => [
+                'id' => $attempt->order->id,
+                'number' => $attempt->order->number,
+                'status' => $attempt->order->state(),
+                'title' => $attempt->order->package_title ?? $attempt->order->items->pluck('title')->implode(', '),
+                'customer' => $attempt->order->customer ? [
+                    'name' => trim("{$attempt->order->customer->first_name} {$attempt->order->customer->last_name}"),
+                    'email' => $attempt->order->customer->email,
+                ] : null,
+            ],
+        ])->values());
+    }
+
+    /**
+     * Una persona ya resolvió el cobro en revisión: deja de avisar.
+     */
+    public function resolvePaymentReview(Request $request, string $attempt): JsonResponse
+    {
+        $data = $request->validate([
+            'note' => ['required', 'string', 'min:5', 'max:300'],
+        ]);
+
+        $attempt = $this->online->resolveReview(PaymentAttempt::query()->with('order')->findOrFail($attempt), $request->user(), $data['note']);
+
+        return ApiResponse::success(OrderPresenter::make($attempt->order->load(self::RELATIONS)));
+    }
+
+    /**
+     * El personal vuelve a preguntar a las pasarelas por una orden: aplica un
+     * pago que no se había registrado y deja en revisión lo que no cuadra.
+     */
+    public function recheckPayment(Order $order): JsonResponse
+    {
+        return ApiResponse::success(OrderPresenter::make($this->online->recheck($order)->load(self::RELATIONS)));
+    }
+
+    /**
+     * Reembolso total: lo cobrado en línea se devuelve en la pasarela; lo
+     * recibido por fuera se registra como ya devuelto. En una venta en cuotas
+     * se devuelve lo pagado hasta ahora. El comprador pierde la matrícula que
+     * le dio la compra.
      */
     public function refund(Request $request, Order $order): JsonResponse
     {

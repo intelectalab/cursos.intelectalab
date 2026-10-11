@@ -156,11 +156,10 @@ class InstallmentTest extends TestCase
             ->assertJsonPath('data.expires_at', null);
         $this->withToken($this->buyer)->getJson($this->api("/me/courses/{$this->course}"))->assertOk();
 
-        // Con un pago recibido, el plan ya no cambia, y la orden no se cancela ni se reembolsa desde aquí
+        // Con un pago recibido, el plan ya no cambia y la orden no se cancela
         $this->plan($order, [[100, '2026-04-05'], [100, '2026-05-05']])->assertStatus(409)->assertJsonPath('code', 'ORDER_NOT_PENDING');
         $this->withToken($this->admin)->deleteJson($this->api("/orders/{$order}/installments"))->assertStatus(409);
         $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/cancel"))->assertStatus(409);
-        $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno se retiró.'])->assertStatus(409)->assertJsonPath('code', 'ORDER_NOT_REFUNDABLE');
 
         // Segunda cuota: sigue en cuotas. Tercera: pagada.
         $this->confirm($order)->assertOk()->assertJsonPath('data.status', 'PARTIAL')->assertJsonPath('data.debt.pending_amount', '100.00');
@@ -244,6 +243,70 @@ class InstallmentTest extends TestCase
         app(TenantContext::class)->runForTenant($this->tenant->id, function () {
             $this->assertSame(2, Payment::query()->count());
             $this->assertSame(0, PaymentAttempt::query()->where('status', PaymentAttempt::STATUS_NEEDS_REVIEW)->count());
+        });
+    }
+
+    public function test_an_order_in_installments_is_refunded_for_what_was_collected_and_reports_count_each_payment(): void
+    {
+        $this->mercadoPago(['/users/me' => Http::response(['id' => 99, 'nickname' => 'ACADEMIAACME', 'site_id' => 'MPE'])]);
+        $this->withToken($this->admin)->putJson($this->api('/settings/payment-gateways/mercadopago'), ['access_token' => 'APP_USR-clave-de-la-academia'])->assertOk();
+
+        $order = $this->order();
+        $this->plan($order, [[100, '2026-03-05'], [100, '2026-04-05'], [100, '2026-05-05']])->assertOk();
+
+        // Sin ningún pago no hay qué devolver
+        $refund = fn (array $extra = []) => $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno se retiró del curso.'] + $extra);
+        $refund()->assertStatus(409)->assertJsonPath('code', 'ORDER_NOT_REFUNDABLE');
+
+        // Cuota 1 por fuera; cuota 2 en línea
+        $this->confirm($order)->assertOk();
+        $this->mercadoPago(['/checkout/preferences' => Http::response(['id' => 'PREF-2', 'init_point' => 'https://www.mercadopago.com.pe/checkout?pref_id=PREF-2'], 201)]);
+        $this->withToken($this->buyer)->postJson($this->api("/me/orders/{$order}/pay"), ['gateway' => 'MERCADOPAGO', 'return_url' => "https://acme.localhost/my-orders/{$order}"])->assertCreated();
+        $paid = ['/v1/payments/search*' => Http::response(['results' => [$this->mpPayment($order, 555002, 100)]])];
+        $this->mercadoPago($paid);
+        $this->withToken($this->buyer)->postJson($this->api("/me/orders/{$order}/pay/sync"))->assertOk()->assertJsonPath('data.status', 'PARTIAL');
+
+        // Reportes: lo cobrado cuenta cuota a cuota aunque la orden no esté pagada, y se ve lo que falta cobrar
+        $report = fn () => $this->withToken($this->admin)->getJson($this->api('/reports/overview?from=2026-03-01&to=2026-03-31'));
+        $report()->assertOk()
+            ->assertJsonPath('data.totals.revenue', '200.00')
+            ->assertJsonPath('data.totals.installment_revenue', '200.00')
+            ->assertJsonPath('data.totals.paid_orders', 0)
+            ->assertJsonPath('data.series.1.revenue', '200.00')
+            ->assertJsonPath('data.today.receivable_installments', 1)
+            ->assertJsonPath('data.today.receivable_amount', '100.00')
+            ->assertJsonPath('data.today.overdue_amount', '0.00');
+
+        $this->withToken($this->admin)->getJson($this->api("/orders/{$order}"))
+            ->assertJsonPath('data.collected.amount', '200.00')
+            ->assertJsonPath('data.collected.online_amount', '100.00')
+            ->assertJsonPath('data.collected.manual_amount', '100.00')
+            ->assertJsonPath('data.collected.gateways', ['MERCADOPAGO']);
+
+        // Si Mercado Pago no devuelve, no se toca nada
+        $this->mercadoPago($paid + ['/v1/payments/555002/refunds' => Http::response(['message' => 'The payment is too old to be refunded'], 400)]);
+        $refund()->assertStatus(502)->assertJsonPath('code', 'GATEWAY_ERROR');
+        $this->withToken($this->admin)->getJson($this->api("/orders/{$order}"))->assertJsonPath('data.status', 'PARTIAL')->assertJsonPath('data.collected.amount', '200.00');
+
+        // Devuelve por la pasarela lo cobrado en línea y registra lo devuelto por fuera
+        $this->mercadoPago($paid + ['/v1/payments/555002/refunds' => Http::response(['id' => 880033, 'status' => 'approved'], 201)]);
+        $refund(['reference' => 'Transferencia BCP, operación 4455'])->assertOk()
+            ->assertJsonPath('data.status', 'REFUNDED')
+            ->assertJsonPath('data.installments.0.payment.refund.reference', 'Transferencia BCP, operación 4455')
+            ->assertJsonPath('data.installments.1.payment.refund.reference', '880033')
+            ->assertJsonPath('data.refunded_amount', '200.00')
+            ->assertJsonPath('data.collected.amount', '0.00');
+        Http::assertSentCount(2);
+
+        // El alumno pierde el acceso, la cuota que faltaba ya no se debe y lo devuelto deja de ser ingreso
+        $this->withToken($this->buyer)->getJson($this->api("/me/courses/{$this->course}"))->assertNotFound();
+        $this->withToken($this->admin)->getJson($this->api('/orders/installments'))->assertJsonPath('meta.counts.ALL', 0);
+        $report()->assertJsonPath('data.totals.revenue', '0.00')->assertJsonPath('data.today.receivable_amount', '0.00');
+        $refund()->assertStatus(409)->assertJsonPath('code', 'ORDER_NOT_REFUNDABLE');
+
+        app(TenantContext::class)->runForTenant($this->tenant->id, function () {
+            $this->assertSame(2, Payment::query()->where('status', Payment::STATUS_REFUNDED)->count());
+            $this->assertSame('200.00', AuditEvent::query()->where('action', 'orders.refunded')->sole()->after['refunded']);
         });
     }
 

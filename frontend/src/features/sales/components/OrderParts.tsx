@@ -50,6 +50,16 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
 
     <InstallmentList order={order} />
 
+    {order.status === 'REFUNDED' && !order.payment && order.refunded_at && (
+      <div className="p-3 rounded-xl border border-sky-200 bg-sky-50/60 text-[13px]">
+        <p className="text-xs font-semibold text-sky-800">Reembolsada el {formatDateTime(order.refunded_at)}</p>
+        <p className="text-slate-800 break-words">
+          Se devolvieron {formatMoney(order.refunded_amount, order.currency)}, lo cobrado hasta ese día.{' '}
+          {order.installments.find((installment) => installment.payment?.refund?.reason)?.payment?.refund?.reason}
+        </p>
+      </div>
+    )}
+
     {order.payment && (
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[13px] pt-4 border-t border-slate-200/80">
         <div>

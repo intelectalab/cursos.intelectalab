@@ -357,7 +357,7 @@ export const MyOrderPage: React.FC = () => {
           )}
           {order.status === 'REFUNDED' && (
             <Alert tone="info">
-              Esta compra fue reembolsada{order.payment?.refund ? ` el ${formatDateTime(order.payment.refund.at)}` : ''}: se te devolvió el importe completo y ya no tienes acceso al
+              Esta compra fue reembolsada{order.refunded_at ? ` el ${formatDateTime(order.refunded_at)}` : ''}: se te devolvió lo que habías pagado y ya no tienes acceso al
               curso. Si pagaste en línea, el dinero vuelve al medio con el que pagaste; el plazo depende de tu banco.
             </Alert>
           )}

@@ -5,13 +5,14 @@ namespace App\Modules\Sales\Http;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\OrderItem;
+use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Sales\Domain\Models\PaymentAttempt;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 
 class OrderPresenter
 {
     /**
-     * Espera customer, company, currency, items y payment.confirmer cargados.
+     * Espera customer, company, currency, items, payment.confirmer, attempts e installments.payment cargados.
      *
      * @return array<string, mixed>
      */
@@ -73,13 +74,58 @@ class OrderPresenter
                 ] : null,
             ] : null,
             // Cobros que la pasarela hizo y no se aplicaron a la orden: hay que resolverlos a mano
-            'payment_reviews' => $order->relationLoaded('attemptsToReview') ? $order->attemptsToReview->map(fn (PaymentAttempt $attempt) => [
-                'gateway' => $attempt->gateway,
-                'payment_id' => $attempt->external_payment_id,
-                'reason' => $attempt->review_reason,
-                'at' => $attempt->updated_at->toIso8601String(),
-            ])->values() : [],
+            'payment_reviews' => $order->relationLoaded('attempts')
+                ? $order->attempts->where('status', PaymentAttempt::STATUS_NEEDS_REVIEW)->map(fn (PaymentAttempt $attempt) => self::review($attempt))->values()
+                : [],
+            // Veces que el comprador fue a pagarla a una pasarela: si hay alguna, se le puede volver a preguntar
+            'online_attempts' => $order->relationLoaded('attempts') ? $order->attempts->count() : 0,
+            ...self::moneyMoved($order),
             ...self::plan($order),
+        ];
+    }
+
+    /**
+     * Un cobro que la pasarela hizo y no se aplicó a la orden.
+     *
+     * @return array<string, mixed>
+     */
+    public static function review(PaymentAttempt $attempt): array
+    {
+        return [
+            'id' => $attempt->id,
+            'gateway' => $attempt->gateway,
+            'payment_id' => $attempt->external_payment_id,
+            'reason' => $attempt->review_reason,
+            'amount' => $attempt->amount,
+            'currency' => $attempt->currency,
+            'at' => $attempt->updated_at->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Lo cobrado por la orden que sigue en pie (es lo que devolvería un
+     * reembolso) y lo ya devuelto. Cuenta el pago único y el de cada cuota.
+     *
+     * @return array<string, mixed>
+     */
+    private static function moneyMoved(Order $order): array
+    {
+        $payments = collect([$order->payment])
+            ->merge($order->relationLoaded('installments') ? $order->installments->map(fn (OrderInstallment $installment) => $installment->relationLoaded('payment') ? $installment->payment : null) : [])
+            ->filter();
+        $collected = $payments->where('status', Payment::STATUS_CONFIRMED);
+        $online = $collected->filter(fn (Payment $payment) => $payment->isOnline());
+
+        return [
+            'collected' => [
+                'amount' => self::money($collected->sum('amount')),
+                'payments' => $collected->count(),
+                // Lo que devolvería la pasarela y lo que tiene que devolver la organización por su cuenta
+                'online_amount' => self::money($online->sum('amount')),
+                'manual_amount' => self::money($collected->sum('amount') - $online->sum('amount')),
+                'gateways' => $online->pluck('gateway')->unique()->values(),
+            ],
+            'refunded_amount' => self::money($payments->where('status', Payment::STATUS_REFUNDED)->sum('amount')),
         ];
     }
 
@@ -132,6 +178,12 @@ class OrderPresenter
                 'gateway' => $payment->gateway,
                 'reference' => $payment->reference,
                 'confirmed_by' => $payment->relationLoaded('confirmer') && $payment->confirmer ? trim("{$payment->confirmer->first_name} {$payment->confirmer->last_name}") : null,
+                // La cuota se pagó y después se devolvió
+                'refund' => $payment->refunded_at ? [
+                    'at' => $payment->refunded_at->toIso8601String(),
+                    'reason' => $payment->refund_reason,
+                    'reference' => $payment->refund_reference,
+                ] : null,
             ] : null,
         ];
     }

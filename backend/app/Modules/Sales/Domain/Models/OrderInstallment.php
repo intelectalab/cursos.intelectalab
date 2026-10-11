@@ -68,6 +68,7 @@ class OrderInstallment extends Model
 
     public function payment(): HasOne
     {
-        return $this->hasOne(Payment::class, 'installment_id')->where('status', Payment::STATUS_CONFIRMED);
+        // El pago de la cuota, también cuando ya se devolvió
+        return $this->hasOne(Payment::class, 'installment_id')->whereIn('status', [Payment::STATUS_CONFIRMED, Payment::STATUS_REFUNDED]);
     }
 }

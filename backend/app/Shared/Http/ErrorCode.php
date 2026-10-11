@@ -61,6 +61,7 @@ enum ErrorCode: string
     case CouponInvalid = 'COUPON_INVALID';
     case GatewayNotAvailable = 'GATEWAY_NOT_AVAILABLE';
     case GatewayError = 'GATEWAY_ERROR';
+    case PaymentReviewClosed = 'PAYMENT_REVIEW_CLOSED';
 
     case CertificateNotEligible = 'CERTIFICATE_NOT_ELIGIBLE';
     case CertificateRevoked = 'CERTIFICATE_REVOKED';

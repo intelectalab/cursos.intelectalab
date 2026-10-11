@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BadgeCheck, Ban, CalendarClock, CircleDollarSign, CreditCard, Hourglass, Search, TimerOff, Undo2 } from 'lucide-react';
+import { BadgeCheck, Ban, CalendarClock, CircleDollarSign, CreditCard, Hourglass, RefreshCw, Search, TimerOff, Undo2 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -38,9 +38,11 @@ import {
   salesApi,
   type Order,
   type PaymentMethod,
+  type PaymentReview,
 } from '../api';
 import { DueInstallments, InstallmentPlanForm } from '../components/Installments';
 import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
+import { PaymentReviewList } from '../components/PaymentReviews';
 import { ExportButton } from '../../../shared/ui/ExportButton';
 
 // Detalle de una orden con sus acciones: confirmar el pago recibido o cancelarla
@@ -55,7 +57,11 @@ const OrderModal: React.FC<{
   onClose: () => void;
   onChanged: (order: Order) => void;
 }> = ({ order, canConfirm, canCancel, canDefer, canRefund, onClose, onChanged }) => {
-  const [mode, setMode] = useState<'view' | 'pay' | 'cancel' | 'release' | 'refund' | 'plan'>('view');
+  const [mode, setMode] = useState<'view' | 'pay' | 'cancel' | 'release' | 'refund' | 'plan' | 'resolve'>('view');
+  // Cobro en revisión que se está dando por resuelto
+  const [resolving, setResolving] = useState<PaymentReview | null>(null);
+  const [resolution, setResolution] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
   const [refundReason, setRefundReason] = useState('');
   const [refundReference, setRefundReference] = useState('');
   const [releaseReason, setReleaseReason] = useState('');
@@ -73,14 +79,20 @@ const OrderModal: React.FC<{
   // El plan de pagos se arma mientras nadie haya pagado, en compras personales con importe
   const plannable = pending && order.customer !== null && Number(order.total_amount) > 0;
   const dueNow = next ? next.amount : order.total_amount;
-  // Solo compras personales pagadas y con importe: lo demás no tiene qué devolver por aquí
-  const refundable = order.status === 'PAID' && order.customer !== null && Number(order.total_amount) > 0 && order.payment !== null;
-  const paidOnline = order.payment !== null && order.payment.gateway !== 'MANUAL';
-  const gatewayName = PAYMENT_GATEWAY_LABEL[order.payment?.gateway ?? ''] ?? 'la pasarela';
+  // Compras personales con importe y algo cobrado (pagadas, o en cuotas con alguna pagada): lo demás no tiene qué devolver por aquí
+  const refundable =
+    (order.status === 'PAID' || partial) && order.customer !== null && Number(order.total_amount) > 0 && (order.collected.payments > 0 || Number(order.refunded_amount) > 0);
+  // Lo que devuelve la pasarela y lo que tiene que devolver la academia por su cuenta
+  const refundOnline = Number(order.collected.online_amount);
+  const refundManual = Number(order.collected.manual_amount);
+  const gatewayName = order.collected.gateways.map((code) => PAYMENT_GATEWAY_LABEL[code] ?? code).join(' y ') || 'la pasarela';
+  // Se le puede volver a preguntar a la pasarela si el comprador fue alguna vez a pagar en línea
+  const recheckable = order.customer !== null && order.online_attempts > 0;
 
   const run = async (action: () => Promise<Order>, fallback: string) => {
     setProcessing(true);
     setError(null);
+    setNotice(null);
     try {
       onChanged(await action());
       setMode('view');
@@ -97,6 +109,27 @@ const OrderModal: React.FC<{
       () => salesApi.confirmPayment(order.id, { method, reference: reference.trim() || null, notes: notes.trim() || null }),
       'No se pudo confirmar el pago.',
     );
+  };
+
+  const recheck = async () => {
+    setProcessing(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const fresh = await salesApi.recheckPayment(order.id);
+      setNotice(
+        fresh.status !== order.status || fresh.collected.amount !== order.collected.amount
+          ? 'La pasarela informó un pago y ya quedó aplicado.'
+          : fresh.payment_reviews.length > order.payment_reviews.length
+            ? 'La pasarela informó un cobro que no cuadra con la orden: quedó en revisión.'
+            : 'La pasarela no informa ningún pago nuevo para esta orden.',
+      );
+      onChanged(fresh);
+    } catch (err) {
+      setError(apiErrorMessage(err, 'No se pudo consultar a la pasarela.'));
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const footer =
@@ -118,7 +151,14 @@ const OrderModal: React.FC<{
       <>
         <Button onClick={() => setMode('view')}>Volver</Button>
         <Button variant="danger" type="submit" form="refund-order-form" processing={processing}>
-          Reembolsar {formatMoney(order.total_amount, order.currency)}
+          Reembolsar {formatMoney(order.collected.amount, order.currency)}
+        </Button>
+      </>
+    ) : mode === 'resolve' ? (
+      <>
+        <Button onClick={() => setMode('view')}>Volver</Button>
+        <Button variant="primary" type="submit" form="resolve-review-form" processing={processing}>
+          Marcar como resuelto
         </Button>
       </>
     ) : mode === 'plan' ? (
@@ -153,6 +193,11 @@ const OrderModal: React.FC<{
             Cancelar orden
           </Button>
         )}
+        {recheckable && canConfirm && (
+          <Button icon={<RefreshCw className="w-4 h-4" />} processing={processing} onClick={() => void recheck()}>
+            Consultar a la pasarela
+          </Button>
+        )}
         {pending && canDefer && order.company && !order.licenses_released_at && <Button onClick={() => setMode('release')}>Entregar licencias sin pago</Button>}
         {plannable && canConfirm && (
           <Button icon={<CalendarClock className="w-4 h-4" />} onClick={() => setMode('plan')}>
@@ -171,6 +216,7 @@ const OrderModal: React.FC<{
     <Modal title={`Orden ${orderCode(order.number)}`} subtitle={`Generada el ${formatDateTime(order.created_at)}`} onClose={onClose} footer={footer}>
       <div className="space-y-5">
         {error && <Alert>{error}</Alert>}
+        {notice && mode === 'view' && <Alert tone="info">{notice}</Alert>}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -199,9 +245,25 @@ const OrderModal: React.FC<{
             )}
             {order.status === 'CANCELLED' && <p className="text-xs text-slate-500">Cancelada el {formatDateTime(order.cancelled_at)}.</p>}
             {order.payment_reviews.map((review) => (
-              <Alert key={`${review.gateway}-${review.payment_id}`}>
+              <Alert key={review.id}>
                 {PAYMENT_GATEWAY_LABEL[review.gateway] ?? review.gateway} cobró un pago (n.º {review.payment_id}) que no se aplicó a esta orden. {review.reason} Revísalo en tu
                 cuenta de la pasarela y devuélvelo o confirma el pago a mano.
+                {canConfirm && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className="font-semibold underline cursor-pointer"
+                      onClick={() => {
+                        setResolving(review);
+                        setResolution('');
+                        setMode('resolve');
+                      }}
+                    >
+                      Ya lo resolví
+                    </button>
+                  </>
+                )}
               </Alert>
             ))}
             {order.licenses_released_at && (
@@ -227,6 +289,26 @@ const OrderModal: React.FC<{
             </Alert>
             <Field label="Motivo" hint="Ejemplo: orden de compra 4471, paga a 30 días.">
               <textarea className={INPUT_CLASS} rows={3} required minLength={5} maxLength={500} autoFocus value={releaseReason} onChange={(event) => setReleaseReason(event.target.value)} />
+            </Field>
+          </form>
+        )}
+
+        {mode === 'resolve' && resolving && (
+          <form
+            id="resolve-review-form"
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(() => salesApi.resolvePaymentReview(resolving.id, resolution.trim()), 'No se pudo marcar como resuelto.');
+            }}
+          >
+            <Alert tone="info">
+              Vas a dar por resuelto el cobro n.º {resolving.payment_id} de {PAYMENT_GATEWAY_LABEL[resolving.gateway] ?? resolving.gateway} por{' '}
+              <strong>{formatMoney(resolving.amount, resolving.currency)}</strong>. El sistema no mueve dinero aquí: solo deja de avisar. Hazlo cuando ya lo hayas devuelto en la
+              pasarela o lo hayas confirmado a mano en la orden.
+            </Alert>
+            <Field label="Qué hiciste con el cobro" hint="Queda en la auditoría. Ejemplo: «Devuelto al alumno desde Mercado Pago el 11 de octubre».">
+              <textarea className={INPUT_CLASS} rows={3} required minLength={5} maxLength={300} autoFocus value={resolution} onChange={(event) => setResolution(event.target.value)} />
             </Field>
           </form>
         )}
@@ -272,27 +354,36 @@ const OrderModal: React.FC<{
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              void run(() => salesApi.refundOrder(order.id, refundReason.trim(), paidOnline ? null : refundReference.trim() || null), 'No se pudo reembolsar la orden.');
+              void run(() => salesApi.refundOrder(order.id, refundReason.trim(), refundManual > 0 ? refundReference.trim() || null : null), 'No se pudo reembolsar la orden.');
             }}
           >
             <Alert tone="info">
-              {paidOnline ? (
+              {hasPlan && (
                 <>
-                  Se devolverán <strong>{formatMoney(order.total_amount, order.currency)}</strong> completos por {gatewayName}, con tu cuenta, al medio con el que pagó el
-                  comprador. {order.payment?.notes ? `${order.payment.notes} ` : ''}
-                </>
-              ) : (
-                <>
-                  Este pago se recibió por fuera: <strong>devuelve tú el dinero</strong> ({formatMoney(order.total_amount, order.currency)}) y regístralo aquí. El sistema no mueve
-                  dinero en este caso.{' '}
+                  Esta venta es en cuotas: se devuelve lo cobrado hasta hoy, <strong>{formatMoney(order.collected.amount, order.currency)}</strong>
+                  {order.collected.payments === 1 ? ' (una cuota)' : ` (${order.collected.payments} cuotas)`}
+                  {partial ? ', y lo que faltaba pagar ya no se debe' : ''}.{' '}
                 </>
               )}
+              {refundOnline > 0 && (
+                <>
+                  Se devolverán <strong>{formatMoney(refundOnline, order.currency)}</strong> por {gatewayName}, con tu cuenta, al medio con el que pagó el comprador.{' '}
+                  {order.payment?.notes ? `${order.payment.notes} ` : ''}
+                </>
+              )}
+              {refundManual > 0 && (
+                <>
+                  {refundOnline > 0 ? 'El resto se recibió' : hasPlan ? 'Se recibió' : 'Este pago se recibió'} por fuera: <strong>devuelve tú el dinero</strong> (
+                  {formatMoney(refundManual, order.currency)}) y regístralo aquí. El sistema no mueve ese dinero.{' '}
+                </>
+              )}
+              {Number(order.refunded_amount) > 0 && <>Ya se devolvieron {formatMoney(order.refunded_amount, order.currency)} en un intento anterior. </>}
               El comprador pierde la matrícula que le dio esta compra. No se puede deshacer.
             </Alert>
             <Field label="Motivo" hint="Queda en la orden y en la auditoría. Ejemplo: «El alumno pidió la devolución dentro del plazo».">
               <textarea className={INPUT_CLASS} rows={3} required minLength={5} maxLength={500} autoFocus value={refundReason} onChange={(event) => setRefundReason(event.target.value)} />
             </Field>
-            {!paidOnline && (
+            {refundManual > 0 && (
               <Field label="Cómo devolviste el dinero (opcional)" hint="Ejemplo: «Transferencia BCP, operación 445566».">
                 <input className={INPUT_CLASS} maxLength={120} value={refundReference} onChange={(event) => setRefundReference(event.target.value)} />
               </Field>
@@ -376,7 +467,7 @@ export const OrdersPage: React.FC = () => {
     { key: 'PAID', label: 'Pagadas', value: counts.PAID ?? null, icon: CircleDollarSign, tone: 'success', help: 'Pago confirmado: el comprador ya está matriculado, o la empresa ya tiene sus licencias.' },
     { key: 'EXPIRED', label: 'Vencidas', value: counts.EXPIRED ?? null, icon: TimerOff, tone: 'danger', help: 'No se pagaron dentro del plazo. El comprador puede hacer una compra nueva.' },
     { key: 'CANCELLED', label: 'Canceladas', value: counts.CANCELLED ?? null, icon: Ban, tone: 'neutral', help: 'Las canceló el comprador o el personal antes de pagarse.' },
-    { key: 'REFUNDED', label: 'Reembolsadas', value: counts.REFUNDED ?? null, icon: Undo2, tone: 'info', help: 'Se pagaron y después se devolvió el importe completo. El comprador ya no tiene la matrícula de esa compra y no cuentan como ingreso.' },
+    { key: 'REFUNDED', label: 'Reembolsadas', value: counts.REFUNDED ?? null, icon: Undo2, tone: 'info', help: 'Se devolvió todo lo cobrado, fuera un pago único o las cuotas pagadas. El comprador ya no tiene la matrícula de esa compra y no cuentan como ingreso.' },
   ];
 
   return (
@@ -387,6 +478,8 @@ export const OrdersPage: React.FC = () => {
         subtitle="Órdenes de compra de tus alumnos y confirmación de los pagos recibidos."
         action={<ExportButton path="/orders/export" params={{ search: search || undefined, status: status || undefined }} filename="ordenes.xlsx" />}
       />
+
+      <PaymentReviewList version={version} onOpen={(orderId) => void openById(orderId)} />
 
       <DueInstallments version={version} onOpen={(orderId) => void openById(orderId)} />
 

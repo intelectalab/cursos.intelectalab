@@ -125,7 +125,7 @@ class ExcelExportTest extends TestCase
         $sheets = $this->sheets($this->withToken($this->admin)->get($this->api('/reports/overview/export?from=2026-03-01&to=2026-03-31')));
 
         $this->assertSame(['Resumen', 'Hoy', 'Por día', 'Cursos más vendidos', 'Finalización por curso'], array_keys($sheets));
-        $this->assertSame('Ingresos (PEN)', $sheets['Resumen'][1][0]);
+        $this->assertSame('Ingresos cobrados (PEN)', $sheets['Resumen'][1][0]);
         $this->assertEquals(100, $sheets['Resumen'][1][1]);
         $this->assertEquals(1, $sheets['Hoy'][1][1]);
         $this->assertCount(32, $sheets['Por día']);

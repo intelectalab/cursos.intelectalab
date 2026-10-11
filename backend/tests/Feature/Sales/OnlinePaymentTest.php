@@ -115,6 +115,49 @@ class OnlinePaymentTest extends TestCase
             ->assertJsonPath('data.checkout_url', 'https://www.mercadopago.com.pe/checkout/v1/redirect?pref_id=PREF-1');
     }
 
+    public function test_the_staff_rechecks_an_order_with_the_gateway_and_resolves_a_charge_under_review(): void
+    {
+        $this->connect();
+        $order = $this->order();
+        $this->startCheckout($order);
+
+        $recheck = fn () => $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/recheck-payment"));
+        $reviews = fn () => $this->withToken($this->admin)->getJson($this->api('/orders/payment-reviews'));
+
+        // El comprador pagó un importe que no es el de la orden y no volvió: el personal pregunta a la pasarela
+        $this->mercadoPago(['/v1/payments/search*' => Http::response(['results' => [$this->mpPayment($order, ['transaction_amount' => 12])]])]);
+        $recheck()->assertOk()->assertJsonPath('data.status', 'PENDING')->assertJsonPath('data.online_attempts', 1)->assertJsonCount(1, 'data.payment_reviews');
+
+        $review = $reviews()->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.payment_id', '555001')
+            ->assertJsonPath('data.0.order.customer.email', 'ana@acme.com')
+            ->assertJsonPath('data.0.order.status', 'PENDING')
+            ->json('data.0.id');
+
+        // Solo el personal: ni ver la lista, ni preguntar a la pasarela, ni resolver
+        $this->withToken($this->buyer)->getJson($this->api('/orders/payment-reviews'))->assertForbidden();
+        $this->withToken($this->buyer)->postJson($this->api("/orders/{$order}/recheck-payment"))->assertForbidden();
+        $this->withToken($this->buyer)->postJson($this->api("/orders/payment-reviews/{$review}/resolve"), ['note' => 'Devuelto al alumno.'])->assertForbidden();
+
+        // Resolverlo exige decir qué se hizo; después deja de avisar y no se resuelve dos veces
+        $resolve = fn (array $data) => $this->withToken($this->admin)->postJson($this->api("/orders/payment-reviews/{$review}/resolve"), $data);
+        $resolve([])->assertStatus(422);
+        $resolve(['note' => 'Devuelto al alumno desde Mercado Pago.'])->assertOk()->assertJsonCount(0, 'data.payment_reviews');
+        $resolve(['note' => 'Devuelto al alumno desde Mercado Pago.'])->assertStatus(409)->assertJsonPath('code', 'PAYMENT_REVIEW_CLOSED');
+        $reviews()->assertJsonCount(0, 'data');
+
+        // Volver a preguntar por el mismo cobro ya resuelto no lo reabre
+        $recheck()->assertOk()->assertJsonCount(0, 'data.payment_reviews');
+
+        // Después paga bien: al volver a preguntar, el pago se aplica y el comprador queda matriculado
+        $this->mercadoPago(['/v1/payments/search*' => Http::response(['results' => [$this->mpPayment($order, ['transaction_amount' => 12]), $this->mpPayment($order, ['id' => 555002])]])]);
+        $recheck()->assertOk()->assertJsonPath('data.status', 'PAID')->assertJsonPath('data.payment.reference', '555002');
+        $this->withToken($this->buyer)->getJson($this->api("/me/courses/{$this->course}"))->assertOk();
+
+        app(TenantContext::class)->runForTenant($this->tenant->id, fn () => $this->assertSame(1, AuditEvent::query()->where('action', 'payments.online_review_resolved')->count()));
+    }
+
     public function test_an_organization_connects_its_account_and_its_keys_never_come_back(): void
     {
         $gateways = $this->api('/settings/payment-gateways');

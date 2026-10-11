@@ -138,6 +138,22 @@ class Order extends Model
     }
 
     /**
+     * Todo lo cobrado por la orden: su pago único o el de cada cuota, devueltos o no.
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Cada vez que el comprador fue a pagarla a una pasarela.
+     */
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(PaymentAttempt::class);
+    }
+
+    /**
      * Plan de pagos de la orden, en el orden en que se pagan. Vacío = se paga de una vez.
      */
     public function installments(): HasMany

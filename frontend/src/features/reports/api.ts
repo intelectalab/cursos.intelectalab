@@ -2,7 +2,10 @@ import { api } from '../../shared/api/client';
 
 export interface ReportTotals {
   paid_orders: number;
+  // Lo cobrado en el periodo, pago a pago
   revenue: string;
+  // De lo cobrado, lo que entró por cuotas
+  installment_revenue: string;
   new_enrollments: number;
   purchased_enrollments: number;
   active_students: number;
@@ -27,6 +30,11 @@ export interface Overview {
   today: {
     pending_orders: number;
     pending_amount: string;
+    // Cuotas sin pagar de las ventas en cuotas en curso, y cuánto de eso ya venció
+    receivable_installments: number;
+    receivable_amount: string;
+    overdue_installments: number;
+    overdue_amount: string;
     students_with_access: number;
     published_courses: number;
     valid_certificates: number;

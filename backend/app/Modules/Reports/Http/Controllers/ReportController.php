@@ -41,7 +41,8 @@ class ReportController extends Controller
         $money = fn (string $label) => "{$label} ({$data['currency']})";
 
         $totals = [
-            'revenue' => $money('Ingresos'),
+            'revenue' => $money('Ingresos cobrados'),
+            'installment_revenue' => $money('De ellos, por cuotas'),
             'paid_orders' => 'Órdenes pagadas',
             'new_enrollments' => 'Matrículas nuevas',
             'purchased_enrollments' => 'Matrículas por compra',
@@ -64,13 +65,17 @@ class ReportController extends Controller
                 'rows' => [
                     ['Órdenes pendientes de pago', $data['today']['pending_orders']],
                     [$money('Importe pendiente'), (float) $data['today']['pending_amount']],
+                    ['Cuotas por cobrar', $data['today']['receivable_installments']],
+                    [$money('Por cobrar en cuotas'), (float) $data['today']['receivable_amount']],
+                    ['Cuotas vencidas', $data['today']['overdue_installments']],
+                    [$money('Vencido'), (float) $data['today']['overdue_amount']],
                     ['Alumnos con acceso', $data['today']['students_with_access']],
                     ['Cursos publicados', $data['today']['published_courses']],
                     ['Certificados vigentes', $data['today']['valid_certificates']],
                 ],
             ],
             'Por día' => [
-                'headers' => ['Fecha', $money('Ingresos'), 'Órdenes pagadas', 'Matrículas nuevas'],
+                'headers' => ['Fecha', $money('Ingresos cobrados'), 'Órdenes pagadas', 'Matrículas nuevas'],
                 'rows' => array_map(fn (array $day) => [$day['date'], (float) $day['revenue'], $day['paid_orders'], $day['new_enrollments']], $data['series']),
             ],
             'Cursos más vendidos' => [

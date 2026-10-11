@@ -313,27 +313,26 @@ class OrderService
     }
 
     /**
-     * Deja reembolsada una orden pagada: el dinero ya se devolvió (por la
-     * pasarela o por fuera). Las matrículas que dio la compra se cancelan.
-     * Solo compras personales con importe: una venta a empresa o una
+     * Deja reembolsada una orden: el dinero ya se devolvió (por la pasarela o
+     * por fuera). Las matrículas que dio la compra se cancelan. En una venta
+     * en cuotas se devuelve lo cobrado hasta ahora y lo que faltaba ya no se
+     * debe. Solo compras personales con importe: una venta a empresa o una
      * inscripción gratuita no pasan por aquí.
      *
-     * @param  string|null  $reference  devolución en la pasarela, o cómo se devolvió el dinero
+     * @param  string|null  $reference  cómo se devolvió el dinero de los pagos que aún no figuran devueltos
      */
     public function markRefunded(Order $order, User $actor, string $reason, ?string $reference): Order
     {
         return DB::transaction(function () use ($order, $actor, $reason, $reference) {
-            $order = Order::query()->lockForUpdate()->with('payment')->findOrFail($order->id);
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
 
             $this->assertRefundable($order);
 
-            $order->payment->update([
-                'status' => Payment::STATUS_REFUNDED,
-                'refunded_at' => now(),
-                'refunded_by' => $actor->id,
-                'refund_reason' => $reason,
-                'refund_reference' => $reference,
-            ]);
+            $from = $order->status;
+
+            $order->payments()->where('status', Payment::STATUS_CONFIRMED)->get()
+                ->each(fn (Payment $payment) => $this->markPaymentRefunded($payment, $actor, $reason, $reference));
+
             $order->update(['status' => Order::STATUS_REFUNDED, 'refunded_at' => now()]);
 
             // Devuelto el dinero, se retira el acceso que dio esta compra
@@ -343,17 +342,39 @@ class OrderService
                 }
             });
 
-            $this->audit->record('orders.refunded', $order, ['status' => Order::STATUS_PAID], [
+            $refunded = $order->payments()->where('status', Payment::STATUS_REFUNDED)->get();
+
+            $this->audit->record('orders.refunded', $order, ['status' => $from], [
                 'status' => Order::STATUS_REFUNDED,
                 'number' => $order->number,
                 'total' => $order->total_amount,
-                'gateway' => $order->payment->gateway,
+                'refunded' => self::money((string) $refunded->sum('amount')),
+                'payments' => $refunded->count(),
+                'gateway' => $refunded->pluck('gateway')->unique()->implode(', '),
                 'reason' => $reason,
-                'reference' => $reference,
+                'reference' => $refunded->pluck('refund_reference')->filter()->unique()->implode(', ') ?: null,
             ]);
 
             return $order;
         });
+    }
+
+    /**
+     * Deja devuelto un pago: el dinero ya salió. En una venta en cuotas se
+     * registra pago a pago, para que una devolución que se corta a la mitad
+     * se pueda retomar sin devolver dos veces.
+     *
+     * @param  string|null  $reference  devolución en la pasarela, o cómo se devolvió el dinero
+     */
+    public function markPaymentRefunded(Payment $payment, User $actor, string $reason, ?string $reference): void
+    {
+        $payment->update([
+            'status' => Payment::STATUS_REFUNDED,
+            'refunded_at' => now(),
+            'refunded_by' => $actor->id,
+            'refund_reason' => $reason,
+            'refund_reference' => $reference,
+        ]);
     }
 
     /**
@@ -440,14 +461,14 @@ class OrderService
     }
 
     /**
-     * Solo se reembolsa una compra personal pagada y con importe.
+     * Solo se reembolsa una compra personal con importe y con algo cobrado:
+     * pagada, o en cuotas con al menos una pagada.
      */
     public function assertRefundable(Order $order): void
     {
         $message = match (true) {
-            $order->installments()->exists() => 'Esta orden se paga en cuotas y su reembolso todavía no se hace desde el sistema: devuelve cada pago por el medio con el que se recibió y cancela la matrícula del alumno.',
             $order->status === Order::STATUS_REFUNDED => 'Esta orden ya fue reembolsada.',
-            $order->status !== Order::STATUS_PAID || $order->payment === null => 'Solo se reembolsa una orden pagada.',
+            ! in_array($order->status, [Order::STATUS_PAID, Order::STATUS_PARTIAL], true) || ! $order->payments()->exists() => 'Solo se reembolsa una orden pagada.',
             $order->customer_id === null => 'Las ventas a empresas no se reembolsan desde aquí: tienen licencias entregadas y se resuelven con la empresa.',
             (float) $order->total_amount <= 0 => 'Esta inscripción fue gratuita: no hay dinero que devolver. Para retirar el acceso, cancela la matrícula.',
             default => null,

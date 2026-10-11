@@ -1,3 +1,17 @@
-# Plataforma SaaS ERP / LMS Educativo Multi-Tenant
+# ERP SaaS IntelectaLab Â· Plataforma de cursos virtuales
 
-Sistema de misión crítica para la comercialización y gestión de formación virtual (B2C y B2B).
+Plataforma para que varias academias vendan y dicten cursos virtuales, a personas (B2C) y a empresas (B2B). Cada academia trabaja en su propio subdominio, con sus datos aislados.
+
+| Carpeta | Contenido |
+| --- | --- |
+| [`backend/`](backend/README.md) | API en Laravel 12 sobre PostgreSQL |
+| [`frontend/`](frontend/README.md) | AplicaciÃ³n web en React, TypeScript y Vite |
+| `docker-compose.yml` | PostgreSQL y Adminer para desarrollo |
+
+## Puesta en marcha
+
+```bash
+docker compose up -d
+```
+
+DespuÃ©s, sigue los pasos de `backend/README.md` y de `frontend/README.md`.
