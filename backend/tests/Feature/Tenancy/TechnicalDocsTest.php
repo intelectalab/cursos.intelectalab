@@ -54,6 +54,10 @@ class TechnicalDocsTest extends TestCase
             $this->assertMatchesRegularExpression('/\| `order_id` \| UUID \| FK orders\.id \| Sí \|/', $dictionary);
             $this->assertStringContainsString('Aislada por academia.', $dictionary);
 
+            // Ninguna columna queda sin describir: una nueva exige su comentario en la migración o su línea en database/data-dictionary.php
+            preg_match_all('/^\| `(\w+)` \|[^|]*\|[^|]*\|[^|]*\| *\|$/m', $dictionary, $undescribed);
+            $this->assertSame([], $undescribed[1], 'Columnas sin descripción en el diccionario de datos.');
+
             $this->assertStringContainsString('`STATUS_REFUNDED` | `REFUNDED`', (string) file_get_contents("{$directory}/catalogo-de-estados.md"));
         } finally {
             File::deleteDirectory($directory);

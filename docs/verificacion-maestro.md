@@ -95,19 +95,19 @@ El Maestro pide no inventar estas decisiones. Las cuatro **asumidas** se constru
 | Esquema y migraciones PostgreSQL | Hecho. |
 | Matriz de permisos | Hecho: `docs/roles-y-permisos.md`, generado del código. |
 | ADR | Hecho uno: `docs/adr/0001-arquitectura-base.md`. |
-| Pruebas automatizadas | Hecho: 308 del backend y 5 recorridos en navegador. |
+| Pruebas automatizadas | Hecho: 315 del backend y 5 recorridos en navegador, corridos el 2026-10-10. |
 | CI/CD | A medias: revisión automática escrita, nunca ejecutada; sin despliegue automático. |
 | Manual de despliegue | Hecho: `docs/instalacion-y-despliegue.md`. |
 | Manual de uso | Hecho: `docs/manual-de-uso-por-rol.docx` (no lo pide el Maestro; lo pidió el responsable del proyecto). |
 | OpenAPI | Hecho: `docs/tecnica/openapi.json`, generado de las rutas (298 operaciones). Los cuerpos se deducen de las validaciones y no todos se pudieron deducir. |
-| Diccionario de datos | Hecho: `docs/tecnica/diccionario-de-datos.md`, generado de la base (82 tablas, 839 columnas). Unas 230 columnas aún no tienen descripción propia. |
+| Diccionario de datos | Hecho: `docs/tecnica/diccionario-de-datos.md`, generado de la base (82 tablas, 839 columnas). Todas las columnas están descritas, y una prueba lo exige. |
 | Catálogo de estados | Hecho: `docs/tecnica/catalogo-de-estados.md`. Muchos valores no tienen su significado escrito. |
 | Catálogo de errores | Hecho: `docs/tecnica/catalogo-de-errores.md`. |
 | Mapa de trazabilidad | Hecho: `docs/tecnica/trazabilidad.md` (a mano). |
 | Runbooks y manual operativo | **Faltan.** |
-| Reporte de seguridad | **Falta.** |
+| Reporte de seguridad | Hecho: `docs/reporte-de-seguridad.md` (revisión propia). **Falta la prueba de penetración.** |
 | Reporte de QA / aceptación | **Falta** (S13). |
-| Notas de versión | **Faltan.** |
+| Notas de versión | Hecho: `docs/notas-de-version.md`. |
 | Infraestructura como código | No aplica todavía: no hay servidor. |
 
 ## 8. Qué falta para poder decir «solo queda revisar el sistema»
@@ -115,7 +115,7 @@ El Maestro pide no inventar estas decisiones. Las cuatro **asumidas** se constru
 1. Terminar las pruebas de pagos: reembolso y pago de plan con Mercado Pago (ya hay credenciales y un primer pago hecho), y credenciales de prueba de PayPal.
 2. Que jefatura decida, por escrito, si SCORM, billetera, IA, asistencia, comprobantes y deudas se construyen o quedan fuera de esta versión.
 3. Servidor, dominio y correo, para S13.
-4. La documentación técnica que sale del código ya está en `docs/tecnica/`. Siguen faltando runbooks, manual operativo, reporte de seguridad, reporte de aceptación y notas de versión, que dependen de tener servidor.
+4. La documentación técnica que sale del código ya está en `docs/tecnica/`. El reporte de seguridad y las notas de versión ya están. Siguen faltando runbooks, manual operativo y reporte de aceptación, que dependen de tener servidor, y la prueba de penetración.
 5. Confirmar las cuatro decisiones asumidas (PD-001, PD-002, PD-004 y PD-011).
 
 Con lo que ya existe sí se puede hacer una revisión del sistema, dejando claro que es sin esos módulos y sin cobros reales.

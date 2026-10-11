@@ -367,13 +367,15 @@ class ExportTechnicalDocsCommand extends Command
         SQL))->pluck('relname')->all();
 
         [$owners, $comments] = $this->migrationNotes();
+        // Lo que las migraciones no comentan está descrito aparte
+        $described = require database_path('data-dictionary.php');
 
         $lines = [
             '# Diccionario de datos',
             '',
             self::GENERATED,
             '',
-            'Base de datos PostgreSQL. Todas las claves primarias `id` son UUID. El dinero se guarda como decimal, nunca como número de coma flotante. Las descripciones salen de los comentarios de las migraciones; las columnas comunes (identificador, academia, fechas) y las referencias a otras tablas llevan una descripción genérica. Una celda vacía significa que la columna no tiene comentario.',
+            'Base de datos PostgreSQL. Todas las claves primarias `id` son UUID. El dinero se guarda como decimal, nunca como número de coma flotante. Las descripciones salen de los comentarios de las migraciones y, donde no los hay, de `backend/database/data-dictionary.php`; las columnas comunes (identificador, academia, fechas) y las referencias a otras tablas llevan una descripción genérica. Una celda vacía significa que la columna no tiene comentario.',
             '',
             '**Aislamiento:** las tablas marcadas con «Aislada por academia» tienen `tenant_id` y seguridad por filas forzada en la base: una academia no puede leer filas de otra aunque la consulta lo intente.',
             '',
@@ -416,6 +418,7 @@ class ExportTechnicalDocsCommand extends Command
                         implode(', ', $key),
                         $column->is_nullable === 'NO' ? 'Sí' : 'No',
                         str_replace('|', '\\|', $comments[$table][$column->column_name]
+                            ?? $described[$table][$column->column_name]
                             ?? self::COMMON_COLUMNS[$column->column_name]
                             ?? (isset($keys['foreign'][$column->column_name]) ? 'Referencia a `'.Str::before($keys['foreign'][$column->column_name], '.').'`' : ''))
                     );

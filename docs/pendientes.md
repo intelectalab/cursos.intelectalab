@@ -2,7 +2,7 @@
 
 Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones se necesitan. Se actualiza al cerrar cada bloque de trabajo.
 
-Última actualización: 2026-10-10, al cerrar la entrega 2 del editor visual de certificados.
+Última actualización: 2026-10-10, al cerrar los documentos del Maestro y la revisión de calidad.
 
 ## Dónde estamos
 
@@ -57,6 +57,9 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Cierre de brechas del Maestro · entrega 2 | Paso de revisión en Páginas: quien redacta envía a revisión; quien publica aprueba publicando o devuelve con observaciones | Hecho |
 | Editor visual de certificados · entrega 1 | Lienzo donde cada dato, texto o imagen se arrastra, se redimensiona y se edita; hoja horizontal o vertical; vista previa en PDF | Hecho |
 | Editor visual de certificados · entrega 2 | Varias plantillas con una por curso, y diseño congelado al emitir (los ya emitidos conservan el suyo) | Hecho |
+| Cierre de brechas del Maestro · entrega 5 | Reporte de seguridad, notas de versión, diccionario de datos completo y los cinco recorridos automáticos corridos otra vez | Hecho |
+| Cierre de brechas del Maestro · entrega 3 | Tipos de cambio: manual y automático | Pendiente (espera dos respuestas) |
+| Cierre de brechas del Maestro · entrega 4 | Pagos parciales y deudas; el alumno entra con el primer pago | Pendiente (espera tres respuestas) |
 | Ajustes de evaluación | El cuestionario que vence califica lo guardado; nota mínima para aprobar el curso, que también exige el certificado | Hecho |
 | Planes de la plataforma · entrega 1 | Planes por tope de alumnos, prueba gratuita de 14 días y 10 alumnos para toda academia nueva, asignación de plan desde la ficha y tarjeta "Tu plan" en la academia | Hecho |
 | Planes de la plataforma · entrega 2 | "Mi plan": la academia elige plan, genera su orden de pago a IntelectaLab e informa su pago; el super administrador lo confirma en "Pagos" y el plan queda vigente | Hecho |
@@ -64,7 +67,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 | Consola de plataforma · ficha por academia | Datos editables, cifras y ventas de seis meses, administradores con restablecimiento de contraseña, historial de la plataforma y motivo obligatorio al suspender | Hecho |
 
 - **Avance del plan:** 12 de 14 sprints construidos (S0 a S8 y S10 a S12). **S6 Pagos tiene su primer pago de prueba** (un curso con tarjeta, en Mercado Pago, el 2026-10-10); faltan el reembolso, el pago de un plan y todo PayPal, que no tiene credenciales. Los comprobantes siguen fuera. Faltan S9, en espera de una decisión, y S13.
-- **Calidad:** 315 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que no se corren desde S12; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
+- **Calidad:** 315 pruebas automáticas del backend pasan, más 5 recorridos automáticos en navegador (acceso, compra con cupón, cuestionario, certificado y licencia), que pasaron el 2026-10-10; la aplicación web compila sin errores y las dependencias no tienen avisos de seguridad.
 - **Seguridad:** las pruebas revisan que las 277 rutas de la API exijan sesión y permiso (salvo las declaradas públicas) y que las 65 tablas con datos de academias tengan el aislamiento forzado en la base de datos.
 - **Qué ya se puede hacer de punta a punta:** crear un curso con videos, materiales y actividades, publicarlo, matricular alumnos con o sin fecha de vencimiento, y que estos lo cursen: rinden cuestionarios con nota automática, entregan tareas que el profesor califica, responden encuestas y ven su avance.
 - **Venta:** un visitante ve el catálogo público, crea su cuenta, compra un curso y recibe las instrucciones de pago; el personal confirma el pago recibido y el alumno queda matriculado. Los cursos gratuitos matriculan al instante.
@@ -78,7 +81,7 @@ Lista general del proyecto: en qué sprint estamos, qué falta y qué decisiones
 - **Qué no se puede hacer todavía:** reembolsar una parte, emitir comprobantes ni enviar correos de verdad (los avisos por correo ya se generan, pero quedan en el registro del servidor hasta definir el proveedor).
 - **Staging:** no hay servidor todavía (decisión 1), así que nadie fuera del equipo puede probar el sistema.
 
-El detalle de cada bloque terminado está en [avances/](avances/README.md). La comparación con el Documento Maestro (20 de 26 requisitos hechos, 3 a medias y 3 sin construir) está en [verificacion-maestro.md](verificacion-maestro.md). El manual de uso por rol está en `docs/manual-de-uso-por-rol.docx` y se actualiza con cada cambio. La documentación técnica que pide el Maestro (OpenAPI, diccionario de datos, catálogos de estados y de errores, y trazabilidad) está en [tecnica/](tecnica/README.md) y se regenera con `php artisan docs:technical`.
+El detalle de cada bloque terminado está en [avances/](avances/README.md). La comparación con el Documento Maestro (20 de 26 requisitos hechos, 3 a medias y 3 sin construir) está en [verificacion-maestro.md](verificacion-maestro.md). El manual de uso por rol está en `docs/manual-de-uso-por-rol.docx` y se actualiza con cada cambio. La documentación técnica que pide el Maestro (OpenAPI, diccionario de datos, catálogos de estados y de errores, y trazabilidad) está en [tecnica/](tecnica/README.md) y se regenera con `php artisan docs:technical`. El [reporte de seguridad](reporte-de-seguridad.md) y las [notas de versión](notas-de-version.md) están en esta carpeta.
 
 **Terminado: el cobro de la plataforma a las academias, con pago por fuera.** Modelo descrito por el responsable del proyecto (falta confirmarlo con jefatura, decisión 16): la academia se registra en prueba gratuita, luego paga a IntelectaLab según su cantidad de alumnos, y sus alumnos le pagan los cursos a ella. Tres entregas hechas: (1) planes y prueba gratuita; (2) "Mi plan" en la academia con orden de pago y confirmación en la consola; (3) límites y vencimiento. **El plan ya limita:** con el cupo lleno no entran alumnos nuevos, y una academia vencida pasa por siete días de gracia y luego queda en solo lectura.
 
@@ -109,7 +112,7 @@ El detalle de cada bloque terminado está en [avances/](avances/README.md). La c
 
 | Elemento | Situación |
 | --- | --- |
-| `backend_env_backup` | Copia antigua de la configuración, subida al repositorio con una clave de la aplicación. Hay que retirarla y generar una clave nueva para cualquier servidor. |
+| `backend_env_backup` | Copia antigua de la configuración, subida al repositorio con una clave de la aplicación. Hay que retirarla y generar una clave nueva para cualquier servidor. **Es el primer punto del reporte de seguridad.** |
 | `backend/app/Http/Controllers/Api/AuthController.php` | Controlador antiguo sin uso. Hace fallar la revisión automática de estilo. |
 | Restos de plantillas en el frontend | `src/assets` (3 imágenes), `public/icons.svg` y `tailwind.config.js`: nada los usa. |
 | Esquema `erp_legacy` en la base local | Las 58 tablas del diseño anterior. Ya no se usan; borrarlas no se puede deshacer. |

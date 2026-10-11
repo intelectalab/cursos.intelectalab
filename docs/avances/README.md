@@ -53,6 +53,7 @@ Un archivo por bloque de trabajo: qué se construyó, cómo se usa, qué se veri
 | 2026-10-10 | Páginas: paso de revisión (enviar a revisión, publicar o devolver con observaciones; cierra RF-CMS-001) | [2026-10-10-paginas-paso-de-revision.md](2026-10-10-paginas-paso-de-revision.md) |
 | 2026-10-10 | Certificados: editor visual, entrega 1 (lienzo donde cada dato, texto o imagen se arrastra y se edita) | [2026-10-10-certificados-editor-visual.md](2026-10-10-certificados-editor-visual.md) |
 | 2026-10-10 | Certificados: editor visual, entrega 2 (varias plantillas con una por curso y diseño congelado al emitir) | [2026-10-10-certificados-plantillas-por-curso.md](2026-10-10-certificados-plantillas-por-curso.md) |
+| 2026-10-10 | Reporte de seguridad, notas de versión, diccionario de datos completo y recorridos automáticos otra vez en verde | [2026-10-10-documentos-del-maestro-y-calidad.md](2026-10-10-documentos-del-maestro-y-calidad.md) |
 
 Documentos relacionados:
 
