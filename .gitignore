@@ -26,3 +26,6 @@ Thumbs.db
 CLAUDE.md
 AGENTS.md
 boost.json
+
+# Documentación interna del proyecto (avances, pendientes, manual, reportes): se queda en el equipo, no va al repositorio
+docs/
