@@ -8,6 +8,7 @@ use App\Modules\Sales\Application\OrderService;
 use App\Modules\Sales\Application\Payments\Online\OnlinePaymentService;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Sales\Http\OrderPresenter;
@@ -23,6 +24,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
@@ -31,9 +33,9 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class OrderController extends Controller
 {
-    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer', 'payment.refunder', 'attemptsToReview'];
+    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer', 'payment.refunder', 'attemptsToReview', 'installments.payment.confirmer'];
 
-    private const STATUS_LABELS = ['PENDING' => 'Pendiente de pago', 'PAID' => 'Pagada', 'CANCELLED' => 'Cancelada', 'EXPIRED' => 'Vencida', 'REFUNDED' => 'Reembolsada'];
+    private const STATUS_LABELS = ['PENDING' => 'Pendiente de pago', 'PARTIAL' => 'En cuotas', 'PAID' => 'Pagada', 'CANCELLED' => 'Cancelada', 'EXPIRED' => 'Vencida', 'REFUNDED' => 'Reembolsada'];
 
     private const METHOD_LABELS = ['TRANSFER' => 'Transferencia', 'YAPE' => 'Yape', 'CASH' => 'Efectivo', 'OTHER' => 'Otro', 'CARD' => 'Tarjeta', 'WALLET' => 'Saldo en cuenta', 'PAYPAL' => 'PayPal'];
 
@@ -221,6 +223,133 @@ class OrderController extends Controller
         ] + $data);
 
         return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+    }
+
+    /**
+     * Arma el plan de pagos de una orden pendiente: en cuántas cuotas, de
+     * cuánto y hasta cuándo. Pagada la primera, el comprador entra al curso.
+     */
+    public function setInstallments(Request $request, Order $order): JsonResponse
+    {
+        $today = OrderPresenter::today();
+        $data = $request->validate([
+            'installments' => ['required', 'array', 'min:'.OrderInstallment::MIN, 'max:'.OrderInstallment::MAX],
+            'installments.*.amount' => ['required', 'numeric', 'min:0.01', 'max:9999999'],
+            'installments.*.due_date' => ['required', 'date_format:Y-m-d', "after_or_equal:{$today}"],
+        ], [
+            'installments.min' => 'Un plan de pagos tiene al menos '.OrderInstallment::MIN.' cuotas.',
+            'installments.max' => 'Un plan de pagos tiene como máximo '.OrderInstallment::MAX.' cuotas.',
+            'installments.*.due_date.after_or_equal' => 'La fecha de una cuota no puede ser anterior a hoy.',
+        ]);
+
+        // Cada cuota vence después de la anterior
+        $dates = array_column($data['installments'], 'due_date');
+        $sorted = $dates;
+        sort($sorted);
+
+        if ($dates !== $sorted || count(array_unique($dates)) !== count($dates)) {
+            throw ValidationException::withMessages(['installments' => 'Cada cuota debe vencer después de la anterior.']);
+        }
+
+        $order = $this->orders->setInstallments($order, $request->user(), $data['installments']);
+
+        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+    }
+
+    /**
+     * Quita el plan de pagos de una orden que todavía no recibió ningún pago.
+     */
+    public function removeInstallments(Request $request, Order $order): JsonResponse
+    {
+        $order = $this->orders->removeInstallments($order, $request->user());
+
+        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+    }
+
+    /**
+     * Cuotas por cobrar de toda la organización, las vencidas primero.
+     */
+    public function installments(Request $request): JsonResponse
+    {
+        $filters = $request->validate([
+            'filter' => ['nullable', Rule::in(['OVERDUE', 'UPCOMING'])],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $today = OrderPresenter::today();
+        $base = fn () => OrderInstallment::query()
+            ->where('status', OrderInstallment::STATUS_PENDING)
+            // Solo cuentan las órdenes que ya recibieron un pago: una pendiente todavía no debe nada, puede vencer
+            ->whereIn('order_id', Order::query()->where('status', Order::STATUS_PARTIAL)->select('id'));
+
+        $installments = $base()
+            ->with(['order.customer', 'order.currency', 'order.items'])
+            ->when(($filters['filter'] ?? null) === 'OVERDUE', fn (Builder $q) => $q->where('due_date', '<', $today))
+            ->when(($filters['filter'] ?? null) === 'UPCOMING', fn (Builder $q) => $q->where('due_date', '>=', $today))
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->paginate($filters['per_page'] ?? 50);
+
+        return ApiResponse::paginated($installments, fn (OrderInstallment $installment) => self::presentDue($installment, $today), [
+            'counts' => [
+                'ALL' => $base()->count(),
+                'OVERDUE' => $base()->where('due_date', '<', $today)->count(),
+                'UPCOMING' => $base()->where('due_date', '>=', $today)->count(),
+            ],
+            'amounts' => [
+                'pending' => number_format((float) $base()->sum('amount'), 2, '.', ''),
+                'overdue' => number_format((float) $base()->where('due_date', '<', $today)->sum('amount'), 2, '.', ''),
+            ],
+            'currency' => app(TenantSettingsService::class)->currency(),
+            'today' => $today,
+        ]);
+    }
+
+    /**
+     * Cuotas vencidas, para avisar al personal apenas entra. Pocas y ligeras:
+     * se consulta a menudo.
+     */
+    public function installmentAlerts(): JsonResponse
+    {
+        $today = OrderPresenter::today();
+
+        $overdue = OrderInstallment::query()
+            ->where('status', OrderInstallment::STATUS_PENDING)
+            ->where('due_date', '<', $today)
+            ->whereIn('order_id', Order::query()->where('status', Order::STATUS_PARTIAL)->select('id'))
+            ->with(['order.customer', 'order.currency', 'order.items'])
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->limit(20)
+            ->get();
+
+        return ApiResponse::success($overdue->map(fn (OrderInstallment $installment) => self::presentDue($installment, $today))->values());
+    }
+
+    /**
+     * Una cuota por cobrar, con lo necesario para ubicar a quien debe.
+     *
+     * @return array<string, mixed>
+     */
+    private static function presentDue(OrderInstallment $installment, string $today): array
+    {
+        $order = $installment->order;
+
+        return OrderPresenter::installment($installment, $today) + [
+            'days_overdue' => $installment->isOverdue($today) ? (int) $installment->due_date->diffInDays($today) : 0,
+            'order' => [
+                'id' => $order->id,
+                'number' => $order->number,
+                'currency' => $order->currency->code,
+                'title' => $order->package_title ?? $order->items->pluck('title')->implode(', '),
+                'customer' => $order->customer ? [
+                    'id' => $order->customer->id,
+                    'name' => trim("{$order->customer->first_name} {$order->customer->last_name}"),
+                    'email' => $order->customer->email,
+                    'phone' => $order->customer->phone,
+                ] : null,
+            ],
+        ];
     }
 
     /**

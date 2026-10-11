@@ -1,5 +1,6 @@
 import React from 'react';
 import { Badge } from '../../../shared/ui';
+import { InstallmentList } from './Installments';
 import { formatDateTime, formatMoney, ORDER_STATUS_LABEL, ORDER_STATUS_TONE, PAYMENT_GATEWAY_LABEL, PAYMENT_METHOD_LABEL, type Order, type OrderStatus } from '../api';
 
 export const OrderStatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => (
@@ -46,6 +47,8 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
         <dd className="font-bold text-slate-900 tnum">{formatMoney(order.total_amount, order.currency)}</dd>
       </div>
     </dl>
+
+    <InstallmentList order={order} />
 
     {order.payment && (
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[13px] pt-4 border-t border-slate-200/80">

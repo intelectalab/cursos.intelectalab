@@ -2,6 +2,7 @@ import React, { Suspense, useCallback, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
+import { DebtAlerts } from '../../features/sales/components/DebtAlerts';
 import { PlanBanner } from '../../features/settings/components/PlanBanner';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -64,6 +65,8 @@ export const AppLayout: React.FC = () => {
             </Suspense>
           </div>
         </main>
+        {/* Quien cobra ve aquí, sobre cualquier pantalla, las cuotas que vencieron */}
+        {!session?.support_mode && <DebtAlerts />}
       </div>
     </div>
   );

@@ -5,7 +5,8 @@ import type { PageMeta } from '../identity/api';
 import type { AvailableCourse, AvailableCourseDetail } from '../enrollments/api';
 
 // REFUNDED: se pagó y después se devolvió el dinero completo
-export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
+// PARTIAL = se paga en cuotas: ya entró al menos una y el comprador tiene acceso
+export type OrderStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
 // CARD, WALLET y PAYPAL solo llegan por una pasarela en línea
 export type PaymentMethod = 'TRANSFER' | 'YAPE' | 'CASH' | 'OTHER' | 'CARD' | 'WALLET' | 'PAYPAL';
 export type PaymentGatewayCode = 'MANUAL' | 'MERCADOPAGO' | 'PAYPAL';
@@ -18,11 +19,12 @@ export interface OnlineGatewayOption {
   charge: { currency: string; amount: string; rate: string | null } | null;
 }
 
-export const ORDER_STATUSES: OrderStatus[] = ['PENDING', 'PAID', 'CANCELLED', 'EXPIRED', 'REFUNDED'];
+export const ORDER_STATUSES: OrderStatus[] = ['PENDING', 'PARTIAL', 'PAID', 'CANCELLED', 'EXPIRED', 'REFUNDED'];
 export const PAYMENT_METHODS: PaymentMethod[] = ['TRANSFER', 'YAPE', 'CASH', 'OTHER'];
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   PENDING: 'Pendiente de pago',
+  PARTIAL: 'En cuotas',
   PAID: 'Pagada',
   CANCELLED: 'Cancelada',
   EXPIRED: 'Vencida',
@@ -31,6 +33,7 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 
 export const ORDER_STATUS_TONE: Record<OrderStatus, Tone> = {
   PENDING: 'warning',
+  PARTIAL: 'info',
   PAID: 'success',
   CANCELLED: 'neutral',
   EXPIRED: 'danger',
@@ -101,6 +104,44 @@ export interface Order {
   payment: OrderPayment | null;
   // Cobros que una pasarela hizo y no se aplicaron a la orden: los resuelve una persona
   payment_reviews: { gateway: string; payment_id: string | null; reason: string | null; at: string }[];
+  // Plan de pagos; vacío = la orden se paga de una vez
+  installments: Installment[];
+  debt: OrderDebt | null;
+}
+
+// Una cuota de una orden que se paga por partes
+export interface Installment {
+  id: string;
+  number: number;
+  amount: string;
+  // AAAA-MM-DD
+  due_date: string;
+  status: 'PENDING' | 'PAID';
+  // Sin pagar y con su fecha ya pasada
+  overdue: boolean;
+  paid_at: string | null;
+  payment: { method: PaymentMethod; gateway: string; reference: string | null; confirmed_by: string | null } | null;
+}
+
+export interface OrderDebt {
+  paid_amount: string;
+  pending_amount: string;
+  overdue_amount: string;
+  overdue_count: number;
+  // La cuota que toca pagar ahora
+  next: Installment | null;
+}
+
+// Una cuota por cobrar, con quién la debe
+export interface DueInstallment extends Installment {
+  days_overdue: number;
+  order: {
+    id: string;
+    number: number;
+    currency: string;
+    title: string;
+    customer: { id: string; name: string; email: string; phone: string | null } | null;
+  };
 }
 
 // Lo que ve el comprador: mientras la orden espera su pago, cómo pagarla
@@ -240,6 +281,30 @@ export const salesApi = {
   async orders(params: { search?: string; status?: string; page?: number }) {
     const response = await api.get('/orders', { params });
     return { data: response.data.data as Order[], meta: response.data.meta as PageMeta };
+  },
+  async order(order: string) {
+    return (await api.get(`/orders/${order}`)).data.data as Order;
+  },
+  // Plan de pagos: lo arma el personal mientras la orden espera su primer pago
+  async setInstallments(order: string, installments: { amount: string; due_date: string }[]) {
+    return (await api.put(`/orders/${order}/installments`, { installments: installments.map((row) => ({ amount: Number(row.amount), due_date: row.due_date })) })).data.data as Order;
+  },
+  async removeInstallments(order: string) {
+    return (await api.delete(`/orders/${order}/installments`)).data.data as Order;
+  },
+  // Cuotas por cobrar de toda la academia
+  async dueInstallments(filter?: 'OVERDUE' | 'UPCOMING') {
+    const response = await api.get('/orders/installments', { params: { filter } });
+    return {
+      data: response.data.data as DueInstallment[],
+      counts: response.data.meta.counts as { ALL: number; OVERDUE: number; UPCOMING: number },
+      amounts: response.data.meta.amounts as { pending: string; overdue: string },
+      currency: response.data.meta.currency as string,
+    };
+  },
+  // Cuotas vencidas, para el aviso emergente al personal
+  async installmentAlerts() {
+    return (await api.get('/orders/installments/alerts')).data.data as DueInstallment[];
   },
   async confirmPayment(order: string, input: ConfirmPaymentInput) {
     return (await postIdempotent(`/orders/${order}/confirm-payment`, input)).data.data as Order;

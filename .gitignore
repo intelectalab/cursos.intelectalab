@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 *.pem
+# Copias de la configuración: llevan las mismas claves que el .env
+*env_backup*
+*.env.bak
 *.key
 
 # Dependencias y Builds

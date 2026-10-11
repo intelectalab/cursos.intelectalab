@@ -25,6 +25,9 @@ type State =
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
+// Icono de la pestaña cuando la academia no tiene logo
+const DEFAULT_TAB_ICON = '/intelectalab.svg';
+
 const Notice: React.FC<{ title: string; text: string; action?: React.ReactNode }> = ({ title, text, action }) => (
   <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-6 text-center">
     <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-sky-500/25 blur-[110px] pointer-events-none" />
@@ -67,6 +70,28 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       active = false;
     };
   }, []);
+
+  // El icono de la pestaña es el logo de la academia; sin logo, o en el dominio central, el de IntelectaLab
+  const tabIcon = state.status === 'ready' ? (state.tenant?.logo_url ?? null) : null;
+
+  useEffect(() => {
+    let link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+
+    if (tabIcon) {
+      // El logo puede ser PNG o JPG: sin tipo fijo, el navegador lo deduce
+      link.removeAttribute('type');
+      link.href = tabIcon;
+    } else {
+      link.type = 'image/svg+xml';
+      link.href = DEFAULT_TAB_ICON;
+    }
+  }, [tabIcon]);
 
   const setLogoUrl = useCallback((logoUrl: string | null) => {
     setState((current) =>

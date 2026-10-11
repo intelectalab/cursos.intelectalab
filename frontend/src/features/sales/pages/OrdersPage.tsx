@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BadgeCheck, Ban, CircleDollarSign, CreditCard, Hourglass, Search, TimerOff, Undo2 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { BadgeCheck, Ban, CalendarClock, CircleDollarSign, CreditCard, Hourglass, Search, TimerOff, Undo2 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -38,6 +39,7 @@ import {
   type Order,
   type PaymentMethod,
 } from '../api';
+import { DueInstallments, InstallmentPlanForm } from '../components/Installments';
 import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
 import { ExportButton } from '../../../shared/ui/ExportButton';
 
@@ -53,7 +55,7 @@ const OrderModal: React.FC<{
   onClose: () => void;
   onChanged: (order: Order) => void;
 }> = ({ order, canConfirm, canCancel, canDefer, canRefund, onClose, onChanged }) => {
-  const [mode, setMode] = useState<'view' | 'pay' | 'cancel' | 'release' | 'refund'>('view');
+  const [mode, setMode] = useState<'view' | 'pay' | 'cancel' | 'release' | 'refund' | 'plan'>('view');
   const [refundReason, setRefundReason] = useState('');
   const [refundReference, setRefundReference] = useState('');
   const [releaseReason, setReleaseReason] = useState('');
@@ -64,6 +66,13 @@ const OrderModal: React.FC<{
   const [error, setError] = useState<string | null>(null);
 
   const pending = order.status === 'PENDING';
+  // En cuotas: ya entró un pago y faltan otros
+  const partial = order.status === 'PARTIAL';
+  const next = order.debt?.next ?? null;
+  const hasPlan = order.installments.length > 0;
+  // El plan de pagos se arma mientras nadie haya pagado, en compras personales con importe
+  const plannable = pending && order.customer !== null && Number(order.total_amount) > 0;
+  const dueNow = next ? next.amount : order.total_amount;
   // Solo compras personales pagadas y con importe: lo demás no tiene qué devolver por aquí
   const refundable = order.status === 'PAID' && order.customer !== null && Number(order.total_amount) > 0 && order.payment !== null;
   const paidOnline = order.payment !== null && order.payment.gateway !== 'MANUAL';
@@ -112,6 +121,18 @@ const OrderModal: React.FC<{
           Reembolsar {formatMoney(order.total_amount, order.currency)}
         </Button>
       </>
+    ) : mode === 'plan' ? (
+      <>
+        <Button onClick={() => setMode('view')}>Volver</Button>
+        {hasPlan && (
+          <Button variant="danger" processing={processing} onClick={() => void run(() => salesApi.removeInstallments(order.id), 'No se pudo quitar el plan de pagos.')}>
+            Quitar el plan
+          </Button>
+        )}
+        <Button variant="primary" type="submit" form="installment-plan-form" processing={processing}>
+          Guardar plan de pagos
+        </Button>
+      </>
     ) : mode === 'cancel' ? (
       <>
         <Button onClick={() => setMode('view')}>Volver</Button>
@@ -133,9 +154,14 @@ const OrderModal: React.FC<{
           </Button>
         )}
         {pending && canDefer && order.company && !order.licenses_released_at && <Button onClick={() => setMode('release')}>Entregar licencias sin pago</Button>}
-        {pending && canConfirm && (
+        {plannable && canConfirm && (
+          <Button icon={<CalendarClock className="w-4 h-4" />} onClick={() => setMode('plan')}>
+            {hasPlan ? 'Cambiar el plan de pagos' : 'Pagar en cuotas'}
+          </Button>
+        )}
+        {(pending || partial) && canConfirm && (
           <Button variant="primary" icon={<BadgeCheck className="w-4 h-4" />} onClick={() => setMode('pay')}>
-            Confirmar pago
+            {next ? `Confirmar cuota ${next.number}` : 'Confirmar pago'}
           </Button>
         )}
       </>
@@ -159,8 +185,18 @@ const OrderModal: React.FC<{
 
         {mode === 'view' && (
           <>
+            {order.debt && order.debt.overdue_count > 0 && (
+              <Alert>
+                Tiene {order.debt.overdue_count === 1 ? 'una cuota vencida' : `${order.debt.overdue_count} cuotas vencidas`} por{' '}
+                <strong>{formatMoney(order.debt.overdue_amount, order.currency)}</strong>. El alumno conserva su acceso: si decides retirarlo, cancela su matrícula en «Matrículas».
+              </Alert>
+            )}
             <OrderSummary order={order} />
-            {pending && order.expires_at && <p className="text-xs text-slate-500">Espera su pago hasta el {formatDateTime(order.expires_at)}.</p>}
+            {pending && order.expires_at && (
+              <p className="text-xs text-slate-500">
+                Espera {hasPlan ? 'su primera cuota' : 'su pago'} hasta el {formatDateTime(order.expires_at)}.
+              </p>
+            )}
             {order.status === 'CANCELLED' && <p className="text-xs text-slate-500">Cancelada el {formatDateTime(order.cancelled_at)}.</p>}
             {order.payment_reviews.map((review) => (
               <Alert key={`${review.gateway}-${review.payment_id}`}>
@@ -195,11 +231,22 @@ const OrderModal: React.FC<{
           </form>
         )}
 
+        {mode === 'plan' && (
+          <InstallmentPlanForm
+            order={order}
+            formId="installment-plan-form"
+            onSubmit={(rows) => void run(() => salesApi.setInstallments(order.id, rows), 'No se pudo guardar el plan de pagos.')}
+          />
+        )}
+
         {mode === 'pay' && (
           <form id="confirm-payment-form" onSubmit={confirmPayment} className="space-y-4">
             <Alert tone="info">
-              Confirma solo si ya verificaste que recibiste <strong>{formatMoney(order.total_amount, order.currency)}</strong>. Al confirmar,{' '}
-              {order.company ? 'la empresa recibe sus licencias' : 'el comprador queda matriculado'} y la orden ya no se puede cancelar.
+              Confirma solo si ya verificaste que recibiste <strong>{formatMoney(dueNow, order.currency)}</strong>
+              {next ? ` de la cuota ${next.number} de ${order.installments.length}` : ''}.{' '}
+              {partial
+                ? 'El comprador ya tiene acceso; con la última cuota la orden queda pagada.'
+                : `Al confirmar, ${order.company ? 'la empresa recibe sus licencias' : 'el comprador queda matriculado'} y la orden ya no se puede cancelar.`}
             </Alert>
             <Field label="Medio de pago">
               <select className={INPUT_CLASS} value={method} onChange={(event) => setMethod(event.target.value as PaymentMethod)}>
@@ -274,6 +321,28 @@ export const OrdersPage: React.FC = () => {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [open, setOpen] = useState<Order | null>(null);
+  // Cambia cada vez que una orden cambia, para que la lista de cuotas se vuelva a cargar
+  const [version, setVersion] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Orden que pide abrir un enlace (por ejemplo, el aviso de una cuota vencida)
+  const linked = searchParams.get('order');
+
+  const openById = useCallback(async (orderId: string) => {
+    try {
+      setOpen(await salesApi.order(orderId));
+    } catch {
+      // Si la orden ya no existe, la lista sigue a la vista
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!linked) return;
+    const timer = setTimeout(() => {
+      void openById(linked);
+      setSearchParams({}, { replace: true });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [linked, openById, setSearchParams]);
 
   const load = useCallback(async () => {
     try {
@@ -303,6 +372,7 @@ export const OrdersPage: React.FC = () => {
   const cards: FilterCard[] = [
     { key: '', label: 'Todas', value: counts.ALL ?? null, icon: CreditCard, tone: 'brand', help: 'Todas las órdenes que coinciden con la búsqueda.' },
     { key: 'PENDING', label: 'Pendientes de pago', value: counts.PENDING ?? null, icon: Hourglass, tone: 'warning', help: 'Esperan que confirmes el pago recibido. Pasado su plazo, vencen solas.' },
+    { key: 'PARTIAL', label: 'En cuotas', value: counts.PARTIAL ?? null, icon: CalendarClock, tone: 'info', help: 'Se pagan por partes: ya entró al menos una cuota y el comprador tiene acceso. Falta cobrar el resto.' },
     { key: 'PAID', label: 'Pagadas', value: counts.PAID ?? null, icon: CircleDollarSign, tone: 'success', help: 'Pago confirmado: el comprador ya está matriculado, o la empresa ya tiene sus licencias.' },
     { key: 'EXPIRED', label: 'Vencidas', value: counts.EXPIRED ?? null, icon: TimerOff, tone: 'danger', help: 'No se pagaron dentro del plazo. El comprador puede hacer una compra nueva.' },
     { key: 'CANCELLED', label: 'Canceladas', value: counts.CANCELLED ?? null, icon: Ban, tone: 'neutral', help: 'Las canceló el comprador o el personal antes de pagarse.' },
@@ -317,6 +387,8 @@ export const OrdersPage: React.FC = () => {
         subtitle="Órdenes de compra de tus alumnos y confirmación de los pagos recibidos."
         action={<ExportButton path="/orders/export" params={{ search: search || undefined, status: status || undefined }} filename="ordenes.xlsx" />}
       />
+
+      <DueInstallments version={version} onOpen={(orderId) => void openById(orderId)} />
 
       <FilterCards cards={cards} active={status} label="Órdenes por estado" onSelect={(key) => filter(() => setStatus(key))} />
 
@@ -427,6 +499,7 @@ export const OrdersPage: React.FC = () => {
           onClose={() => setOpen(null)}
           onChanged={(order) => {
             setOpen(order);
+            setVersion((current) => current + 1);
             void load();
           }}
         />

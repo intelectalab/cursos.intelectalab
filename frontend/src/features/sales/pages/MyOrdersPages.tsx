@@ -111,7 +111,7 @@ export const MyOrderPage: React.FC = () => {
       const fresh = await salesApi.myOrder(orderId);
       // No siempre se vuelve por el enlace de la pasarela: mientras la orden espere un pago en línea, se le pregunta.
       // Si la pasarela no responde, la orden se muestra igual
-      const ask = fresh.status === 'PENDING' && (returned || fresh.online_gateways.length > 0);
+      const ask = (fresh.status === 'PENDING' || fresh.status === 'PARTIAL') && (returned || fresh.online_gateways.length > 0);
       setOrder(ask ? await salesApi.syncPayment(orderId).catch(() => fresh) : fresh);
       setState('ready');
     } catch (err) {
@@ -126,7 +126,13 @@ export const MyOrderPage: React.FC = () => {
   }, [load]);
 
   const instructions = order?.payment_instructions;
-  const gateways = order?.status === 'PENDING' ? order.online_gateways : [];
+  // Se puede pagar mientras esté pendiente o en cuotas con alguna por pagar
+  const payable = order?.status === 'PENDING' || order?.status === 'PARTIAL';
+  const gateways = order && payable ? order.online_gateways : [];
+  const next = order?.debt?.next ?? null;
+  // Lo que toca pagar ahora: la siguiente cuota o el total
+  const dueNow = next ? next.amount : (order?.total_amount ?? '0');
+  const dueLabel = next && order ? ` de la cuota ${next.number} de ${order.installments.length}` : '';
 
   const payWith = async (gateway: string) => {
     if (!order) return;
@@ -205,7 +211,39 @@ export const MyOrderPage: React.FC = () => {
             </Card>
           )}
 
-          {order.status === 'PENDING' && returned && (
+          {order.status === 'PARTIAL' && (
+            <Card className={`p-5 sm:p-6 ${next?.overdue ? 'border-rose-200 bg-rose-50/60' : 'border-sky-200 bg-sky-50/60'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className={`w-5 h-5 shrink-0 mt-0.5 ${next?.overdue ? 'text-rose-600' : 'text-sky-600'}`} />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Ya tienes acceso al curso</p>
+                    <p className="text-[13px] text-slate-700">
+                      {next ? (
+                        next.overdue ? (
+                          <>
+                            Tu cuota {next.number} de <strong>{formatMoney(next.amount, order.currency)}</strong> venció. Págala cuanto antes para no perder tu acceso.
+                          </>
+                        ) : (
+                          <>
+                            Te falta pagar <strong>{formatMoney(order.debt?.pending_amount ?? '0', order.currency)}</strong>. La cuota {next.number} es de{' '}
+                            <strong>{formatMoney(next.amount, order.currency)}</strong>.
+                          </>
+                        )
+                      ) : (
+                        'Estás al día con tus cuotas.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <Button variant="primary" onClick={() => navigate(`/my-courses/${order.items[0].course_id}`)}>
+                  Ir al curso
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {payable && returned && (
             <Alert tone="info">
               Todavía no vemos tu pago. Si acabas de pagar, puede tardar unos minutos en confirmarse; si lo dejaste a medias, puedes intentarlo otra vez.{' '}
               <button type="button" className="font-semibold underline cursor-pointer disabled:opacity-60" disabled={checking} onClick={checkAgain}>
@@ -223,8 +261,8 @@ export const MyOrderPage: React.FC = () => {
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900">Paga en línea</h2>
                   <p className="text-[13px] text-slate-500">
-                    Paga <strong className="text-slate-900 tnum">{formatMoney(order.total_amount, order.currency)}</strong> ahora y tu acceso se activa al momento. Te llevamos a la
-                    página segura del medio de pago y vuelves aquí.
+                    Paga <strong className="text-slate-900 tnum">{formatMoney(dueNow, order.currency)}</strong>
+                    {dueLabel} ahora{order.status === 'PENDING' ? ' y tu acceso se activa al momento' : ''}. Te llevamos a la página segura del medio de pago y vuelves aquí.
                   </p>
                 </div>
               </div>
@@ -255,7 +293,7 @@ export const MyOrderPage: React.FC = () => {
             </Card>
           )}
 
-          {order.status === 'PENDING' && instructions && (
+          {payable && instructions && (
             <Card className="p-5 sm:p-6 space-y-4">
               <div className="flex items-start gap-3">
                 <span className="w-9 h-9 shrink-0 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -264,8 +302,8 @@ export const MyOrderPage: React.FC = () => {
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900">{gateways.length > 0 ? 'O paga por fuera' : 'Cómo pagar'}</h2>
                   <p className="text-[13px] text-slate-500">
-                    Paga <strong className="text-slate-900 tnum">{formatMoney(order.total_amount, order.currency)}</strong> e indica el número de orden.
-                    Tu acceso se activa cuando la academia confirma el pago.
+                    Paga <strong className="text-slate-900 tnum">{formatMoney(dueNow, order.currency)}</strong>
+                    {dueLabel} e indica el número de orden. {order.status === 'PENDING' ? 'Tu acceso se activa cuando la academia confirma el pago.' : 'La academia confirma el pago y tu cuota queda al día.'}
                   </p>
                 </div>
               </div>
@@ -278,7 +316,7 @@ export const MyOrderPage: React.FC = () => {
                 <Alert tone="info">La academia aún no publicó sus datos de pago. Comunícate con ella para coordinar cómo pagar esta orden.</Alert>
               )}
 
-              {order.expires_at && (
+              {order.status === 'PENDING' && order.expires_at && (
                 <p className="flex items-center gap-2 text-xs text-slate-500">
                   <Clock className="w-3.5 h-3.5" /> Tienes hasta el {formatDateTime(order.expires_at)} para pagar; después la orden vence y tendrás que generar otra.
                 </p>

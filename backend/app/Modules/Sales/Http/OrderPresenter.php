@@ -3,8 +3,10 @@
 namespace App\Modules\Sales\Http;
 
 use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\OrderItem;
 use App\Modules\Sales\Domain\Models\PaymentAttempt;
+use App\Modules\Tenancy\Application\TenantSettingsService;
 
 class OrderPresenter
 {
@@ -77,6 +79,79 @@ class OrderPresenter
                 'reason' => $attempt->review_reason,
                 'at' => $attempt->updated_at->toIso8601String(),
             ])->values() : [],
+            ...self::plan($order),
         ];
+    }
+
+    /**
+     * Plan de pagos de la orden y lo que debe. Sin cuotas, la orden se paga de una vez.
+     *
+     * @return array<string, mixed>
+     */
+    private static function plan(Order $order): array
+    {
+        if (! $order->relationLoaded('installments') || $order->installments->isEmpty()) {
+            return ['installments' => [], 'debt' => null];
+        }
+
+        $today = self::today();
+        $pending = $order->installments->where('status', OrderInstallment::STATUS_PENDING);
+        $overdue = $pending->filter(fn (OrderInstallment $installment) => $installment->isOverdue($today));
+        $next = $pending->first();
+
+        return [
+            'installments' => $order->installments->map(fn (OrderInstallment $installment) => self::installment($installment, $today))->values(),
+            'debt' => [
+                'paid_amount' => self::money($order->installments->where('status', OrderInstallment::STATUS_PAID)->sum('amount')),
+                'pending_amount' => self::money($pending->sum('amount')),
+                'overdue_amount' => self::money($overdue->sum('amount')),
+                'overdue_count' => $overdue->count(),
+                // La cuota que toca pagar ahora
+                'next' => $next ? self::installment($next, $today) : null,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function installment(OrderInstallment $installment, ?string $today = null): array
+    {
+        $payment = $installment->relationLoaded('payment') ? $installment->payment : null;
+
+        return [
+            'id' => $installment->id,
+            'number' => $installment->number,
+            'amount' => $installment->amount,
+            'due_date' => $installment->due_date->toDateString(),
+            'status' => $installment->status,
+            'overdue' => $installment->isOverdue($today ?? self::today()),
+            'paid_at' => $installment->paid_at?->toIso8601String(),
+            'payment' => $payment ? [
+                'method' => $payment->method,
+                'gateway' => $payment->gateway,
+                'reference' => $payment->reference,
+                'confirmed_by' => $payment->relationLoaded('confirmer') && $payment->confirmer ? trim("{$payment->confirmer->first_name} {$payment->confirmer->last_name}") : null,
+            ] : null,
+        ];
+    }
+
+    /**
+     * Día de hoy en la hora de la organización: con él se decide si una cuota ya venció.
+     */
+    public static function today(): string
+    {
+        $request = request();
+
+        if (! $request->attributes->has('tenant_today')) {
+            $request->attributes->set('tenant_today', now(app(TenantSettingsService::class)->timezone())->toDateString());
+        }
+
+        return (string) $request->attributes->get('tenant_today');
+    }
+
+    private static function money(float|int|string $amount): string
+    {
+        return number_format((float) $amount, 2, '.', '');
     }
 }

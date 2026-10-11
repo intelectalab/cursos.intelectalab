@@ -8,6 +8,8 @@ use App\Modules\Sales\Application\Exchange\ExchangeRateService;
 use App\Modules\Sales\Application\OrderService;
 use App\Modules\Sales\Domain\Models\GatewayAccount;
 use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\OrderInstallment;
+use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Sales\Domain\Models\PaymentAttempt;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiException;
@@ -171,7 +173,7 @@ class OnlinePaymentService
 
         foreach ($this->gateways as $gateway) {
             $account = $accounts->get($gateway->code());
-            $quote = $account ? ChargeQuote::for($gateway, (string) $order->total_amount, $order->currency->code, $this->rateFor($account)) : null;
+            $quote = $account ? ChargeQuote::for($gateway, $this->amountDue($order), $order->currency->code, $this->rateFor($account)) : null;
 
             if ($quote !== null) {
                 $available[] = [
@@ -201,17 +203,20 @@ class OnlinePaymentService
         $order->loadMissing(['items', 'customer', 'currency']);
         $gateway = $this->gateway($code);
         $account = $this->account($code);
-        $quote = ChargeQuote::for($gateway, (string) $order->total_amount, $order->currency->code, $this->rateFor($account));
+        $quote = ChargeQuote::for($gateway, $this->amountDue($order), $order->currency->code, $this->rateFor($account));
+        // En una orden en cuotas se cobra la siguiente
+        $installment = $this->nextInstallment($order);
 
         $checkout = $gateway->startCheckout($account->forGateway(), new Charge(
             reference: $order->id,
-            title: 'Orden '.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT).' · '.($order->package_title ?? $order->items->first()?->title),
+            title: 'Orden '.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT).' · '.($order->package_title ?? $order->items->first()?->title)
+                .($installment ? " · cuota {$installment->number} de ".$order->installments()->count() : ''),
             amount: $quote->amount,
             currency: $quote->currency,
             payerEmail: $order->customer->email,
             payerFirstName: $order->customer->first_name,
             payerLastName: $order->customer->last_name,
-            // Pasado el plazo de la orden, la pasarela ya no la cobra
+            // Pasado el plazo de la orden, la pasarela ya no la cobra. Una cuota posterior no vence: se cobra aunque llegue tarde
             expiresAt: $order->expires_at,
         ), $urls);
 
@@ -234,7 +239,7 @@ class OnlinePaymentService
      */
     public function sync(Order $order): Order
     {
-        if ($order->status !== Order::STATUS_PENDING) {
+        if (! in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_PARTIAL], true)) {
             return $order;
         }
 
@@ -250,13 +255,32 @@ class OnlinePaymentService
             }
 
             foreach ($this->gateway($attempt->gateway)->paymentsFor($account->forGateway(), $order->id, $attempt->external_id) as $payment) {
-                if ($payment->isApproved()) {
+                // En una orden en cuotas la pasarela devuelve también los pagos de las cuotas anteriores, ya aplicados
+                if ($payment->isApproved() && ! $this->alreadyApplied($order, $payment, $attempt->gateway)) {
                     return $this->apply($order, $payment, $attempt->gateway);
                 }
             }
         }
 
         return $order;
+    }
+
+    /**
+     * Lo que toca cobrar ahora: la siguiente cuota o, sin plan de pagos, el total.
+     */
+    private function amountDue(Order $order): string
+    {
+        return (string) ($this->nextInstallment($order)?->amount ?? $order->total_amount);
+    }
+
+    private function nextInstallment(Order $order): ?OrderInstallment
+    {
+        return $order->installments()->where('status', OrderInstallment::STATUS_PENDING)->first();
+    }
+
+    private function alreadyApplied(Order $order, GatewayPayment $payment, string $code): bool
+    {
+        return Payment::query()->where('order_id', $order->id)->where('gateway', $code)->where('reference', $payment->id)->exists();
     }
 
     /**
@@ -373,14 +397,14 @@ class OnlinePaymentService
             }
 
             // El mismo pago avisado otra vez
-            if ($order->payment?->gateway === $code && $order->payment->reference === $payment->id) {
+            if ($this->alreadyApplied($order, $payment, $code)) {
                 return $order;
             }
 
             $problem = match (true) {
                 $payment->currency !== $attempt->currency || $payment->amount !== number_format((float) $attempt->amount, 2, '.', '') => "La pasarela cobró {$payment->currency} {$payment->amount} y se le pidió cobrar {$attempt->currency} {$attempt->amount}.",
                 $order->status === Order::STATUS_PAID => 'La orden ya estaba pagada por otro medio: hay un cobro de más.',
-                $order->status !== Order::STATUS_PENDING => 'La orden ya no estaba pendiente cuando llegó el pago.',
+                ! in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_PARTIAL], true) => 'La orden ya no estaba pendiente cuando llegó el pago.',
                 default => null,
             };
 

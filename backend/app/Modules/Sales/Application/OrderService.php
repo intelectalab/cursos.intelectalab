@@ -15,6 +15,7 @@ use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
 use App\Modules\Sales\Domain\Models\Currency;
 use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\OrderItem;
 use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
@@ -22,6 +23,7 @@ use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Tenancy\TenantContext;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
@@ -253,15 +255,22 @@ class OrderService
         return DB::transaction(function () use ($order, $actor, $data) {
             $order = Order::query()->lockForUpdate()->findOrFail($order->id);
             $online = isset($data['gateway']);
+            // Con plan de pagos, cada pago cubre la siguiente cuota
+            $installment = $order->installments()->where('status', OrderInstallment::STATUS_PENDING)->lockForUpdate()->first();
 
-            if (! ($online && $order->status === Order::STATUS_PENDING)) {
+            if ($order->status === Order::STATUS_PARTIAL) {
+                if ($installment === null) {
+                    throw new ApiException(ErrorCode::OrderNotPending, 'La orden ya está pagada.', 409, ['status' => $order->status]);
+                }
+            } elseif (! ($online && $order->status === Order::STATUS_PENDING)) {
                 $this->assertPending($order);
             }
 
             $payment = Payment::create([
                 'order_id' => $order->id,
+                'installment_id' => $installment?->id,
                 'currency_id' => $order->currency_id,
-                'amount' => $order->total_amount,
+                'amount' => $installment?->amount ?? $order->total_amount,
                 'method' => $data['method'],
                 'gateway' => $data['gateway'] ?? $this->gateway->code(),
                 'status' => Payment::STATUS_CONFIRMED,
@@ -277,9 +286,27 @@ class OrderService
                 'amount' => $payment->amount,
                 'method' => $payment->method,
                 'reference' => $payment->reference,
+                'installment' => $installment?->number,
             ]);
 
-            $this->settle($order, $actor);
+            if ($installment === null) {
+                $this->settle($order, $actor);
+
+                return $order;
+            }
+
+            $installment->update(['status' => OrderInstallment::STATUS_PAID, 'paid_at' => $payment->paid_at]);
+
+            // La primera cuota da el acceso; la última deja la orden pagada
+            if ($order->status === Order::STATUS_PENDING) {
+                $order->update(['status' => Order::STATUS_PARTIAL, 'expires_at' => null]);
+                $this->enroll($order, $actor);
+                $this->audit->record('orders.partially_paid', $order, ['status' => Order::STATUS_PENDING], ['status' => Order::STATUS_PARTIAL, 'number' => $order->number, 'installment' => $installment->number]);
+            }
+
+            if (! $order->installments()->where('status', OrderInstallment::STATUS_PENDING)->exists()) {
+                $this->markPaid($order, $actor, Order::STATUS_PARTIAL);
+            }
 
             return $order;
         });
@@ -330,11 +357,95 @@ class OrderService
     }
 
     /**
+     * Arma o reemplaza el plan de pagos de una orden que todavía no recibió
+     * ningún pago. El plazo de la orden pasa a ser el de la primera cuota.
+     *
+     * @param  list<array{amount: string|float|int, due_date: string}>  $rows  en el orden en que se pagan
+     */
+    public function setInstallments(Order $order, User $actor, array $rows): Order
+    {
+        return DB::transaction(function () use ($order, $actor, $rows) {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+
+            $this->assertPlannable($order);
+
+            $total = array_sum(array_map(fn (array $row) => (int) round((float) $row['amount'] * 100), $rows));
+
+            if ($total !== (int) round((float) $order->total_amount * 100)) {
+                throw new ApiException(ErrorCode::ValidationError, 'Las cuotas deben sumar el total de la orden.', 422, [
+                    'installments' => ['Las cuotas suman '.self::money((string) ($total / 100)).' y la orden es de '.self::money((string) $order->total_amount).'.'],
+                ]);
+            }
+
+            $order->installments()->delete();
+
+            foreach (array_values($rows) as $index => $row) {
+                $order->installments()->create([
+                    'number' => $index + 1,
+                    'amount' => self::money((string) $row['amount']),
+                    'due_date' => $row['due_date'],
+                    'status' => OrderInstallment::STATUS_PENDING,
+                    'created_by' => $actor->id,
+                ]);
+            }
+
+            // La orden espera su primera cuota hasta el final de ese día, en la hora de la organización
+            $order->update(['expires_at' => CarbonImmutable::parse($rows[0]['due_date'], $this->settings->timezone())->endOfDay()->utc()]);
+
+            $this->audit->record('orders.installments_set', $order, null, [
+                'number' => $order->number,
+                'installments' => array_map(fn (array $row) => ['amount' => self::money((string) $row['amount']), 'due_date' => $row['due_date']], $rows),
+            ]);
+
+            return $order;
+        });
+    }
+
+    /**
+     * Quita el plan de pagos: la orden vuelve a pagarse de una vez, con el plazo normal desde ahora.
+     */
+    public function removeInstallments(Order $order, User $actor): Order
+    {
+        return DB::transaction(function () use ($order) {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+
+            $this->assertPlannable($order);
+
+            if ($order->installments()->exists()) {
+                $order->installments()->delete();
+                $order->update(['expires_at' => now()->addHours($this->settings->orderExpirationHours())]);
+                $this->audit->record('orders.installments_removed', $order, null, ['number' => $order->number]);
+            }
+
+            return $order;
+        });
+    }
+
+    /**
+     * El plan de pagos se arma mientras la orden espera su primer pago, en compras personales con importe.
+     */
+    private function assertPlannable(Order $order): void
+    {
+        $message = match (true) {
+            $order->customer_id === null => 'Las ventas a empresas no se pagan en cuotas desde aquí.',
+            (float) $order->total_amount <= 0 => 'Esta inscripción es gratuita: no hay nada que pagar en cuotas.',
+            $order->status === Order::STATUS_PARTIAL => 'Esta orden ya recibió un pago: su plan de pagos no se puede cambiar.',
+            $order->status !== Order::STATUS_PENDING => 'Solo se arma un plan de pagos para una orden pendiente.',
+            default => null,
+        };
+
+        if ($message !== null) {
+            throw new ApiException(ErrorCode::OrderNotPending, $message, 409, ['status' => $order->status]);
+        }
+    }
+
+    /**
      * Solo se reembolsa una compra personal pagada y con importe.
      */
     public function assertRefundable(Order $order): void
     {
         $message = match (true) {
+            $order->installments()->exists() => 'Esta orden se paga en cuotas y su reembolso todavía no se hace desde el sistema: devuelve cada pago por el medio con el que se recibió y cancela la matrícula del alumno.',
             $order->status === Order::STATUS_REFUNDED => 'Esta orden ya fue reembolsada.',
             $order->status !== Order::STATUS_PAID || $order->payment === null => 'Solo se reembolsa una orden pagada.',
             $order->customer_id === null => 'Las ventas a empresas no se reembolsan desde aquí: tienen licencias entregadas y se resuelven con la empresa.',
@@ -467,6 +578,7 @@ class OrderService
         $message = match ($order->state()) {
             Order::STATUS_PENDING => null,
             Order::STATUS_PAID => 'La orden ya está pagada.',
+            Order::STATUS_PARTIAL => 'La orden ya recibió un pago y el comprador tiene acceso: no se puede cancelar.',
             Order::STATUS_CANCELLED => 'La orden fue cancelada.',
             default => 'La orden venció sin pago. El comprador debe generar una nueva.',
         };
@@ -484,8 +596,15 @@ class OrderService
      */
     private function settle(Order $order, User $actor): void
     {
-        $order->update(['status' => Order::STATUS_PAID, 'paid_at' => now()]);
+        $this->enroll($order, $actor);
+        $this->markPaid($order, $actor, Order::STATUS_PENDING);
+    }
 
+    /**
+     * Da al comprador el acceso que compró: una matrícula por cada curso de la orden.
+     */
+    private function enroll(Order $order, User $actor): void
+    {
         $order->items()->with('course')->get()->each(function (OrderItem $item) use ($order, $actor) {
             if ($order->customer_id === null) {
                 return;
@@ -502,8 +621,16 @@ class OrderService
 
             $item->update(['enrollment_id' => $enrollment?->id]);
         });
+    }
 
-        $this->audit->record('orders.paid', $order, ['status' => Order::STATUS_PENDING], [
+    /**
+     * La orden quedó cobrada por completo.
+     */
+    private function markPaid(Order $order, User $actor, string $from): void
+    {
+        $order->update(['status' => Order::STATUS_PAID, 'paid_at' => now()]);
+
+        $this->audit->record('orders.paid', $order, ['status' => $from], [
             'status' => Order::STATUS_PAID,
             'number' => $order->number,
             'total' => $order->total_amount,

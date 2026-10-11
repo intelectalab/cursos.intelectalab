@@ -61,12 +61,20 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/options', [OrderController::class, 'options']);
         Route::get('/orders/export', [OrderController::class, 'export']);
+        // Cuotas por cobrar y aviso de las vencidas
+        Route::get('/orders/installments', [OrderController::class, 'installments']);
+        Route::get('/orders/installments/alerts', [OrderController::class, 'installmentAlerts']);
         Route::get('/orders/{order}', [OrderController::class, 'show'])->whereUuid('order');
     });
 
     // Confirmar un pago recibido fuera del sistema. POST /orders/{id}/payments queda para la pasarela (S6).
     Route::post('/orders/{order}/confirm-payment', [OrderController::class, 'confirmPayment'])
         ->whereUuid('order')->middleware(['permission:payments.confirm', 'idempotent']);
+    // Plan de pagos: lo arma quien confirma los pagos, mientras la orden espera el primero
+    Route::put('/orders/{order}/installments', [OrderController::class, 'setInstallments'])
+        ->whereUuid('order')->middleware('permission:payments.confirm');
+    Route::delete('/orders/{order}/installments', [OrderController::class, 'removeInstallments'])
+        ->whereUuid('order')->middleware('permission:payments.confirm');
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])
         ->whereUuid('order')->middleware('permission:orders.cancel');
     // Reembolso total de una compra pagada: devuelve el dinero y retira la matrícula
