@@ -34,7 +34,7 @@ function formatDate(value: string | null): string {
 
 export const TeachersPage: React.FC = () => {
   const { hasPermission } = useAuth();
-  // Dar de alta exige crear usuarios y poder leer los roles para asignar el de Profesor
+  // Dar de alta exige crear usuarios y poder leer los roles para asignar el de Docente
   const canCreate = hasPermission('users.create') && hasPermission('roles.read');
 
   const [rows, setRows] = useState<TeacherRow[]>([]);
@@ -74,7 +74,7 @@ export const TeachersPage: React.FC = () => {
   const filtered = search !== '' || filter !== '';
   const counts = meta?.counts ?? {};
   const cards: FilterCard[] = [
-    { key: '', label: 'Todos', value: counts.ALL ?? null, icon: Users, tone: 'brand', help: 'Todas las personas con el rol Profesor o asignadas a algún curso, según la búsqueda.' },
+    { key: '', label: 'Todos', value: counts.ALL ?? null, icon: Users, tone: 'brand', help: 'Todas las personas con el rol Docente o asignadas a algún curso, según la búsqueda.' },
     { key: 'WITH_COURSES', label: 'Con cursos', value: counts.WITH_COURSES ?? null, icon: BookOpenCheck, tone: 'success', help: 'Están asignados a por lo menos un curso que no está archivado.' },
     { key: 'WITHOUT_COURSES', label: 'Sin cursos', value: counts.WITHOUT_COURSES ?? null, icon: UserMinus, tone: 'warning', help: 'Tienen cuenta de docente pero ningún curso vigente asignado. Se asignan desde cada curso, en Participantes.' },
     { key: 'INACTIVE', label: 'Cuenta inactiva', value: counts.INACTIVE ?? null, icon: UserX, tone: 'neutral', help: 'Su cuenta está desactivada y no pueden iniciar sesión.' },
@@ -203,7 +203,7 @@ export const TeachersPage: React.FC = () => {
         <NewPersonModal
           roleCode="TEACHER"
           title="Nuevo docente"
-          subtitle="Se crea su cuenta con el rol Profesor. Después asígnalo a sus cursos desde Participantes."
+          subtitle="Se crea su cuenta con el rol Docente. Después asígnalo a sus cursos desde Participantes."
           submitLabel="Crear docente"
           passwordHint="Mínimo 8 caracteres. Entrégasela al docente; podrá cambiarla desde su cuenta."
           onClose={() => setCreating(false)}

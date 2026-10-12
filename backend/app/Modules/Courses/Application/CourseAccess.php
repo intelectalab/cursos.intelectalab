@@ -9,7 +9,7 @@ use App\Shared\Http\ErrorCode;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Alcance por curso. Los permisos "assigned" (rol Profesor) solo valen
+ * Alcance por curso. Los permisos "assigned" (rol Docente) solo valen
  * sobre los cursos donde el usuario está asignado como profesor.
  */
 class CourseAccess

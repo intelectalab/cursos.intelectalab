@@ -90,7 +90,7 @@ export const ACTIVITY_LABEL: Record<ActivityType, string> = {
 
 export const ACTIVITY_HINT: Record<ActivityType, string> = {
   QUIZ: 'Preguntas que se califican solas.',
-  TASK: 'El alumno entrega y el profesor revisa.',
+  TASK: 'El alumno entrega y el docente revisa.',
   SURVEY: 'Opinión del alumno, sin nota.',
 };
 

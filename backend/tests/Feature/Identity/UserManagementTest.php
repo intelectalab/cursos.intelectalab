@@ -34,12 +34,12 @@ class UserManagementTest extends TestCase
         $this->withToken($token)->postJson($this->tenantUrl('acme', '/users'), $this->payload())
             ->assertCreated()
             ->assertJsonPath('data.email', 'lucia@acme.com')
-            ->assertJsonPath('data.roles', ['Profesor'])
+            ->assertJsonPath('data.roles', ['Docente'])
             ->assertJsonMissingPath('data.password');
 
         $this->postJson($this->tenantUrl('acme', '/auth/login'), ['email' => 'lucia@acme.com', 'password' => self::PASSWORD])
             ->assertOk()
-            ->assertJsonPath('data.user.roles', ['Profesor']);
+            ->assertJsonPath('data.user.roles', ['Docente']);
 
         $this->assertTrue(AuditEvent::query()->where('action', 'users.created')->exists());
     }

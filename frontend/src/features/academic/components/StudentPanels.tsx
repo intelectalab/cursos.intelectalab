@@ -96,7 +96,7 @@ export const TaskPanel: React.FC<{
             <div className="flex items-center gap-3 p-4 rounded-xl border bg-amber-50 border-amber-200 text-amber-900" role="status">
               <RotateCcw className="w-6 h-6 text-amber-600 shrink-0" />
               <p className="text-[13px]">
-                <span className="block font-semibold">Tu profesor te devolvió la tarea el {formatDate(submission.returned_at)}</span>
+                <span className="block font-semibold">Tu docente te devolvió la tarea el {formatDate(submission.returned_at)}</span>
                 Revisa su comentario y vuelve a entregarla.
               </p>
             </div>
@@ -105,14 +105,14 @@ export const TaskPanel: React.FC<{
               <Hourglass className="w-6 h-6 text-sky-600 shrink-0" />
               <p className="text-[13px]">
                 <span className="block font-semibold">Entregada el {formatDate(submission.submitted_at)}</span>
-                Tu profesor aún no la revisa{state.can_submit ? '; mientras tanto puedes reemplazarla.' : '.'}
+                Tu docente aún no la revisa{state.can_submit ? '; mientras tanto puedes reemplazarla.' : '.'}
               </p>
             </div>
           )}
 
           {submission.feedback && (
             <div className="p-4 rounded-xl border border-slate-200">
-              <p className="text-xs font-semibold text-slate-500 mb-1">Comentario de tu profesor</p>
+              <p className="text-xs font-semibold text-slate-500 mb-1">Comentario de tu docente</p>
               <p className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap break-words">{submission.feedback}</p>
             </div>
           )}

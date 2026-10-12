@@ -128,7 +128,7 @@ const CourseCard: React.FC<{ course: CourseSummary }> = ({ course }) => (
               <Avatar name={teacher.name} size="sm" />
             </span>
           ))}
-          {course.teachers.length === 0 && <span className="text-xs text-slate-500">Sin profesores</span>}
+          {course.teachers.length === 0 && <span className="text-xs text-slate-500">Sin docentes</span>}
         </div>
         <span className="text-xs font-medium text-slate-500 tnum">{course.version ? `Versión ${course.version}` : 'Sin publicar'}</span>
       </div>
@@ -200,7 +200,7 @@ export const CoursesPage: React.FC = () => {
       <PageHeader
         title="Cursos"
         icon={BookOpen}
-        subtitle={seesAll ? 'Crea los cursos de tu academia, arma su contenido y publícalos.' : 'Cursos en los que estás asignado como profesor.'}
+        subtitle={seesAll ? 'Crea los cursos de tu academia, arma su contenido y publícalos.' : 'Cursos en los que estás asignado como docente.'}
         action={
           canCreate && (
             <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
@@ -290,7 +290,7 @@ export const CoursesPage: React.FC = () => {
                 ? 'Prueba con otra búsqueda o cambia los filtros.'
                 : seesAll
                   ? 'Crea el primero: empieza como borrador y lo publicas cuando esté listo.'
-                  : 'Cuando te asignen como profesor de un curso, aparecerá aquí.'
+                  : 'Cuando te asignen como docente de un curso, aparecerá aquí.'
             }
             action={
               filtered ? (

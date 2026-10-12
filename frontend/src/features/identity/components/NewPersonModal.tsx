@@ -4,7 +4,7 @@ import { Alert, Button, Field, INPUT_CLASS, Modal } from '../../../shared/ui';
 import { DOCUMENT_TYPES, identityApi, type DocumentType } from '../api';
 
 /**
- * Alta rápida de una persona con un rol base ya puesto (Alumno, Profesor).
+ * Alta rápida de una persona con un rol base ya puesto (Alumno, Docente).
  * Es la misma operación de Usuarios, sin tener que elegir el rol.
  */
 export const NewPersonModal: React.FC<{

@@ -175,7 +175,7 @@ export const APP_MODULES: ModuleItem[] = [
     icon: BookOpen,
     tone: 'violet',
     group: 'operation',
-    // El profesor entra con el permiso de cursos asignados
+    // El docente entra con el permiso de cursos asignados
     permission: ['courses.read', 'courses.assigned.read'],
     component: CoursesPage,
   },

@@ -29,7 +29,7 @@ class TeacherDirectory
     public const RECENT_DAYS = 30;
 
     /**
-     * Es docente quien tiene el rol Profesor o está asignado a algún curso.
+     * Es docente quien tiene el rol Docente o está asignado a algún curso.
      * Los cursos archivados no cuentan como carga.
      *
      * @return Builder<User>

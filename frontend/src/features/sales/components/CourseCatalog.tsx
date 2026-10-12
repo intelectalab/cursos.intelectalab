@@ -89,7 +89,7 @@ export const CourseOverview: React.FC<{ detail: AvailableCourseDetail }> = ({ de
     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
       {detail.teachers.length > 0 && (
         <div>
-          <dt className="text-xs font-semibold text-slate-500">{detail.teachers.length === 1 ? 'Profesor' : 'Profesores'}</dt>
+          <dt className="text-xs font-semibold text-slate-500">{detail.teachers.length === 1 ? 'Docente' : 'Docentes'}</dt>
           <dd className="text-slate-800">{detail.teachers.join(', ')}</dd>
         </div>
       )}

@@ -89,7 +89,7 @@ class ParticipantService
 
     /**
      * Agrega personas al curso con un papel. A quien le falte el rol base de
-     * ese papel (Alumno o Profesor) se le otorga, para que pueda entrar.
+     * ese papel (Alumno o Docente) se le otorga, para que pueda entrar.
      *
      * @param  list<string>  $userIds
      * @return array{added: int, skipped: int, roles_granted: int}

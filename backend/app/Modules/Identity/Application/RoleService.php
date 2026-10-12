@@ -112,7 +112,7 @@ class RoleService
     }
 
     /**
-     * Suma un rol base (Alumno, Profesor) a quien no lo tiene, sin tocar sus
+     * Suma un rol base (Alumno, Docente) a quien no lo tiene, sin tocar sus
      * otros roles. Lo usa el sistema cuando alguien recibe un papel en un
      * curso; no pasa por la regla de no otorgar más de lo que uno tiene porque
      * el rol es fijo y de alcance acotado.

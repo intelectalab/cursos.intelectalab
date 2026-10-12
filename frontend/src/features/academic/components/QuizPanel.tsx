@@ -525,7 +525,7 @@ export const QuizPanel: React.FC<{
             : exhausted
               ? 'Ya usaste todos tus intentos.'
               : `Te ${state.attempts_left === 1 ? 'queda 1 intento' : `quedan ${state.attempts_left} intentos`}.`}{' '}
-          {state.extra_attempts > 0 && !exhausted && 'Tu profesor te dio un intento adicional. '}
+          {state.extra_attempts > 0 && !exhausted && 'Tu docente te dio un intento adicional. '}
           Cuenta el mejor.
         </span>
       </div>

@@ -116,7 +116,7 @@ export interface CourseOptions {
   grade_scale: number;
   cover: FileRules;
   material: FileRules;
-  // Solo para quien puede asignar profesores
+  // Solo para quien puede asignar docentes
   teachers?: Teacher[];
 }
 

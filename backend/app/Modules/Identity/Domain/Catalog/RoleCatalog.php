@@ -48,7 +48,7 @@ class RoleCatalog
                 ],
             ],
             self::TEACHER => [
-                'name' => 'Profesor',
+                'name' => 'Docente',
                 'description' => 'Gestión académica de los cursos asignados',
                 // Alcance del Maestro §8.1 más los bancos de preguntas, que necesita
                 // para armar los cuestionarios de sus cursos.

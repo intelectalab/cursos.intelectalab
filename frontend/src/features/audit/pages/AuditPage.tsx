@@ -53,7 +53,7 @@ const ACTION_LABEL: Record<string, string> = {
   'courses.published': 'Curso publicado',
   'courses.archived': 'Curso archivado',
   'courses.restored': 'Curso restaurado',
-  'courses.teachers_updated': 'Profesores del curso cambiados',
+  'courses.teachers_updated': 'Docentes del curso cambiados',
   'enrollments.created': 'Alumno matriculado',
   'enrollments.updated': 'Vigencia de matrícula cambiada',
   'enrollments.cancelled': 'Matrícula cancelada',
