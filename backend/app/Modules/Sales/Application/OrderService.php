@@ -19,6 +19,7 @@ use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\OrderItem;
 use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
+use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
@@ -35,6 +36,7 @@ use Illuminate\Support\Facades\DB;
 class OrderService
 {
     public function __construct(
+        private readonly TenantNotifier $notifier,
         private readonly EnrollmentService $enrollments,
         private readonly EnrollmentQuota $quota,
         private readonly TenantSettingsService $settings,
@@ -195,8 +197,18 @@ class OrderService
                 'currency' => $currency->code,
             ] + ($applied ? ['coupon' => $applied['coupon']->code, 'discount' => $discount] : []));
 
+            $code = self::code($order);
+
             if ($total === self::money('0')) {
                 $this->settle($order, $customer);
+                $this->notifier->toUser($customer, "Ya estás inscrito en «{$productName}»", [
+                    'Tu inscripción quedó confirmada: ya puedes empezar.',
+                ], ['label' => 'Ir a mis cursos', 'path' => '/my-courses']);
+            } else {
+                $this->notifier->toUser($customer, "Recibimos tu orden {$code}", [
+                    "Tu compra de «{$productName}» por ".TenantNotifier::money($currency->code, $total).' está pendiente de pago.',
+                    'Tienes hasta el '.$order->expires_at->timezone($this->settings->timezone())->format('d/m/Y, H:i').' para pagarla; después la orden vence.',
+                ], ['label' => 'Ver cómo pagar', 'path' => "/my-orders/{$order->id}"]);
             }
 
             return $order;
@@ -289,8 +301,15 @@ class OrderService
                 'installment' => $installment?->number,
             ]);
 
+            $order->loadMissing(['customer', 'currency']);
+            $money = TenantNotifier::money($order->currency->code, $payment->amount);
+
             if ($installment === null) {
                 $this->settle($order, $actor);
+                $this->notifier->toUser($order->customer, 'Pago confirmado: ya tienes acceso', [
+                    "Recibimos tu pago de {$money} por la orden ".self::code($order).'.',
+                    'Tu matrícula está activa: el curso ya está en «Mis cursos».',
+                ], ['label' => 'Ir a mis cursos', 'path' => '/my-courses']);
 
                 return $order;
             }
@@ -304,9 +323,19 @@ class OrderService
                 $this->audit->record('orders.partially_paid', $order, ['status' => Order::STATUS_PENDING], ['status' => Order::STATUS_PARTIAL, 'number' => $order->number, 'installment' => $installment->number]);
             }
 
-            if (! $order->installments()->where('status', OrderInstallment::STATUS_PENDING)->exists()) {
+            $next = $order->installments()->where('status', OrderInstallment::STATUS_PENDING)->first();
+
+            if ($next === null) {
                 $this->markPaid($order, $actor, Order::STATUS_PARTIAL);
             }
+
+            $this->notifier->toUser($order->customer, "Recibimos el pago de tu cuota {$installment->number}", [
+                "Registramos tu pago de {$money} por la cuota {$installment->number} de la orden ".self::code($order).'.',
+                $installment->number === 1 ? 'Ya tienes acceso al curso: está en «Mis cursos».' : null,
+                $next
+                    ? 'Tu siguiente cuota es de '.TenantNotifier::money($order->currency->code, $next->amount).' y vence el '.$next->due_date->format('d/m/Y').'.'
+                    : 'Con esta cuota terminaste de pagar tu compra. ¡Gracias!',
+            ], ['label' => 'Ver mi orden', 'path' => "/my-orders/{$order->id}"]);
 
             return $order;
         });
@@ -354,6 +383,13 @@ class OrderService
                 'reason' => $reason,
                 'reference' => $refunded->pluck('refund_reference')->filter()->unique()->implode(', ') ?: null,
             ]);
+
+            $order->loadMissing(['customer', 'currency']);
+            $this->notifier->toUser($order->customer, 'Tu compra fue reembolsada', [
+                'Se te devolvió '.TenantNotifier::money($order->currency->code, $refunded->sum('amount')).' de la orden '.self::code($order).'.',
+                'Si pagaste en línea, el dinero vuelve al medio con el que pagaste; el plazo depende de tu banco.',
+                'Ya no tienes acceso al curso de esa compra.',
+            ], ['label' => 'Ver mi orden', 'path' => "/my-orders/{$order->id}"]);
 
             return $order;
         });
@@ -658,6 +694,14 @@ class OrderService
         ]);
 
         OrderPaid::dispatch($order, $actor);
+    }
+
+    /**
+     * Número de la orden como lo ve la persona.
+     */
+    private static function code(Order $order): string
+    {
+        return 'N.º '.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT);
     }
 
     /**

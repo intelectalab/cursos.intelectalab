@@ -4,12 +4,14 @@ namespace App\Modules\Identity\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Shared\Http\ApiException;
 use Illuminate\Support\Facades\DB;
 
 class UserService
 {
     public function __construct(
+        private readonly TenantNotifier $notifier,
         private readonly RoleService $roles,
         private readonly AuditLogger $audit,
     ) {}
@@ -33,6 +35,11 @@ class UserService
 
             $this->audit->record('users.created', $user, null, $this->snapshot($user));
             $this->roles->assignToUser($actor, $user, $data['roles']);
+
+            $this->notifier->toUser($user, 'Tu cuenta está lista', [
+                "Te crearon una cuenta. Entra con tu correo ({$user->email}) y la contraseña que te entregaron.",
+                'Si no la tienes, usa «¿Olvidaste tu contraseña?» en la pantalla de acceso para crear una.',
+            ], ['label' => 'Iniciar sesión', 'path' => '/login']);
 
             return $user;
         });

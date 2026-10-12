@@ -127,11 +127,10 @@ export const Login: React.FC = () => {
               </svg>
             </div>
             <div>
-              <span className="font-extrabold text-xl tracking-tight text-white drop-shadow-sm">
-                Intelecta<span className="text-[#38BDF8]">Lab_</span>
-              </span>
-              <span className="block text-[9px] uppercase tracking-widest font-semibold text-blue-200">
-                SaaS Enterprise Suite
+              {/* Quien entra viene a su academia: manda su nombre; la plataforma queda como firma */}
+              <span className="block font-extrabold text-xl tracking-tight text-white drop-shadow-sm">{tenant?.name ?? 'IntelectaLab'}</span>
+              <span className="block text-[11px] font-semibold text-blue-200">
+                con Intelecta<span className="text-[#38BDF8]">Lab_</span>
               </span>
             </div>
           </div>
@@ -142,7 +141,7 @@ export const Login: React.FC = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <span className="text-[11px] font-medium tracking-wide">Multi-Tenant v12.0</span>
+            <span className="text-[11px] font-medium tracking-wide">Campus en línea</span>
           </div>
         </div>
 
@@ -150,18 +149,18 @@ export const Login: React.FC = () => {
         <div className="relative z-10 my-auto py-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#38BDF8]/10 border border-[#38BDF8]/25 text-[#38BDF8] text-xs font-semibold uppercase tracking-wider mb-5">
             <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '8s' }} />
-            Arquitectura de Aislamiento PostgreSQL
+            Campus virtual
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.12] max-w-xl text-white mb-5 drop-shadow">
-            Toda tu operación, <br />
+            Aprende a tu ritmo, <br />
             <span className="bg-gradient-to-r from-white via-blue-100 to-[#38BDF8] bg-clip-text text-transparent">
-              en un solo lugar.
+              desde donde estés.
             </span>
           </h1>
 
           <p className="text-blue-100/80 text-sm sm:text-base max-w-lg leading-relaxed mb-10 font-normal">
-            Aprovisiona organizaciones, coordina roles con permisos RBAC en tiempo real y administra datos de alta escala de manera blindada e independiente.
+            Entra a {tenant?.name ?? 'tu academia'}: sigue tus clases, rinde tus evaluaciones y descarga tus certificados, todo en un mismo lugar.
           </p>
 
           {/* 3 Tarjetas Traslúcidas Reactivas al Cursor */}
@@ -172,10 +171,10 @@ export const Login: React.FC = () => {
                 <Users className="w-4 h-4" />
               </div>
               <p className="text-xs font-semibold text-white/95 leading-snug">
-                Gestión centralizada
+                Tus cursos
               </p>
               <p className="text-[10px] text-blue-200/65 mt-1 leading-tight">
-                Control multiorganización sin fricciones
+                Clases y materiales siempre a la mano
               </p>
             </div>
 
@@ -184,10 +183,10 @@ export const Login: React.FC = () => {
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <p className="text-xs font-semibold text-white/95 leading-snug">
-                Matriz RBAC granular
+                Evaluaciones y notas
               </p>
               <p className="text-[10px] text-blue-200/65 mt-1 leading-tight">
-                Permisos validados en middleware
+                Tu avance al día, curso por curso
               </p>
             </div>
 
@@ -196,10 +195,10 @@ export const Login: React.FC = () => {
                 <Building2 className="w-4 h-4" />
               </div>
               <p className="text-xs font-semibold text-white/95 leading-snug">
-                Multi-tenant real
+                Certificados
               </p>
               <p className="text-[10px] text-blue-200/65 mt-1 leading-tight">
-                Aislamiento estricto en BD
+                Con código para comprobarlos
               </p>
             </div>
 

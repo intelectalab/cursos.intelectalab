@@ -8,6 +8,7 @@ use App\Modules\B2b\Domain\Models\CorporateMember;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\Role;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,10 @@ use Illuminate\Support\Facades\DB;
  */
 class MemberService
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly TenantNotifier $notifier,
+        private readonly AuditLogger $audit,
+    ) {}
 
     /**
      * Registra a una persona en la empresa. Crea su cuenta con el rol que le
@@ -55,6 +59,11 @@ class MemberService
                 ]);
 
                 $this->audit->record('users.created', $user, null, $user->only(['email', 'first_name', 'last_name', 'status']));
+
+                $this->notifier->toUser($user, 'Tu cuenta está lista', [
+                    "Tu empresa te registró para llevar cursos. Entra con tu correo ({$user->email}) y la contraseña que te entregaron.",
+                    'Si no la tienes, usa «¿Olvidaste tu contraseña?» en la pantalla de acceso para crear una.',
+                ], ['label' => 'Iniciar sesión', 'path' => '/login']);
             }
 
             $role = Role::query()

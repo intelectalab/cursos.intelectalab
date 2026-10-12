@@ -9,6 +9,7 @@ use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Support\Domain\Models\Ticket;
 use App\Modules\Support\Domain\Models\TicketMessage;
+use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Tenancy\TenantContext;
@@ -26,6 +27,7 @@ class TicketService
     private const AGENT_PERMISSIONS = ['*', 'tickets.*', 'tickets.manage'];
 
     public function __construct(
+        private readonly TenantNotifier $notifier,
         private readonly FileStorage $storage,
         private readonly TenantContext $context,
         private readonly AuditLogger $audit,
@@ -134,6 +136,11 @@ class TicketService
                     'status' => $ticket->status === Ticket::STATUS_OPEN ? Ticket::STATUS_IN_PROGRESS : $ticket->status,
                     'assignee_id' => $ticket->assignee_id ?? $author->id,
                 ]);
+
+                $ticket->loadMissing('requester');
+                $this->notifier->toUser($ticket->requester, 'Respondimos tu consulta #'.str_pad((string) $ticket->number, 4, '0', STR_PAD_LEFT), [
+                    "Hay una respuesta nueva en tu consulta «{$ticket->subject}».",
+                ], ['label' => 'Ver la respuesta', 'path' => '/help']);
             }
 
             return $ticket;

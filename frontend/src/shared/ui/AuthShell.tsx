@@ -19,10 +19,19 @@ export const BrandMark: React.FC<{ tagline?: string }> = ({ tagline }) => (
       </svg>
     </div>
     <div className="leading-tight">
-      <span className="font-extrabold text-xl tracking-tight text-white">
-        Intelecta<span className="text-sky-400">Lab_</span>
-      </span>
-      {tagline && <span className="block text-[11px] font-medium text-brand-200">{tagline}</span>}
+      {tagline ? (
+        // Dentro de una academia manda su nombre; la plataforma queda como firma
+        <>
+          <span className="block font-extrabold text-xl tracking-tight text-white">{tagline}</span>
+          <span className="block text-[11px] font-medium text-brand-200">
+            con Intelecta<span className="text-sky-400">Lab_</span>
+          </span>
+        </>
+      ) : (
+        <span className="font-extrabold text-xl tracking-tight text-white">
+          Intelecta<span className="text-sky-400">Lab_</span>
+        </span>
+      )}
     </div>
   </div>
 );

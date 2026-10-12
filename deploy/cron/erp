@@ -1,0 +1,8 @@
+# Tareas programadas de la plataforma. Copiar a /etc/cron.d/erp (dueño root, permisos 644).
+
+# Cada minuto Laravel decide qué toca: vencer órdenes, cerrar tickets, traer el tipo de cambio,
+# enviar los recordatorios de cuotas y de accesos por vencer, y limpiar sesiones.
+* * * * * www-data cd /var/www/erp/backend && php artisan schedule:run >> /dev/null 2>&1
+
+# Copia de seguridad diaria a las 2:30 a. m. (hora del servidor)
+30 2 * * * root /var/www/erp/deploy/scripts/backup.sh >> /var/log/erp-backup.log 2>&1

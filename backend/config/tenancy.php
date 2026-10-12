@@ -15,6 +15,14 @@ return [
     'central_domain' => env('TENANCY_CENTRAL_DOMAIN', 'localhost'),
 
     /*
+    | Dirección pública de cada organización, con {tenant} en el lugar de su
+    | subdominio. La usan los enlaces de los correos que salen de tareas
+    | programadas. Vacío: https (o el esquema de APP_URL) y el dominio central.
+    */
+
+    'public_url' => env('TENANCY_PUBLIC_URL'),
+
+    /*
     |--------------------------------------------------------------------------
     | Subdominios reservados
     |--------------------------------------------------------------------------

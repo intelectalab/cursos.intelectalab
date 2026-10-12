@@ -6,6 +6,7 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use Carbon\CarbonInterface;
@@ -24,6 +25,7 @@ class EnrollmentService
     public const STUDENT_PERMISSION = 'student.portal';
 
     public function __construct(
+        private readonly TenantNotifier $notifier,
         private readonly AuditLogger $audit,
         private readonly EnrollmentQuota $quota,
     ) {}
@@ -131,6 +133,14 @@ class EnrollmentService
                         'source' => $enrollment->source,
                         'ends_at' => $endsAt?->toDateString(),
                     ]);
+
+                    // Quien compra ya recibe el aviso de su pago
+                    if ($source !== Enrollment::SOURCE_PURCHASE) {
+                        $this->notifier->toUser($student, "Ya tienes acceso a «{$course->title}»", [
+                            "Te matricularon en el curso «{$course->title}».",
+                            $endsAt ? 'Tu acceso está disponible hasta el '.$endsAt->format('d/m/Y').'.' : null,
+                        ], ['label' => 'Entrar al curso', 'path' => "/my-courses/{$course->id}"]);
+                    }
 
                     return $enrollment;
                 })

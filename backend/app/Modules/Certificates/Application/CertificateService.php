@@ -12,6 +12,7 @@ use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Http\ClassroomPresenter;
 use App\Modules\Files\Domain\Models\File;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
@@ -30,6 +31,7 @@ class CertificateService
     private const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
     public function __construct(
+        private readonly TenantNotifier $notifier,
         private readonly AuditLogger $audit,
         private readonly GradebookService $gradebook,
     ) {}
@@ -84,6 +86,11 @@ class CertificateService
                 'course' => $enrollment->course->title,
                 'automatic' => $actor === null,
             ], $actor?->id);
+
+            $this->notifier->toUser($enrollment->student, "Tu certificado de «{$enrollment->course->title}» está listo", [
+                "Completaste el curso «{$enrollment->course->title}» y ya puedes descargar tu certificado.",
+                "Código de verificación: {$certificate->verification_code}. Cualquiera puede comprobarlo en la página de verificación.",
+            ], ['label' => 'Ver mi certificado', 'path' => '/my-certificates']);
 
             return $certificate;
         });

@@ -22,6 +22,9 @@ Schedule::command('idempotency:prune')->daily();
 // Tipo de cambio de las organizaciones que lo tienen en automático. SUNAT lo publica a primera hora
 Schedule::command('exchange-rates:sync')->dailyAt('07:00');
 
+// Recordatorios por correo: cuotas por vencer y vencidas, y accesos a cursos por terminar
+Schedule::command('reminders:send')->dailyAt('08:00');
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');

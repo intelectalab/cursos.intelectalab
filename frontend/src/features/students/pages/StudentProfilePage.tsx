@@ -4,6 +4,7 @@ import { ArrowLeft, Award, BookOpen, Building2, LifeBuoy, Mail, Phone, Receipt, 
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Avatar, Badge, Card, CardHeader, EmptyState, ErrorState, LoadingState, StatCard, Table, TBody, Td, Th, THead, Tr, type Tone } from '../../../shared/ui';
 import { toScale } from '../../academic/api';
+import { formatMoney } from '../../sales/api';
 import { OrderStatusBadge } from '../../sales/components/OrderParts';
 import { studentsApi, type StudentEnrollment, type StudentProfile, type StudentTicket } from '../api';
 
@@ -114,7 +115,7 @@ export const StudentProfilePage: React.FC = () => {
         />
         <StatCard
           label="Pagado"
-          value={paid.length === 0 ? '—' : paid.map(([currency, amount]) => `${currency} ${amount.toFixed(2)}`).join(' · ')}
+          value={paid.length === 0 ? '—' : paid.map(([currency, amount]) => formatMoney(amount, currency)).join(' · ')}
           hint={`${orders.length} ${orders.length === 1 ? 'compra' : 'compras'}`}
           icon={Receipt}
           tone="success"

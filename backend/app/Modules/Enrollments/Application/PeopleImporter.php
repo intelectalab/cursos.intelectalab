@@ -8,6 +8,7 @@ use App\Modules\Identity\Application\RoleService;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\Group;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Import\Importer;
@@ -32,6 +33,7 @@ class PeopleImporter extends Importer
     private bool $canEnroll = false;
 
     public function __construct(
+        private readonly TenantNotifier $notifier,
         private readonly EnrollmentService $enrollments,
         private readonly RoleService $roles,
         private readonly AuditLogger $audit,
@@ -171,6 +173,10 @@ class PeopleImporter extends Importer
                 'must_change_password' => true,
             ]);
             $this->audit->record('users.created', $user, null, $user->only(['email', 'first_name', 'last_name']) + ['source' => 'import']);
+            $this->notifier->toUser($user, 'Tu cuenta está lista', [
+                "Te crearon una cuenta. Entra con tu correo ({$user->email}); tu contraseña temporal es tu número de documento.",
+                'Al entrar por primera vez el sistema te pedirá cambiarla.',
+            ], ['label' => 'Iniciar sesión', 'path' => '/login']);
             $this->roles->grantBaseRole($user, RoleCatalog::STUDENT);
 
             $messages[] = 'Cuenta nueva: entra con su correo y su documento como contraseña temporal.';

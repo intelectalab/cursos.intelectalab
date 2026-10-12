@@ -110,6 +110,9 @@ return [
     |
     */
 
+    // Los avisos a las personas se envían en segundo plano (necesita un proceso de cola en marcha)
+    'queue' => (bool) env('MAIL_QUEUE', false),
+
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
