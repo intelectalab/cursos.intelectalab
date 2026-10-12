@@ -54,6 +54,25 @@ class GatewayAccount extends Model
     }
 
     /**
+     * Con qué se reconoce esta cuenta en la pasarela. Las conectadas antes
+     * de guardar su identificador se reconocen por su nombre.
+     */
+    public function reference(): ?string
+    {
+        return self::referenceOf($this->display);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $display
+     */
+    public static function referenceOf(?array $display): ?string
+    {
+        $reference = (string) ($display['id'] ?? $display['name'] ?? '');
+
+        return $reference !== '' ? mb_substr($reference, 0, 120) : null;
+    }
+
+    /**
      * La cuenta tal como la necesita la pasarela para cobrar.
      */
     public function forGateway(): GatewayCredentials

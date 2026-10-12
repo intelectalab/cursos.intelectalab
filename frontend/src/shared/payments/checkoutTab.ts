@@ -6,6 +6,10 @@ const CHANNEL = 'checkout-tab';
 
 type Message = { type: 'returned' | 'ack'; key: string };
 
+// La pestaña de pago que abrió esta página. Un navegador solo deja que una pestaña se cierre a sí misma en
+// contados casos, y al volver de la pasarela suele negarlo: quien la abrió sí puede cerrarla siempre
+let opened: Window | null = null;
+
 // Abre la pestaña en el mismo clic. Si se abriera después de esperar al servidor, el navegador la bloquearía
 export const openCheckoutTab = (): Window | null => {
   const tab = window.open('', '_blank');
@@ -25,11 +29,13 @@ export const sendToCheckout = (tab: Window | null, url: string): boolean => {
   }
   tab.opener = null;
   tab.location.replace(url);
+  opened = tab;
   return true;
 };
 
 export const closeCheckoutTab = (tab: Window | null) => {
   if (tab && !tab.closed) tab.close();
+  if (tab === opened) opened = null;
 };
 
 interface Options {
@@ -57,9 +63,11 @@ export const useCheckoutTab = ({ key, waiting, returned, onCheck }: Options): bo
     const channel = new BroadcastChannel(CHANNEL);
     channel.onmessage = (event: MessageEvent<Message>) => {
       if (event.data?.key !== key) return;
-      if (event.data.type === 'returned' && live.current.waiting) {
+      // También responde si ya no espera: pudo ver el pago antes de que la otra pestaña volviera
+      if (event.data.type === 'returned' && (live.current.waiting || opened)) {
         channel.postMessage({ type: 'ack', key } satisfies Message);
-        live.current.onCheck();
+        closeCheckoutTab(opened);
+        if (live.current.waiting) live.current.onCheck();
       }
       if (event.data.type === 'ack' && returned) {
         setSpare(true);
@@ -69,6 +77,13 @@ export const useCheckoutTab = ({ key, waiting, returned, onCheck }: Options): bo
     if (returned) channel.postMessage({ type: 'returned', key } satisfies Message);
     return () => channel.close();
   }, [key, returned]);
+
+  // Cuando deja de esperar (el pago ya se ve, o la orden cambió), la pestaña del pago sobra aunque siga en la pasarela
+  const wasWaiting = useRef(false);
+  useEffect(() => {
+    if (wasWaiting.current && !waiting) closeCheckoutTab(opened);
+    wasWaiting.current = waiting;
+  }, [waiting]);
 
   // Al regresar a la pestaña que espera, se comprueba el pago sin que la persona tenga que pedirlo
   useEffect(() => {

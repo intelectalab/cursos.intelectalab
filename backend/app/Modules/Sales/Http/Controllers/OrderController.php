@@ -208,7 +208,10 @@ class OrderController extends Controller
 
     public function show(Order $order): JsonResponse
     {
-        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+        $order->load(self::RELATIONS);
+
+        // Solo en el detalle: avisa si la orden se cobró con otra cuenta de la pasarela que la conectada hoy
+        return ApiResponse::success(OrderPresenter::make($order) + ['account_warning' => $this->online->accountWarning($order)]);
     }
 
     /**
@@ -405,7 +408,9 @@ class OrderController extends Controller
      */
     public function recheckPayment(Order $order): JsonResponse
     {
-        return ApiResponse::success(OrderPresenter::make($this->online->recheck($order)->load(self::RELATIONS)));
+        $order = $this->online->recheck($order)->load(self::RELATIONS);
+
+        return ApiResponse::success(OrderPresenter::make($order) + ['account_warning' => $this->online->accountWarning($order)]);
     }
 
     /**

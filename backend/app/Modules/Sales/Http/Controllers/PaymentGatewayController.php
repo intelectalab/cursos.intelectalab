@@ -3,7 +3,9 @@
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Sales\Application\Payments\Online\GatewayErrorLog;
 use App\Modules\Sales\Application\Payments\Online\OnlinePaymentService;
+use App\Modules\Sales\Domain\Models\GatewayError;
 use App\Shared\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +16,18 @@ use Illuminate\Http\Request;
  */
 class PaymentGatewayController extends Controller
 {
-    public function __construct(private readonly OnlinePaymentService $payments) {}
+    public function __construct(
+        private readonly OnlinePaymentService $payments,
+        private readonly GatewayErrorLog $errors,
+    ) {}
+
+    /**
+     * Lo último que las pasarelas rechazaron o no respondieron con la cuenta de la organización.
+     */
+    public function errors(): JsonResponse
+    {
+        return ApiResponse::success($this->errors->latest(GatewayError::SCOPE_TENANT));
+    }
 
     public function index(): JsonResponse
     {

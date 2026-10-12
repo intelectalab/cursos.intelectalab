@@ -39,6 +39,8 @@ class PaymentAttempt extends Model
         'currency',
         'exchange_rate',
         'checkout_url',
+        'account_ref',
+        'account_name',
         'review_reason',
         'resolved_at',
         'resolved_by',

@@ -27,6 +27,7 @@ Route::prefix('platform')->middleware(['central', 'auth:sanctum', 'platform.admi
 
     // Cuentas de la plataforma en las pasarelas: con ellas cobra los planes en línea
     Route::get('/payment-gateways', [PlatformGatewayController::class, 'index']);
+    Route::get('/payment-gateways/errors', [PlatformGatewayController::class, 'errors']);
     Route::put('/payment-gateways/{gateway}', [PlatformGatewayController::class, 'update']);
     Route::delete('/payment-gateways/{gateway}', [PlatformGatewayController::class, 'destroy']);
 });

@@ -5,7 +5,9 @@ namespace App\Modules\Billing\Application;
 use App\Modules\Billing\Domain\Models\PlanOrder;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Application\Payments\Online\Charge;
+use App\Modules\Sales\Application\Payments\Online\GatewayErrorLog;
 use App\Modules\Sales\Application\Payments\Online\GatewayPayment;
+use App\Modules\Sales\Domain\Models\GatewayError;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Tenancy\TenantContext;
@@ -24,6 +26,7 @@ class PlanOnlinePayments
         private readonly PlatformGateways $gateways,
         private readonly PlanOrderService $orders,
         private readonly TenantContext $context,
+        private readonly GatewayErrorLog $errors,
     ) {}
 
     /**
@@ -54,7 +57,7 @@ class PlanOnlinePayments
 
         $quote = $this->gateways->quote($code, (string) $order->amount, $order->currency);
 
-        $checkout = $this->gateways->gateway($code)->startCheckout($this->gateways->credentials($code), new Charge(
+        $checkout = $this->errors->watch(GatewayError::SCOPE_PLATFORM, $code, GatewayError::OPERATION_CHECKOUT, "Plan {$order->code()}", fn () => $this->gateways->gateway($code)->startCheckout($this->gateways->credentials($code), new Charge(
             reference: $order->id,
             title: "IntelectaLab · Plan {$order->plan_name} ({$order->code()})",
             amount: $quote->amount,
@@ -63,7 +66,9 @@ class PlanOnlinePayments
             payerFirstName: $payer->first_name,
             payerLastName: $payer->last_name,
             expiresAt: $order->expires_at,
-        ), $urls);
+        ), $urls));
+
+        $collector = $this->gateways->account($code);
 
         $order->update([
             'gateway' => $code,
@@ -71,6 +76,9 @@ class PlanOnlinePayments
             // Lo que se le pidió cobrar a la pasarela: es contra lo que se comprueba el pago
             'gateway_amount' => $quote->amount,
             'gateway_currency' => $quote->currency,
+            // Con qué cuenta de la plataforma se cobra: si después se conecta otra, no podrá consultarlo ni devolverlo
+            'gateway_account_ref' => $collector['ref'] ?? null,
+            'gateway_account_name' => $collector['name'] ?? null,
         ]);
 
         return $checkout['checkout_url'];
@@ -88,7 +96,9 @@ class PlanOnlinePayments
             return $order;
         }
 
-        foreach ($this->gateways->gateway($order->gateway)->paymentsFor($account, $order->id, $order->gateway_checkout_id) as $payment) {
+        $payments = $this->errors->watch(GatewayError::SCOPE_PLATFORM, $order->gateway, GatewayError::OPERATION_SYNC, "Plan {$order->code()}", fn () => $this->gateways->gateway($order->gateway)->paymentsFor($account, $order->id, $order->gateway_checkout_id));
+
+        foreach ($payments as $payment) {
             if ($payment->isApproved()) {
                 return $this->apply($order, $payment, $order->gateway);
             }
@@ -112,8 +122,18 @@ class PlanOnlinePayments
             throw new ApiException(ErrorCode::GatewayNotAvailable, 'La cuenta con la que se cobró este pago ya no está conectada. Vuelve a conectarla en Planes para poder devolverlo.', 409);
         }
 
+        $collector = $this->gateways->account((string) $order->gateway);
+
+        // Devolver con otra cuenta que la que cobró no funciona: se dice antes de pedirlo a la pasarela
+        if ($order->gateway_account_ref !== null && ($collector['ref'] ?? null) !== $order->gateway_account_ref) {
+            $was = $order->gateway_account_name ?? $order->gateway_account_ref;
+            $now = $collector['name'] ?? $collector['ref'] ?? 'otra';
+
+            throw new ApiException(ErrorCode::GatewayNotAvailable, "Este pago lo cobró la cuenta «{$was}» y hoy está conectada «{$now}»: con esta no se puede devolver. Vuelve a conectar «{$was}» en Planes para devolverlo.", 409);
+        }
+
         // Primero el dinero: si la pasarela no devuelve, la orden y el plan quedan como estaban
-        $refundId = $this->gateways->gateway($order->gateway)->refund($account, (string) $order->gateway_payment_id);
+        $refundId = $this->errors->watch(GatewayError::SCOPE_PLATFORM, (string) $order->gateway, GatewayError::OPERATION_REFUND, "Plan {$order->code()}", fn () => $this->gateways->gateway($order->gateway)->refund($account, (string) $order->gateway_payment_id));
 
         return $this->orders->revert($order, $reason, $platformAdmin, $refundId);
     }
@@ -130,7 +150,7 @@ class PlanOnlinePayments
             return;
         }
 
-        $payment = $this->gateways->gateway($code)->paymentFromWebhook($account, $request);
+        $payment = $this->errors->watch(GatewayError::SCOPE_PLATFORM, $code, GatewayError::OPERATION_WEBHOOK, null, fn () => $this->gateways->gateway($code)->paymentFromWebhook($account, $request));
 
         if ($payment === null || ! Str::isUuid((string) $payment->orderReference)) {
             return;

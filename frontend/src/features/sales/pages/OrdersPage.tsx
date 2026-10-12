@@ -248,6 +248,7 @@ const OrderModal: React.FC<{
               </p>
             )}
             {order.status === 'CANCELLED' && <p className="text-xs text-slate-500">Cancelada el {formatDateTime(order.cancelled_at)}.</p>}
+            {order.account_warning && <Alert tone="warning">{order.account_warning}</Alert>}
             {order.payment_reviews.map((review) => (
               <Alert key={review.id}>
                 {PAYMENT_GATEWAY_LABEL[review.gateway] ?? review.gateway} cobró un pago (n.º {review.payment_id}) que no se aplicó a esta orden. {review.reason} Revísalo en tu
@@ -437,13 +438,18 @@ export const OrdersPage: React.FC = () => {
   // Orden que pide abrir un enlace (por ejemplo, el aviso de una cuota vencida)
   const linked = searchParams.get('order');
 
+  // El aviso de «otra cuenta» solo viene en el detalle: una respuesta que no lo trae conserva el que ya se veía
+  const show = useCallback((order: Order) => {
+    setOpen((current) => (order.account_warning === undefined && current?.id === order.id ? { ...order, account_warning: current.account_warning } : order));
+  }, []);
+
   const openById = useCallback(async (orderId: string) => {
     try {
-      setOpen(await salesApi.order(orderId));
+      show(await salesApi.order(orderId));
     } catch {
       // Si la orden ya no existe, la lista sigue a la vista
     }
-  }, []);
+  }, [show]);
 
   useEffect(() => {
     if (!linked) return;
@@ -589,7 +595,13 @@ export const OrdersPage: React.FC = () => {
                   </Td>
                   <Td className="text-right font-semibold text-slate-900 tnum whitespace-nowrap">{formatMoney(order.total_amount, order.currency)}</Td>
                   <Td className="text-right">
-                    <Button size="sm" onClick={() => setOpen(order)} aria-label={`Ver la orden ${orderCode(order.number)}`}>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        show(order);
+                        void openById(order.id);
+                      }}
+                      aria-label={`Ver la orden ${orderCode(order.number)}`}>
                       Ver
                     </Button>
                   </Td>

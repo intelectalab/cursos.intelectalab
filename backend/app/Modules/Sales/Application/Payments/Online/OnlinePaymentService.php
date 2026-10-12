@@ -7,6 +7,7 @@ use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Application\Exchange\ExchangeRateService;
 use App\Modules\Sales\Application\OrderService;
 use App\Modules\Sales\Domain\Models\GatewayAccount;
+use App\Modules\Sales\Domain\Models\GatewayError;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\Payment;
@@ -40,6 +41,7 @@ class OnlinePaymentService
         private readonly TenantSettingsService $settings,
         private readonly AuditLogger $audit,
         private readonly ExchangeRateService $rates,
+        private readonly GatewayErrorLog $errors,
     ) {}
 
     /**
@@ -102,7 +104,7 @@ class OnlinePaymentService
     public function connect(string $code, array $credentials, bool $enabled = true): GatewayAccount
     {
         $gateway = $this->gateway($code);
-        $display = $gateway->describeAccount($credentials);
+        $display = $this->errors->watch(GatewayError::SCOPE_TENANT, $code, GatewayError::OPERATION_CONNECT, null, fn () => $gateway->describeAccount($credentials));
 
         return DB::transaction(function () use ($code, $credentials, $display, $enabled) {
             $account = GatewayAccount::query()->updateOrCreate(['gateway' => $code], [
@@ -207,7 +209,7 @@ class OnlinePaymentService
         // En una orden en cuotas se cobra la siguiente
         $installment = $this->nextInstallment($order);
 
-        $checkout = $gateway->startCheckout($account->forGateway(), new Charge(
+        $checkout = $this->errors->watch(GatewayError::SCOPE_TENANT, $code, GatewayError::OPERATION_CHECKOUT, $this->subject($order), fn () => $gateway->startCheckout($account->forGateway(), new Charge(
             reference: $order->id,
             title: 'Orden '.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT).' · '.($order->package_title ?? $order->items->first()?->title)
                 .($installment ? " · cuota {$installment->number} de ".$order->installments()->count() : ''),
@@ -218,7 +220,7 @@ class OnlinePaymentService
             payerLastName: $order->customer->last_name,
             // Pasado el plazo de la orden, la pasarela ya no la cobra. Una cuota posterior no vence: se cobra aunque llegue tarde
             expiresAt: $order->expires_at,
-        ), $urls);
+        ), $urls));
 
         return PaymentAttempt::create([
             'order_id' => $order->id,
@@ -230,6 +232,9 @@ class OnlinePaymentService
             'currency' => $quote->currency,
             'exchange_rate' => $quote->rate,
             'checkout_url' => $checkout['checkout_url'],
+            // Con qué cuenta se cobra: si después se conecta otra, este pago no se podrá consultar ni devolver con ella
+            'account_ref' => $account->reference(),
+            'account_name' => $account->display['name'] ?? null,
         ]);
     }
 
@@ -254,7 +259,7 @@ class OnlinePaymentService
                 continue;
             }
 
-            foreach ($this->gateway($attempt->gateway)->paymentsFor($account->forGateway(), $order->id, $attempt->external_id) as $payment) {
+            foreach ($this->paymentsAt($order, $attempt, $account) as $payment) {
                 // En una orden en cuotas la pasarela devuelve también los pagos de las cuotas anteriores, ya aplicados
                 if ($payment->isApproved() && ! $this->alreadyApplied($order, $payment, $attempt->gateway)) {
                     return $this->apply($order, $payment, $attempt->gateway);
@@ -263,6 +268,84 @@ class OnlinePaymentService
         }
 
         return $order;
+    }
+
+    /**
+     * Lo que la pasarela tiene de ese cobro, con la cuenta conectada hoy.
+     *
+     * @return list<GatewayPayment>
+     */
+    private function paymentsAt(Order $order, PaymentAttempt $attempt, GatewayAccount $account): array
+    {
+        return $this->errors->watch(
+            GatewayError::SCOPE_TENANT,
+            $attempt->gateway,
+            GatewayError::OPERATION_SYNC,
+            $this->subject($order),
+            fn () => $this->gateway($attempt->gateway)->paymentsFor($account->forGateway(), $order->id, $attempt->external_id)
+        );
+    }
+
+    private function subject(Order $order): string
+    {
+        return 'Orden '.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Aviso para el personal cuando algún cobro de la orden se hizo con una
+     * cuenta distinta de la conectada hoy: con esta no se puede consultar ni
+     * devolver. Null si todo se cobró con la cuenta actual, o si no se sabe.
+     * Espera attempts cargados.
+     */
+    public function accountWarning(Order $order): ?string
+    {
+        $accounts = null;
+
+        foreach ($order->attempts as $attempt) {
+            if ($attempt->account_ref === null || ! in_array($attempt->status, [PaymentAttempt::STATUS_APPROVED, PaymentAttempt::STATUS_NEEDS_REVIEW], true)) {
+                continue;
+            }
+
+            $accounts ??= GatewayAccount::query()->get()->keyBy('gateway');
+            $current = $accounts->get($attempt->gateway);
+            $label = $this->gateway($attempt->gateway)->label();
+            $was = $attempt->account_name ?? $attempt->account_ref;
+
+            if ($current === null) {
+                return "Este pago lo cobró la cuenta «{$was}» de {$label}, que ya no está conectada. Para consultarlo o devolverlo desde aquí hay que volver a conectarla en Configuración.";
+            }
+
+            if ($current->reference() !== $attempt->account_ref) {
+                $now = $current->display['name'] ?? $current->reference();
+
+                return "Este pago lo cobró la cuenta «{$was}» de {$label} y hoy está conectada «{$now}». Con la cuenta actual no se puede consultar ni devolver: vuelve a conectar «{$was}» en Configuración, o gestiona el pago desde esa cuenta de {$label}.";
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Devolver con otra cuenta que la que cobró no funciona, y la pasarela
+     * solo responde que no encuentra el pago: se dice antes y con claridad.
+     */
+    private function assertCollectedBy(Order $order, Payment $payment, GatewayAccount $account): void
+    {
+        $attempt = PaymentAttempt::query()->where('order_id', $order->id)->where('gateway', $payment->gateway)->where('external_payment_id', $payment->reference)->first();
+
+        if ($attempt?->account_ref === null || $attempt->account_ref === $account->reference()) {
+            return;
+        }
+
+        $label = $this->gateway($payment->gateway)->label();
+        $was = $attempt->account_name ?? $attempt->account_ref;
+        $now = $account->display['name'] ?? $account->reference();
+
+        throw new ApiException(
+            ErrorCode::GatewayNotAvailable,
+            "Este pago lo cobró la cuenta «{$was}» de {$label} y hoy está conectada «{$now}»: con esta no se puede devolver. Vuelve a conectar «{$was}» en Configuración, o devuelve el dinero desde esa cuenta de {$label} y marca aquí que ya se devolvió por otro medio.",
+            409
+        );
     }
 
     /**
@@ -316,6 +399,10 @@ class OnlinePaymentService
             );
         }
 
+        foreach ($online as $payment) {
+            $this->assertCollectedBy($order, $payment, $accounts[$payment->gateway]);
+        }
+
         foreach ($online as $index => $payment) {
             $gateway = $this->gateway($payment->gateway);
             $account = $accounts[$payment->gateway];
@@ -324,7 +411,7 @@ class OnlinePaymentService
                 // Si el dinero ya se devolvió desde la cuenta de la pasarela, aquí solo falta registrarlo
                 $refundId = $this->alreadyRefundedAtGateway($gateway, $account, $order, (string) $payment->reference)
                     ? 'Devuelto desde la cuenta de '.$gateway->label()
-                    : $gateway->refund($account->forGateway(), (string) $payment->reference);
+                    : $this->errors->watch(GatewayError::SCOPE_TENANT, $payment->gateway, GatewayError::OPERATION_REFUND, $this->subject($order), fn () => $gateway->refund($account->forGateway(), (string) $payment->reference));
             } catch (ApiException $error) {
                 // Primero el dinero: si la pasarela no devuelve, la orden queda como estaba. Lo ya devuelto queda registrado
                 throw $index === 0 ? $error : new ApiException(
@@ -360,7 +447,7 @@ class OnlinePaymentService
                 continue;
             }
 
-            foreach ($this->gateway($attempt->gateway)->paymentsFor($account->forGateway(), $order->id, $attempt->external_id) as $payment) {
+            foreach ($this->paymentsAt($order, $attempt, $account) as $payment) {
                 if ($payment->isApproved() ? ! $this->alreadyApplied($order, $payment, $attempt->gateway) : $payment->status === GatewayPayment::REFUNDED) {
                     $this->apply($order, $payment, $attempt->gateway);
                 }
@@ -431,7 +518,7 @@ class OnlinePaymentService
             return;
         }
 
-        $payment = $this->gateway($code)->paymentFromWebhook($account->forGateway(), $request);
+        $payment = $this->errors->watch(GatewayError::SCOPE_TENANT, $code, GatewayError::OPERATION_WEBHOOK, null, fn () => $this->gateway($code)->paymentFromWebhook($account->forGateway(), $request));
 
         if ($payment === null || ! Str::isUuid((string) $payment->orderReference)) {
             return;

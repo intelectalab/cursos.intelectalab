@@ -126,5 +126,21 @@ class GatewayErrorsTest extends TestCase
 
         $checking = $this->withToken($buyer)->postJson($api("/me/orders/{$order}/pay/sync"))->assertStatus(502)->json('message');
         $this->assertStringContainsString('Si ya pagaste, no vuelvas a pagar', (string) $checking);
+
+        // Todo quedó anotado para el personal, con la causa completa aunque al comprador se le dijera otra cosa
+        $errors = $this->withToken($admin)->getJson($api('/settings/payment-gateways/errors'))->assertOk()->json('data');
+        $this->assertSame(['SYNC', 'CHECKOUT'], array_column($errors, 'operation'));
+        $this->assertSame('Orden 00001', $errors[0]['subject']);
+        $this->assertSame(403, $errors[0]['gateway_status']);
+        $this->assertStringContainsString('conecta la cuenta otra vez', $errors[0]['message']);
+        $this->assertNotEmpty($errors[0]['code']);
+        // El mismo error dos veces seguidas (el personal y el comprador) se cuenta, no se repite
+        $this->assertSame(2, $errors[0]['occurrences']);
+        $this->assertSame(1, $errors[1]['occurrences']);
+
+        // El comprador no los ve, y otra organización tampoco
+        $this->withToken($buyer)->getJson($api('/settings/payment-gateways/errors'))->assertForbidden();
+        $this->provisionTenant('otra', 'admin@otra.com');
+        $this->withToken($this->login('otra', 'admin@otra.com'))->getJson($this->tenantUrl('otra', '/settings/payment-gateways/errors'))->assertOk()->assertJsonCount(0, 'data');
     }
 }

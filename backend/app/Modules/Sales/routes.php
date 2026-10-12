@@ -43,6 +43,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
 
     // Cuentas de la organización en las pasarelas de pago
     Route::get('/settings/payment-gateways', [PaymentGatewayController::class, 'index'])->middleware('permission:tenant_settings.read');
+    Route::get('/settings/payment-gateways/errors', [PaymentGatewayController::class, 'errors'])->middleware('permission:tenant_settings.read');
     Route::middleware('permission:tenant_settings.update')->group(function () {
         Route::put('/settings/payment-gateways/{gateway}', [PaymentGatewayController::class, 'update']);
         Route::delete('/settings/payment-gateways/{gateway}', [PaymentGatewayController::class, 'destroy']);

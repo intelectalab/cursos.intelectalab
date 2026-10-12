@@ -107,6 +107,8 @@ export interface Order {
   payment_reviews: PaymentReview[];
   // Veces que el comprador fue a pagarla a una pasarela: si hay alguna, se le puede volver a preguntar
   online_attempts: number;
+  // Solo en el detalle: la orden se cobró con otra cuenta de la pasarela que la conectada hoy
+  account_warning?: string | null;
   // Lo cobrado que sigue en pie (es lo que devolvería un reembolso): el pago único o el de cada cuota
   collected: { amount: string; payments: number; online_amount: string; manual_amount: string; gateways: string[] };
   refunded_amount: string;

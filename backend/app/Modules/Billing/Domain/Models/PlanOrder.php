@@ -61,6 +61,8 @@ class PlanOrder extends Model
         'gateway_payment_id',
         'gateway_amount',
         'gateway_currency',
+        'gateway_account_ref',
+        'gateway_account_name',
         'review_reason',
     ];
 

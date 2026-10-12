@@ -5,6 +5,8 @@ namespace App\Modules\Billing\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Billing\Application\PlanOnlinePayments;
 use App\Modules\Billing\Application\PlatformGateways;
+use App\Modules\Sales\Application\Payments\Online\GatewayErrorLog;
+use App\Modules\Sales\Domain\Models\GatewayError;
 use App\Shared\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +20,16 @@ class PlatformGatewayController extends Controller
     public function __construct(
         private readonly PlatformGateways $gateways,
         private readonly PlanOnlinePayments $payments,
+        private readonly GatewayErrorLog $errors,
     ) {}
+
+    /**
+     * Lo último que las pasarelas rechazaron o no respondieron con la cuenta de la plataforma.
+     */
+    public function errors(): JsonResponse
+    {
+        return ApiResponse::success($this->errors->latest(GatewayError::SCOPE_PLATFORM));
+    }
 
     public function index(): JsonResponse
     {

@@ -4,7 +4,10 @@ namespace App\Modules\Billing\Application;
 
 use App\Modules\Sales\Application\Payments\Online\ChargeQuote;
 use App\Modules\Sales\Application\Payments\Online\GatewayCredentials;
+use App\Modules\Sales\Application\Payments\Online\GatewayErrorLog;
 use App\Modules\Sales\Application\Payments\Online\OnlineGateway;
+use App\Modules\Sales\Domain\Models\GatewayAccount;
+use App\Modules\Sales\Domain\Models\GatewayError;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Support\Facades\Crypt;
@@ -26,7 +29,10 @@ class PlatformGateways
     /**
      * @param  iterable<OnlineGateway>  $gateways
      */
-    public function __construct(private readonly iterable $gateways) {}
+    public function __construct(
+        private readonly iterable $gateways,
+        private readonly GatewayErrorLog $errors,
+    ) {}
 
     public function gateway(string $code): OnlineGateway
     {
@@ -81,7 +87,7 @@ class PlatformGateways
      */
     public function connect(string $code, array $credentials, bool $enabled = true): void
     {
-        $display = $this->gateway($code)->describeAccount($credentials);
+        $display = $this->errors->watch(GatewayError::SCOPE_PLATFORM, $code, GatewayError::OPERATION_CONNECT, null, fn () => $this->gateway($code)->describeAccount($credentials));
 
         $this->store($code, [
             'credentials' => Crypt::encryptString((string) json_encode(array_filter($credentials, fn ($value) => is_string($value) && filled($value)))),
@@ -157,6 +163,21 @@ class PlatformGateways
             json_decode(Crypt::decryptString($account['credentials']), true) ?: [],
             (bool) ($account['display']['test'] ?? false)
         );
+    }
+
+    /**
+     * Con qué se reconoce la cuenta conectada hoy y cómo se llama; null si no hay.
+     *
+     * @return array{ref: ?string, name: ?string}|null
+     */
+    public function account(string $code): ?array
+    {
+        $account = $this->stored($code);
+
+        return $account === null ? null : [
+            'ref' => GatewayAccount::referenceOf($account['display'] ?? null),
+            'name' => $account['display']['name'] ?? null,
+        ];
     }
 
     private function exchangeRate(string $code): ?float

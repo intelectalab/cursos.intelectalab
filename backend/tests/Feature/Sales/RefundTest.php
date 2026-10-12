@@ -256,6 +256,35 @@ class RefundTest extends TestCase
         $this->withToken($this->buyer)->getJson($this->api("/me/courses/{$this->course}"))->assertNotFound();
     }
 
+    public function test_a_payment_collected_by_another_account_is_not_refunded_with_the_one_connected_now(): void
+    {
+        $order = $this->orderPaidWithMercadoPago();
+        $detail = fn () => $this->withToken($this->admin)->getJson($this->api("/orders/{$order}"))->assertOk();
+
+        $detail()->assertJsonPath('data.account_warning', null);
+
+        // La academia conecta otra cuenta de Mercado Pago
+        $this->gateways([self::MP.'/users/me' => Http::response(['id' => 100, 'nickname' => 'OTRACUENTA', 'site_id' => 'MPE'])]);
+        $this->withToken($this->admin)->putJson($this->api('/settings/payment-gateways/mercadopago'), ['access_token' => 'APP_USR-clave-de-otra-cuenta'])->assertOk();
+
+        $this->assertStringContainsString('lo cobró la cuenta «ACADEMIAACME» de Mercado Pago y hoy está conectada «OTRACUENTA»', (string) $detail()->json('data.account_warning'));
+
+        // No se le pide la devolución a la cuenta equivocada: se explica antes
+        $this->gateways();
+        $message = $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno desistió de la compra.'])
+            ->assertStatus(409)->assertJsonPath('code', 'GATEWAY_NOT_AVAILABLE')->json('message');
+        $this->assertStringContainsString('Vuelve a conectar «ACADEMIAACME»', (string) $message);
+        Http::assertNothingSent();
+        $detail()->assertJsonPath('data.status', 'PAID');
+
+        // Con la cuenta que cobró conectada otra vez, se devuelve
+        $this->gateways([self::MP.'/users/me' => Http::response(['id' => 99, 'nickname' => 'ACADEMIAACME', 'site_id' => 'MPE'])]);
+        $this->withToken($this->admin)->putJson($this->api('/settings/payment-gateways/mercadopago'), ['access_token' => 'APP_USR-clave-de-la-academia'])->assertOk();
+        $this->gateways([self::MP.'/v1/payments/555001/refunds' => Http::response(['id' => 9001, 'status' => 'approved'], 201)]);
+        $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno desistió de la compra.'])
+            ->assertOk()->assertJsonPath('data.status', 'REFUNDED');
+    }
+
     public function test_a_purchase_paid_with_paypal_refunds_the_capture(): void
     {
         $this->gateways();

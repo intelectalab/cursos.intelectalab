@@ -73,6 +73,8 @@ class PayPalGateway implements OnlineGateway
         $this->assertOk($response);
 
         return [
+            // El Client ID identifica a la aplicación que cobra (no es secreto: es el que PayPal usa en el navegador)
+            'id' => $clientId,
             // PayPal no entrega el nombre de la cuenta con estas claves: se muestra el final del Client ID
             'name' => 'Aplicación …'.substr($clientId, -6),
             'country' => null,

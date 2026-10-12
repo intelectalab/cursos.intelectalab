@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, PlugZap } from 'lucide-react';
+import { ChevronDown, CreditCard, PlugZap, TriangleAlert } from 'lucide-react';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, ConfirmModal, Field, IconChip, INPUT_CLASS, LoadingState } from '../../../shared/ui';
+import { formatDateTime } from '../../sales/api';
 
 type GatewayCode = 'MERCADOPAGO' | 'PAYPAL';
 
@@ -317,6 +318,108 @@ const GatewayCard: React.FC<{ gateway: Gateway; audience: Audience; editable: bo
   );
 };
 
+// Algo que una pasarela rechazó o no respondió
+interface GatewayFailure {
+  id: string;
+  gateway: string;
+  operation: 'CONNECT' | 'CHECKOUT' | 'SYNC' | 'REFUND' | 'WEBHOOK';
+  subject: string | null;
+  message: string;
+  gateway_status: number | null;
+  gateway_reason: string | null;
+  // El mismo «Código» que la pantalla mostró junto al error
+  code: string | null;
+  occurrences: number;
+  first_at: string;
+  last_at: string;
+  // Solo en la consola: academia que estaba pagando
+  tenant: string | null;
+}
+
+const OPERATION_LABEL: Record<GatewayFailure['operation'], string> = {
+  CONNECT: 'Al conectar la cuenta',
+  CHECKOUT: 'Al abrir el pago',
+  SYNC: 'Al comprobar un pago',
+  REFUND: 'Al devolver un pago',
+  WEBHOOK: 'Al recibir un aviso de la pasarela',
+};
+
+const GATEWAY_NAME: Record<string, string> = { MERCADOPAGO: 'Mercado Pago', PAYPAL: 'PayPal' };
+
+const ERRORS_INTRO: Record<Audience, string> = {
+  academy: 'Lo que Mercado Pago o PayPal rechazaron o no respondieron con tu cuenta, con la causa y qué hacer. A quien paga se le muestra un mensaje más sencillo.',
+  platform: 'Lo que Mercado Pago o PayPal rechazaron o no respondieron con la cuenta de IntelectaLab, con la causa y qué hacer.',
+};
+
+// Últimos errores de las pasarelas: se cargan al desplegar la lista
+const GatewayFailures: React.FC<{ audience: Audience }> = ({ audience }) => {
+  const [open, setOpen] = useState(false);
+  const [failures, setFailures] = useState<GatewayFailure[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const toggle = async () => {
+    setOpen(!open);
+    if (open) return;
+    setError(null);
+    try {
+      setFailures((await api.get(`${BASE_PATH[audience]}/errors`)).data.data);
+    } catch (err) {
+      setError(apiErrorMessage(err, 'No se pudieron cargar los errores.'));
+    }
+  };
+
+  return (
+    <div className="mt-5 border-t border-slate-200/80 pt-4">
+      <button type="button" className="flex w-full items-center justify-between gap-3 text-left cursor-pointer" aria-expanded={open} onClick={() => void toggle()}>
+        <span className="flex items-center gap-2 text-[13px] font-semibold text-slate-800">
+          <TriangleAlert className="w-4 h-4 text-amber-600" /> Últimos errores de las pasarelas
+        </span>
+        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="mt-3 space-y-3">
+          <p className="text-[13px] text-slate-500">{ERRORS_INTRO[audience]}</p>
+          {error && <Alert>{error}</Alert>}
+          {!failures && !error && <LoadingState />}
+          {failures && failures.length === 0 && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800">Sin errores registrados: las pasarelas respondieron bien a todo.</p>}
+          {failures && failures.length > 0 && (
+            <ul className="space-y-2.5">
+              {failures.map((failure) => (
+                <li key={failure.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    <Badge tone="warning">{GATEWAY_NAME[failure.gateway] ?? failure.gateway}</Badge>
+                    <span className="text-[13px] font-semibold text-slate-900">
+                      {OPERATION_LABEL[failure.operation] ?? failure.operation}
+                      {failure.subject ? ` · ${failure.subject}` : ''}
+                      {failure.tenant ? ` · ${failure.tenant}` : ''}
+                    </span>
+                    <span className="text-xs text-slate-500 sm:ml-auto">
+                      {formatDateTime(failure.last_at)}
+                      {failure.occurrences > 1 ? ` · ${failure.occurrences} veces desde el ${formatDateTime(failure.first_at)}` : ''}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[13px] text-slate-700">{failure.message}</p>
+                  {(failure.gateway_status || failure.gateway_reason || failure.code) && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {[
+                        failure.gateway_status ? `Respuesta ${failure.gateway_status}` : null,
+                        failure.gateway_reason ? `«${failure.gateway_reason}»` : null,
+                        failure.code ? `Código: ${failure.code}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Cobro en línea: las cuentas que se conectan en cada pasarela de pago
 export const PaymentGatewaysSection: React.FC<{ editable: boolean; audience?: Audience }> = ({ editable, audience = 'academy' }) => {
   const [gateways, setGateways] = useState<Gateway[] | null>(null);
@@ -351,6 +454,7 @@ export const PaymentGatewaysSection: React.FC<{ editable: boolean; audience?: Au
           ))}
         </div>
       )}
+      {gateways && <GatewayFailures audience={audience} />}
     </Card>
   );
 };

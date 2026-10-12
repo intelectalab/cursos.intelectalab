@@ -64,6 +64,8 @@ class MercadoPagoGateway implements OnlineGateway
         $this->assertOk($response);
 
         return [
+            // Identificador de la cuenta en Mercado Pago: dice con cuál se cobró cada pago
+            'id' => filled($response->json('id')) ? (string) $response->json('id') : null,
             'name' => $response->json('nickname') ?: $response->json('email'),
             'country' => $response->json('site_id'),
             // Las claves de prueba no mueven dinero; las de un usuario de prueba empiezan con APP_USR- como las reales
