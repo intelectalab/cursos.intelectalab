@@ -135,6 +135,13 @@ class OnlinePaymentTest extends TestCase
             ->assertJsonPath('data.0.order.status', 'PENDING')
             ->json('data.0.id');
 
+        // La campana del personal lo cuenta; quien no atiende ningún tema no la consulta
+        $this->withToken($this->admin)->getJson($this->api('/alerts/summary'))->assertOk()
+            ->assertJsonPath('data.payment_reviews', 1)
+            ->assertJsonPath('data.tickets_waiting', 0)
+            ->assertJsonPath('data.pages_in_review', 0);
+        $this->withToken($this->buyer)->getJson($this->api('/alerts/summary'))->assertForbidden();
+
         // Solo el personal: ni ver la lista, ni preguntar a la pasarela, ni resolver
         $this->withToken($this->buyer)->getJson($this->api('/orders/payment-reviews'))->assertForbidden();
         $this->withToken($this->buyer)->postJson($this->api("/orders/{$order}/recheck-payment"))->assertForbidden();

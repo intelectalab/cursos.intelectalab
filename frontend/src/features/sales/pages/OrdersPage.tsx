@@ -8,6 +8,7 @@ import {
   Avatar,
   Button,
   Card,
+  CHECKBOX_CLASS,
   EmptyState,
   ErrorState,
   Field,
@@ -65,6 +66,8 @@ const OrderModal: React.FC<{
   const [notice, setNotice] = useState<string | null>(null);
   const [refundReason, setRefundReason] = useState('');
   const [refundReference, setRefundReference] = useState('');
+  // La pasarela ya no deja devolver el pago: el dinero se devolvió por otro medio y solo se registra
+  const [refundOutside, setRefundOutside] = useState(false);
   const [releaseReason, setReleaseReason] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('TRANSFER');
   const [reference, setReference] = useState('');
@@ -355,7 +358,10 @@ const OrderModal: React.FC<{
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              void run(() => salesApi.refundOrder(order.id, refundReason.trim(), refundManual > 0 ? refundReference.trim() || null : null), 'No se pudo reembolsar la orden.');
+              void run(
+                () => salesApi.refundOrder(order.id, refundReason.trim(), refundManual > 0 || refundOutside ? refundReference.trim() || null : null, refundOutside),
+                'No se pudo reembolsar la orden.',
+              );
             }}
           >
             <Alert tone="info">
@@ -384,9 +390,21 @@ const OrderModal: React.FC<{
             <Field label="Motivo" hint="Queda en la orden y en la auditoría. Ejemplo: «El alumno pidió la devolución dentro del plazo».">
               <textarea className={INPUT_CLASS} rows={3} required minLength={5} maxLength={500} autoFocus value={refundReason} onChange={(event) => setRefundReason(event.target.value)} />
             </Field>
-            {refundManual > 0 && (
-              <Field label="Cómo devolviste el dinero (opcional)" hint="Ejemplo: «Transferencia BCP, operación 445566».">
-                <input className={INPUT_CLASS} maxLength={120} value={refundReference} onChange={(event) => setRefundReference(event.target.value)} />
+            {refundOnline > 0 && (
+              <label className="flex items-start gap-2.5 text-[13px] text-slate-700 cursor-pointer">
+                <input type="checkbox" className={`${CHECKBOX_CLASS} mt-0.5`} checked={refundOutside} onChange={(event) => setRefundOutside(event.target.checked)} />
+                <span>
+                  <strong className="font-semibold text-slate-900">{gatewayName} ya no deja devolver este pago</strong> (por ejemplo, pasó su plazo). Ya devolví el dinero por otro medio y
+                  solo quiero dejarlo registrado: el sistema no le pedirá nada a la pasarela.
+                </span>
+              </label>
+            )}
+            {(refundManual > 0 || refundOutside) && (
+              <Field
+                label={refundOutside ? 'Cómo devolviste el dinero' : 'Cómo devolviste el dinero (opcional)'}
+                hint="Ejemplo: «Transferencia BCP, operación 445566»."
+              >
+                <input className={INPUT_CLASS} maxLength={120} required={refundOutside} value={refundReference} onChange={(event) => setRefundReference(event.target.value)} />
               </Field>
             )}
           </form>

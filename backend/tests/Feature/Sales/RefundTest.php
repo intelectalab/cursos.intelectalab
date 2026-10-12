@@ -233,6 +233,29 @@ class RefundTest extends TestCase
         Http::assertNotSent(fn (GatewayRequest $request) => str_ends_with($request->url(), '/refunds'));
     }
 
+    public function test_a_payment_the_gateway_no_longer_refunds_is_closed_as_refunded_outside_it(): void
+    {
+        $order = $this->orderPaidWithMercadoPago();
+        $refund = fn (array $extra = []) => $this->withToken($this->admin)->postJson($this->api("/orders/{$order}/refund"), ['reason' => 'El alumno pidió su devolución.'] + $extra);
+
+        // Pasó el plazo de Mercado Pago: el mensaje lo dice y la orden sigue pagada
+        $this->gateways([self::MP.'/v1/payments/555001/refunds' => Http::response(['message' => 'The payment is too old to be refunded'], 400)]);
+        $this->assertStringContainsString('pasó el plazo', (string) $refund()->assertStatus(502)->json('message'));
+
+        // La academia devolvió el dinero por otro medio: debe decir cómo
+        $this->gateways();
+        $refund(['outside_gateway' => true])->assertStatus(422)->assertJsonStructure(['details' => ['reference']]);
+
+        $refund(['outside_gateway' => true, 'reference' => 'Transferencia BCP, operación 778899'])->assertOk()
+            ->assertJsonPath('data.status', 'REFUNDED')
+            ->assertJsonPath('data.payment.gateway', 'MERCADOPAGO')
+            ->assertJsonPath('data.payment.refund.reference', 'Transferencia BCP, operación 778899');
+
+        // No se le pidió nada a la pasarela, y el comprador perdió el acceso
+        Http::assertNothingSent();
+        $this->withToken($this->buyer)->getJson($this->api("/me/courses/{$this->course}"))->assertNotFound();
+    }
+
     public function test_a_purchase_paid_with_paypal_refunds_the_capture(): void
     {
         $this->gateways();

@@ -352,8 +352,13 @@ export const salesApi = {
     return (await api.post(`/orders/${order}/release-licenses`, { reason })).data.data as Order;
   },
   // Reembolso de lo cobrado: en línea lo devuelve la pasarela; por fuera, se registra cómo se devolvió
-  async refundOrder(order: string, reason: string, reference: string | null) {
-    return (await postIdempotent(`/orders/${order}/refund`, { reason, reference })).data.data as Order;
+  // `outsideGateway`: el pago fue en línea, pero la pasarela ya no deja devolverlo y el dinero se devolvió por otro medio
+  async refundOrder(order: string, reason: string, reference: string | null, outsideGateway = false) {
+    return (await postIdempotent(`/orders/${order}/refund`, { reason, reference, outside_gateway: outsideGateway })).data.data as Order;
+  },
+  // Lo que espera al personal, en cifras; null = esa persona no atiende ese tema
+  async alertSummary() {
+    return (await api.get('/alerts/summary')).data.data as { payment_reviews: number | null; tickets_waiting: number | null; pages_in_review: number | null };
   },
   async cancelOrder(order: string) {
     return (await api.post(`/orders/${order}/cancel`)).data.data as Order;

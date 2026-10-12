@@ -176,14 +176,14 @@ class OverviewReport
     }
 
     /**
-     * Cursos más vendidos del periodo: por ingreso de sus órdenes pagadas.
+     * Cursos más vendidos del periodo: por el importe de las ventas hechas en él.
      *
      * @return list<array{course_id: string, title: string, units: int, revenue: string}>
      */
     private function topCourses(CarbonImmutable $start, CarbonImmutable $end, string $currency): array
     {
         return OrderItem::query()
-            ->whereIn('order_id', $this->paidOrders($currency)->whereBetween('paid_at', [$start, $end])->select('id'))
+            ->whereIn('order_id', $this->soldOrders($currency, $start, $end)->select('id'))
             ->select('course_id', DB::raw('max(title) as title'), DB::raw('sum(quantity) as units'), DB::raw('sum(total_amount) as revenue'))
             ->groupBy('course_id')
             ->orderByDesc('revenue')
@@ -238,6 +238,25 @@ class OverviewReport
         return Order::query()
             ->where('status', Order::STATUS_PAID)
             ->whereHas('currency', fn ($q) => $q->where('code', $currency));
+    }
+
+    /**
+     * Ventas hechas en el periodo: la orden que se pagó de una vez cuenta el
+     * día de su pago; la que se paga en cuotas, el día de la primera, que es
+     * cuando el comprador recibe el acceso.
+     */
+    private function soldOrders(string $currency, CarbonImmutable $start, CarbonImmutable $end)
+    {
+        return Order::query()
+            ->whereHas('currency', fn ($q) => $q->where('code', $currency))
+            ->where(fn ($sold) => $sold
+                ->where(fn ($single) => $single
+                    ->where('status', Order::STATUS_PAID)
+                    ->whereDoesntHave('installments')
+                    ->whereBetween('paid_at', [$start, $end]))
+                ->orWhere(fn ($plan) => $plan
+                    ->whereIn('status', [Order::STATUS_PAID, Order::STATUS_PARTIAL])
+                    ->whereHas('installments', fn ($first) => $first->where('number', 1)->whereBetween('paid_at', [$start, $end]))));
     }
 
     /**

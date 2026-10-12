@@ -289,10 +289,17 @@ class OnlinePaymentService
      * por fuera, la organización ya devolvió el dinero y aquí queda registrado.
      *
      * @param  string|null  $manualReference  cómo se devolvió el dinero de un pago por fuera
+     * @param  bool  $outsideGateway  no pedir la devolución a la pasarela: el dinero ya se devolvió por otro medio
      */
-    public function refund(Order $order, User $actor, string $reason, ?string $manualReference = null): Order
+    public function refund(Order $order, User $actor, string $reason, ?string $manualReference = null, bool $outsideGateway = false): Order
     {
         $this->orders->assertRefundable($order);
+
+        // La pasarela ya no deja devolver (pasó su plazo, la cuenta se cerró): la organización devolvió el dinero
+        // por otro medio y aquí solo queda registrado, con la referencia que indique
+        if ($outsideGateway) {
+            return $this->orders->markRefunded($order, $actor, $reason, $manualReference);
+        }
 
         // Lo cobrado en línea que falta devolver: uno si la orden se pagó de una vez, uno por cuota si fue en cuotas
         $online = $order->payments()->where('status', Payment::STATUS_CONFIRMED)->orderBy('paid_at')->orderBy('id')->get()

@@ -49,6 +49,19 @@ class DemoTenantSeeder extends Seeder
             $student->roles()->syncWithoutDetaching(
                 Role::query()->where('code', RoleCatalog::STUDENT)->value('id')
             );
+
+            // Una cuenta por cada rol del personal que no es el administrador, para probar lo que ve cada uno
+            foreach ([
+                ['soporte@plataforma.com', 'Soporte', RoleCatalog::SUPPORT],
+                ['ventas@plataforma.com', 'Ventas', RoleCatalog::SALES],
+            ] as [$email, $name, $role]) {
+                $staff = User::query()->firstOrCreate(
+                    ['email' => $email],
+                    ['password' => $password, 'first_name' => $name, 'last_name' => 'De Prueba', 'status' => User::STATUS_ACTIVE]
+                );
+
+                $staff->roles()->syncWithoutDetaching(Role::query()->where('code', $role)->value('id'));
+            }
         });
     }
 }

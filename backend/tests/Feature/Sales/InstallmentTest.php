@@ -273,6 +273,10 @@ class InstallmentTest extends TestCase
             ->assertJsonPath('data.totals.installment_revenue', '200.00')
             ->assertJsonPath('data.totals.paid_orders', 0)
             ->assertJsonPath('data.series.1.revenue', '200.00')
+            // La venta en cuotas ya cuenta entre los cursos más vendidos, por su importe completo
+            ->assertJsonPath('data.top_courses.0.title', 'Excel para finanzas')
+            ->assertJsonPath('data.top_courses.0.units', 1)
+            ->assertJsonPath('data.top_courses.0.revenue', '300.00')
             ->assertJsonPath('data.today.receivable_installments', 1)
             ->assertJsonPath('data.today.receivable_amount', '100.00')
             ->assertJsonPath('data.today.overdue_amount', '0.00');

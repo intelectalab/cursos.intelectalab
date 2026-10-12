@@ -418,11 +418,19 @@ class OrderController extends Controller
     {
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
-            // Solo para pagos por fuera: cómo se devolvió el dinero
+            // Cómo se devolvió el dinero que no devuelve la pasarela
             'reference' => ['nullable', 'string', 'max:120'],
+            // El pago fue en línea, pero la pasarela ya no deja devolverlo: se devolvió por otro medio
+            'outside_gateway' => ['nullable', 'boolean'],
         ]);
 
-        $order = $this->online->refund($order, $request->user(), $data['reason'], $data['reference'] ?? null);
+        $outside = (bool) ($data['outside_gateway'] ?? false);
+
+        if ($outside && blank($data['reference'] ?? null)) {
+            throw ValidationException::withMessages(['reference' => 'Indica cómo devolviste el dinero: queda como constancia del reembolso.']);
+        }
+
+        $order = $this->online->refund($order, $request->user(), $data['reason'], $data['reference'] ?? null, $outside);
 
         return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
     }

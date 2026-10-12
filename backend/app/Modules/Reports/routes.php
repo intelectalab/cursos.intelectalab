@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Reports\Http\Controllers\AlertController;
 use App\Modules\Reports\Http\Controllers\ReportController;
 use App\Modules\Reports\Http\Controllers\StudentController;
 use App\Modules\Reports\Http\Controllers\TeacherController;
@@ -23,3 +24,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:teachers
     Route::get('/teachers', [TeacherController::class, 'index']);
     Route::get('/teachers/{teacher}', [TeacherController::class, 'show'])->whereUuid('teacher');
 });
+
+// Lo que espera al personal, para la campana de avisos: cada cifra solo llega a quien puede atenderla
+Route::get('/alerts/summary', [AlertController::class, 'summary'])
+    ->middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:payments.confirm,orders.read,tickets.read,cms.publish']);

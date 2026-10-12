@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, BellRing, CheckCheck, X } from 'lucide-react';
+import { Bell, BellRing, CheckCheck, ChevronRight, FileCheck2, LifeBuoy, ShieldAlert, X, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { formatMoney, orderCode, salesApi, type DueInstallment } from '../api';
 
@@ -39,8 +39,11 @@ export const DebtAlerts: React.FC = () => {
   const navigate = useNavigate();
   const panel = useRef<HTMLDivElement>(null);
   const userId = user?.id ?? '';
-  const enabled = userId !== '' && hasPermission('payments.confirm');
+  // Las cuotas vencidas las ve quien cobra; los demás pendientes, quien atiende cada tema
+  const collects = userId !== '' && hasPermission('payments.confirm');
+  const enabled = userId !== '' && (collects || hasPermission(['orders.read', 'tickets.read', 'cms.publish']));
   const [alerts, setAlerts] = useState<DueInstallment[]>([]);
+  const [summary, setSummary] = useState<Awaited<ReturnType<typeof salesApi.alertSummary>> | null>(null);
   const [seen, setSeen] = useState<string[]>(() => (userId ? readSeen(userId) : []));
   const [open, setOpen] = useState(false);
 
@@ -48,11 +51,18 @@ export const DebtAlerts: React.FC = () => {
     if (!enabled) return;
 
     let active = true;
-    const check = () =>
+    const check = () => {
+      if (collects) {
+        salesApi
+          .installmentAlerts()
+          .then((data) => active && setAlerts(data))
+          .catch(() => undefined);
+      }
       salesApi
-        .installmentAlerts()
-        .then((data) => active && setAlerts(data))
+        .alertSummary()
+        .then((data) => active && setSummary(data))
         .catch(() => undefined);
+    };
 
     const first = setTimeout(check, 1500);
     const timer = setInterval(check, REFRESH_MS);
@@ -61,7 +71,7 @@ export const DebtAlerts: React.FC = () => {
       clearTimeout(first);
       clearInterval(timer);
     };
-  }, [enabled]);
+  }, [enabled, collects]);
 
   // La lista se cierra con Escape o al tocar fuera
   useEffect(() => {
@@ -82,6 +92,15 @@ export const DebtAlerts: React.FC = () => {
   if (!enabled) return null;
 
   const fresh = alerts.filter((alert) => !seen.includes(alert.id));
+
+  // Pendientes de otros módulos: se muestran mientras existan, con un enlace a donde se atienden
+  const pending: { key: string; icon: LucideIcon; count: number; text: string; to: string }[] = [
+    { key: 'reviews', icon: ShieldAlert, count: summary?.payment_reviews ?? 0, text: 'cobro en revisión|cobros en revisión', to: '/billing' },
+    { key: 'tickets', icon: LifeBuoy, count: summary?.tickets_waiting ?? 0, text: 'consulta de soporte espera respuesta|consultas de soporte esperan respuesta', to: '/support' },
+    { key: 'pages', icon: FileCheck2, count: summary?.pages_in_review ?? 0, text: 'página espera tu revisión|páginas esperan tu revisión', to: '/pages' },
+  ].filter((item) => item.count > 0);
+  const pendingTotal = pending.reduce((sum, item) => sum + item.count, 0);
+  const badge = fresh.length + pendingTotal;
 
   const dismiss = (ids: string[]) => {
     const next = [...new Set([...seen, ...ids])];
@@ -149,7 +168,14 @@ export const DebtAlerts: React.FC = () => {
             <div>
               <h2 className="text-sm font-semibold text-slate-900">Avisos</h2>
               <p className="text-xs text-slate-500">
-                {alerts.length === 0 ? 'Sin avisos por ahora' : `${alerts.length === 1 ? '1 cuota vencida' : `${alerts.length} cuotas vencidas`}${fresh.length > 0 ? ` · ${fresh.length} sin ver` : ''}`}
+                {alerts.length === 0 && pendingTotal === 0
+                  ? 'Sin avisos por ahora'
+                  : [
+                      alerts.length > 0 ? `${alerts.length === 1 ? '1 cuota vencida' : `${alerts.length} cuotas vencidas`}${fresh.length > 0 ? ` (${fresh.length} sin ver)` : ''}` : null,
+                      pendingTotal > 0 ? `${pendingTotal} ${pendingTotal === 1 ? 'pendiente' : 'pendientes'} por atender` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
               </p>
             </div>
             {fresh.length > 0 && (
@@ -164,8 +190,38 @@ export const DebtAlerts: React.FC = () => {
             )}
           </div>
 
+          {pending.length > 0 && (
+            <ul className="divide-y divide-slate-100 border-b border-slate-200/80 bg-amber-50/40">
+              {pending.map((item) => {
+                const [one, many] = item.text.split('|');
+                return (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-amber-50 cursor-pointer"
+                      onClick={() => {
+                        setOpen(false);
+                        navigate(item.to);
+                      }}
+                    >
+                      <span className="w-8 h-8 shrink-0 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                        <item.icon className="w-4 h-4" />
+                      </span>
+                      <span className="flex-1 text-[13px] text-slate-800">
+                        <strong className="font-semibold text-slate-900 tnum">{item.count}</strong> {item.count === 1 ? one : many}
+                      </span>
+                      <ChevronRight className="w-4 h-4 shrink-0 text-slate-400" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
           {alerts.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[13px] text-slate-500">No hay cuotas vencidas. Cuando una cuota pase su fecha sin pagarse, aparecerá aquí.</p>
+            <p className="px-4 py-8 text-center text-[13px] text-slate-500">
+              {collects ? 'No hay cuotas vencidas. Cuando una cuota pase su fecha sin pagarse, aparecerá aquí.' : pendingTotal === 0 ? 'No tienes pendientes por atender.' : 'Eso es todo por ahora.'}
+            </p>
           ) : (
             <ul className="overflow-y-auto divide-y divide-slate-100">
               {alerts.map((alert) => {
@@ -211,16 +267,16 @@ export const DebtAlerts: React.FC = () => {
 
       <button
         type="button"
-        aria-label={fresh.length > 0 ? `Avisos: ${fresh.length} sin ver` : 'Avisos'}
+        aria-label={badge > 0 ? `Avisos: ${badge} por atender` : 'Avisos'}
         aria-expanded={open}
         aria-controls="lista-de-avisos"
         className="pointer-events-auto relative w-12 h-12 rounded-full bg-gradient-to-br from-brand-700 to-sky-500 text-white shadow-raised flex items-center justify-center cursor-pointer hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
         onClick={() => setOpen((current) => !current)}
       >
         <Bell className="w-5 h-5" />
-        {fresh.length > 0 && (
+        {badge > 0 && (
           <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-rose-600 text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white tnum">
-            {fresh.length > 9 ? '9+' : fresh.length}
+            {badge > 9 ? '9+' : badge}
           </span>
         )}
       </button>

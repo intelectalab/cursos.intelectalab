@@ -186,11 +186,37 @@ export const IconChip: React.FC<{ icon: LucideIcon; tone?: Tone }> = ({ icon: Ic
 
 /* Tabla: encabezado diferenciado, filas con hover y desplazamiento propio */
 
-export const Table: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="overflow-x-auto">
-    <table className="w-full text-[13px] text-left">{children}</table>
-  </div>
-);
+// En teléfono cada fila se muestra como una tarjeta, con el nombre de la columna junto a cada dato
+// (estilos en index.css, clase `stack-table`). El nombre se toma de la cabecera de la tabla.
+export const Table: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const table = useRef<HTMLTableElement>(null);
+
+  // Tras cada dibujo: las filas cambian con los filtros y las páginas
+  useEffect(() => {
+    const element = table.current;
+    if (!element) return;
+
+    const labels = [...element.querySelectorAll('thead th')].map((cell) => cell.textContent?.trim() ?? '');
+    element.querySelectorAll('tbody > tr').forEach((row) => {
+      const cells = [...row.children] as HTMLElement[];
+      // Una fila de detalle (celdas unidas) no lleva nombres de columna
+      const plain = cells.length === labels.length && cells.every((cell) => !cell.hasAttribute('colspan'));
+      cells.forEach((cell, index) => {
+        const label = plain ? labels[index] : '';
+        if (label) cell.dataset.label = label;
+        else delete cell.dataset.label;
+      });
+    });
+  });
+
+  return (
+    <div className="overflow-x-auto">
+      <table ref={table} className="stack-table w-full text-[13px] text-left">
+        {children}
+      </table>
+    </div>
+  );
+};
 
 export const THead: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <thead>
