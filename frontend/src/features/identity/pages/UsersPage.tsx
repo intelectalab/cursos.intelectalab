@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileSpreadsheet, LogOut, Pencil, Plus, Search, UserCheck, UserCog, UserX, Users, UsersRound } from 'lucide-react';
+import { FileSpreadsheet, KeyRound, LogOut, Pencil, Plus, Search, UserCheck, UserCog, UserX, Users, UsersRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -28,6 +28,7 @@ import {
 import { BulkBar, FilterCards, HelpTip, SelectAll, SelectRow, type FilterCard } from '../../../shared/ui/filters';
 import { ImportModal } from '../../../shared/ui/ImportModal';
 import { GroupsTab } from '../components/GroupsTab';
+import { ResetPasswordModal } from '../components/ResetPasswordModal';
 import { DOCUMENT_TYPES, identityApi, type DocumentType, type PageMeta, type Role, type UserRow } from '../api';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
@@ -94,6 +95,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
     }));
 
   const [sessionsNotice, setSessionsNotice] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   const revokeSessions = async () => {
     if (!user) return;
@@ -271,8 +273,22 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
             </Button>
           </div>
         )}
+        {user && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3 border border-slate-200 rounded-xl">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-slate-700">Contraseña</p>
+              <p className="text-xs text-slate-500">Si la olvidó o alguien más la cambió: le das una temporal y al entrar elige una propia.</p>
+            </div>
+            <Button size="sm" icon={<KeyRound className="w-4 h-4" />} onClick={() => setResetting(true)} disabled={processing}>
+              Restablecer contraseña
+            </Button>
+          </div>
+        )}
         {sessionsNotice && <Alert tone="success">{sessionsNotice}</Alert>}
       </form>
+      {resetting && user && (
+        <ResetPasswordModal user={{ id: user.id, name: `${user.first_name} ${user.last_name}`, email: user.email }} onClose={() => setResetting(false)} />
+      )}
     </Modal>
   );
 };

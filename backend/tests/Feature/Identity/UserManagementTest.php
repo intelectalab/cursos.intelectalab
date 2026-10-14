@@ -4,6 +4,7 @@ namespace Tests\Feature\Identity;
 
 use App\Modules\Audit\Domain\Models\AuditEvent;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
+use App\Modules\Identity\Domain\Models\Permission;
 use App\Modules\Identity\Domain\Models\Role;
 use App\Modules\Identity\Domain\Models\User;
 use App\Shared\Tenancy\TenantContext;
@@ -121,6 +122,46 @@ class UserManagementTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.revoked', 0);
         $this->withToken($adminToken)->getJson($this->tenantUrl('acme', '/auth/me'))->assertOk();
+    }
+
+    public function test_an_administrator_resets_a_forgotten_password(): void
+    {
+        $tenant = $this->provisionTenant('acme', 'admin@acme.com');
+        $adminToken = $this->login('acme', 'admin@acme.com');
+        $student = $this->createUser($tenant, RoleCatalog::STUDENT, ['email' => 'ana@acme.com']);
+        $intruder = $this->login('acme', 'ana@acme.com');
+        $reset = fn (string $token, string $id, array $body = ['password' => 'Temporal2026']) => $this->withToken($token)->putJson($this->tenantUrl('acme', "/users/{$id}/password"), $body);
+
+        // Solo quien administra usuarios, con una contraseña de 8 caracteres o más
+        $reset($intruder, $student->id)->assertForbidden();
+        $reset($adminToken, $student->id, ['password' => 'corta'])->assertStatus(422);
+
+        $reset($adminToken, $student->id)->assertOk()->assertJsonPath('data.revoked', 1)->assertJsonPath('data.must_change_password', true);
+
+        // Quien estaba dentro queda fuera, y la contraseña anterior ya no sirve
+        $this->flushHeaders();
+        $this->withToken($intruder)->getJson($this->tenantUrl('acme', '/auth/me'))->assertUnauthorized();
+
+        // Con la temporal entra, pero debe elegir una propia antes de hacer otra cosa
+        $this->flushHeaders();
+        $token = $this->postJson($this->tenantUrl('acme', '/auth/login'), ['email' => 'ana@acme.com', 'password' => 'Temporal2026'])->assertOk()->json('data.token');
+        $this->withToken($token)->getJson($this->tenantUrl('acme', '/me/orders'))->assertStatus(403)->assertJsonPath('code', 'PASSWORD_CHANGE_REQUIRED');
+
+        // Queda en la auditoría, sin la contraseña
+        $event = app(TenantContext::class)->runAsSystem(fn () => AuditEvent::query()->where('action', 'users.password_reset')->firstOrFail());
+        $this->assertStringNotContainsString('Temporal2026', json_encode($event->toArray()));
+
+        // La propia se cambia en «Mi cuenta», y nadie toma así una cuenta con más permisos que los suyos
+        $adminId = $this->withToken($adminToken)->getJson($this->tenantUrl('acme', '/auth/me'))->json('data.user.id');
+        $reset($adminToken, $adminId)->assertForbidden();
+        $support = $this->createUser($tenant, RoleCatalog::SUPPORT, ['email' => 'soporte@acme.com']);
+        $this->createUser($tenant, RoleCatalog::ADMIN, ['email' => 'otro.admin@acme.com']);
+        $otherAdmin = app(TenantContext::class)->runAsSystem(fn () => User::query()->where('email', 'otro.admin@acme.com')->firstOrFail());
+        $supportRole = app(TenantContext::class)->runAsSystem(fn () => $support->roles()->first());
+        app(TenantContext::class)->runAsSystem(fn () => $supportRole->permissions()->syncWithoutDetaching(
+            Permission::query()->whereIn('code', ['users.read', 'users.update'])->pluck('id')
+        ));
+        $reset($this->login('acme', 'soporte@acme.com'), $otherAdmin->id)->assertForbidden()->assertJsonPath('code', 'PRIVILEGE_ESCALATION');
     }
 
     public function test_last_administrator_cannot_be_deactivated(): void

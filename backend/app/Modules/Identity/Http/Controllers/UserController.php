@@ -148,6 +148,20 @@ class UserController extends Controller
     }
 
     /**
+     * Contraseña temporal para una persona que no puede entrar a su cuenta.
+     */
+    public function resetPassword(Request $request, User $user, UserService $users): JsonResponse
+    {
+        $data = $request->validate(['password' => ['required', 'string', 'min:8', 'max:100']]);
+
+        return ApiResponse::success([
+            'email' => $user->email,
+            'must_change_password' => true,
+            'revoked' => $users->resetPassword($request->user(), $user, $data['password']),
+        ]);
+    }
+
+    /**
      * Cierra las sesiones abiertas de una persona (equipo perdido, sospecha de acceso ajeno).
      */
     public function revokeSessions(Request $request, User $user, UserService $users): JsonResponse

@@ -51,6 +51,7 @@ const ROLES = [
       { route: '/users', name: 'nuevo-usuario', steps: [button('Nuevo usuario')] },
       { route: '/users', name: 'importar-personas', steps: [button('Importar')] },
       { route: '/roles', name: 'nuevo-rol', steps: [button('Nuevo rol')] },
+      { route: '/users', name: 'restablecer-contrasena', steps: [button('Editar'), click('[role=dialog] button:has-text("Restablecer contraseña")')] },
       { route: '/pages', name: 'nueva-pagina', steps: [button('Nueva página')] },
       { route: '/billing', name: 'orden', steps: [click('button[aria-label^="Ver la orden"]')] },
       { route: '/settings', name: 'tipo-de-cambio', steps: [scroll('Tipo de cambio')] },

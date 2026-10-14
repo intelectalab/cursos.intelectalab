@@ -3,9 +3,11 @@
 namespace App\Modules\Identity\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
+use App\Modules\Identity\Domain\Catalog\PermissionCatalog;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Shared\Http\ApiException;
+use App\Shared\Http\ErrorCode;
 use Illuminate\Support\Facades\DB;
 
 class UserService
@@ -128,6 +130,41 @@ class UserService
         $this->audit->record('users.sessions_revoked', $user, null, ['revoked' => $revoked]);
 
         return $revoked;
+    }
+
+    /**
+     * Quien administra los usuarios le pone a una persona una contraseña
+     * temporal (la olvidó, o alguien más entró a su cuenta): se cierran todas
+     * sus sesiones y al entrar debe elegir una propia. No se puede tomar así
+     * una cuenta con permisos que quien la restablece no tiene.
+     *
+     * @return int sesiones cerradas
+     */
+    public function resetPassword(User $actor, User $user, string $password): int
+    {
+        if ($actor->is($user)) {
+            throw new ApiException(ErrorCode::Forbidden, 'Tu propia contraseña se cambia en «Mi cuenta».', 403);
+        }
+
+        $own = $actor->permissionCodes();
+
+        if (collect($user->permissionCodes())->contains(fn (string $code) => ! PermissionCatalog::covers($own, $code))) {
+            throw new ApiException(
+                ErrorCode::PrivilegeEscalation,
+                'Esta persona tiene permisos que tu usuario no tiene: su contraseña solo la puede restablecer alguien con al menos sus mismos permisos.',
+                403
+            );
+        }
+
+        return DB::transaction(function () use ($user, $password) {
+            $user->update(['password' => $password, 'must_change_password' => true]);
+            $revoked = $user->tokens()->delete();
+
+            // La contraseña no se guarda en la auditoría
+            $this->audit->record('users.password_reset', $user, null, ['email' => $user->email, 'revoked_sessions' => $revoked]);
+
+            return $revoked;
+        });
     }
 
     /**

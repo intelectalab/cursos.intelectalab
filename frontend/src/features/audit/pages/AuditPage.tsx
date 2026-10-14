@@ -72,6 +72,7 @@ const ACTION_LABEL: Record<string, string> = {
   'auth.login_failed': 'Intento de acceso fallido',
   'users.registered': 'Cuenta creada desde el registro público',
   'users.sessions_revoked': 'Sesiones de un usuario cerradas',
+  'users.password_reset': 'Contraseña de un usuario restablecida',
   'groups.created': 'Grupo creado',
   'grade_scales.created': 'Escala de notas creada',
   'grade_scales.updated': 'Escala de notas editada',

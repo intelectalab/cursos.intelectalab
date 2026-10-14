@@ -117,6 +117,11 @@ export const identityApi = {
     };
   },
 
+  // Contraseña temporal: cierra sus sesiones y la obliga a elegir una propia al entrar
+  async resetUserPassword(id: string, password: string) {
+    return (await api.put(`/users/${id}/password`, { password })).data.data as { email: string; must_change_password: boolean; revoked: number };
+  },
+
   // Cierra las sesiones abiertas de la persona; devuelve cuántas eran
   async revokeUserSessions(id: string) {
     return (await api.delete(`/users/${id}/sessions`)).data.data.revoked as number;

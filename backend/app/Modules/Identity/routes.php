@@ -31,6 +31,7 @@ Route::middleware('tenant')->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->middleware('permission:users.update');
         Route::put('/users/{user}/roles', [UserController::class, 'updateRoles'])->middleware('permission:users.update');
         Route::delete('/users/{user}/sessions', [UserController::class, 'revokeSessions'])->middleware('permission:users.update');
+        Route::put('/users/{user}/password', [UserController::class, 'resetPassword'])->middleware(['permission:users.update', 'throttle:20,1']);
 
         // Grupos: listas de personas reutilizables. Los ve quien consulta usuarios o matricula; los arma quien edita usuarios
         Route::middleware('permission:users.read,enrollments.create')->group(function () {

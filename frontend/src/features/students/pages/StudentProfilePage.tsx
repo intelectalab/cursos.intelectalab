@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, BookOpen, Building2, LifeBuoy, Mail, Phone, Receipt, UsersRound, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Award, BookOpen, Building2, KeyRound, LifeBuoy, Mail, Phone, Receipt, UsersRound, type LucideIcon } from 'lucide-react';
+import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
-import { Avatar, Badge, Card, CardHeader, EmptyState, ErrorState, LoadingState, StatCard, Table, TBody, Td, Th, THead, Tr, type Tone } from '../../../shared/ui';
+import { Avatar, Badge, Button, Card, CardHeader, EmptyState, ErrorState, LoadingState, StatCard, Table, TBody, Td, Th, THead, Tr, type Tone } from '../../../shared/ui';
 import { toScale } from '../../academic/api';
 import { formatMoney } from '../../sales/api';
 import { OrderStatusBadge } from '../../sales/components/OrderParts';
+import { ResetPasswordModal } from '../../identity/components/ResetPasswordModal';
 import { studentsApi, type StudentEnrollment, type StudentProfile, type StudentTicket } from '../api';
 
 function formatDate(value: string | null): string {
@@ -42,6 +44,8 @@ export const StudentProfilePage: React.FC = () => {
   const [gradeScale, setGradeScale] = useState(20);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [resetting, setResetting] = useState(false);
+  const { hasPermission } = useAuth();
 
   useEffect(() => {
     let active = true;
@@ -102,8 +106,23 @@ export const StudentProfilePage: React.FC = () => {
               {student.last_login_at ? formatDate(student.last_login_at) : 'nunca'}
             </p>
           </div>
+          {hasPermission('users.update') && (
+            <Button size="sm" icon={<KeyRound className="w-4 h-4" />} onClick={() => setResetting(true)}>
+              Restablecer contraseña
+            </Button>
+          )}
         </div>
       </Card>
+      {resetting && (
+        <ResetPasswordModal
+          user={{ id: student.id, name: student.name, email: student.email }}
+          onClose={() => {
+            setResetting(false);
+            // La ficha muestra si aún no cambia la temporal
+            setAttempt((n) => n + 1);
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <StatCard
