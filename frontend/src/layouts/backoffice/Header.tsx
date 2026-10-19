@@ -4,6 +4,7 @@ import { useAuth } from '../../features/auth/AuthContext';
 import { APP_MODULES } from '../../config/modules';
 import { Avatar } from '../../shared/ui';
 import { ChevronRight, Globe, LogOut, PanelLeft } from 'lucide-react';
+import { displayAddress } from '../../shared/tenancy/hosts';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -50,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isMenuOpen }) =
       <div className="flex items-center gap-1 sm:gap-3 shrink-0">
         <span className="hidden lg:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-brand-50 text-brand-700 text-xs font-medium ring-1 ring-inset ring-brand-100">
           <Globe className="w-3.5 h-3.5" />
-          {window.location.hostname}
+          {displayAddress()}
         </span>
 
         <div className="hidden sm:block h-6 w-px bg-slate-200" />

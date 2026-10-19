@@ -64,7 +64,8 @@ class TenantNotifier
 
         $mail = new TenantNoticeMail(
             organization: $tenant->name,
-            logoUrl: $logo ? $origin.$logo : null,
+            // El logo lo sirve la API, que cuelga de la raíz del sitio y no de la ruta de la academia
+            logoUrl: $logo ? TenantUrls::root($tenant).$logo : null,
             title: $title,
             greeting: filled($name) ? "Hola {$name}:" : null,
             lines: array_values(array_filter($lines, fn (?string $line) => filled($line))),
@@ -88,16 +89,7 @@ class TenantNotifier
      */
     public function origin(Tenant $tenant): string
     {
-        $host = $tenant->slug.'.'.config('tenancy.central_domain');
-        $current = request()->headers->get('Origin');
-
-        if (is_string($current) && parse_url($current, PHP_URL_HOST) === $host) {
-            return rtrim($current, '/');
-        }
-
-        $pattern = config('tenancy.public_url') ?: (parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https').'://{tenant}.'.config('tenancy.central_domain');
-
-        return rtrim(str_replace('{tenant}', $tenant->slug, $pattern), '/');
+        return TenantUrls::base($tenant);
     }
 
     /**

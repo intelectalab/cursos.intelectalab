@@ -6,6 +6,7 @@ import { Alert, Button, Card, ConfirmModal, EmptyState, ErrorState, LoadingState
 import { formatDateTime, formatMoney, orderCode, salesApi, type MyOrder, type Order } from '../api';
 import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
 import { closeCheckoutTab, openCheckoutTab, sendToCheckout, useCheckoutTab } from '../../../shared/payments/checkoutTab';
+import { appUrl } from '../../../shared/tenancy/hosts';
 
 // "Mis compras": las órdenes del comprador
 export const MyOrdersPage: React.FC = () => {
@@ -148,7 +149,7 @@ export const MyOrderPage: React.FC = () => {
     setPayError(null);
     const tab = openCheckoutTab();
     try {
-      const { checkout_url } = await salesApi.payOnline(order.id, gateway, `${window.location.origin}/my-orders/${order.id}`);
+      const { checkout_url } = await salesApi.payOnline(order.id, gateway, appUrl(`/my-orders/${order.id}`));
       if (sendToCheckout(tab, checkout_url)) {
         setWaitingFor(dueKey);
         setPaying(null);

@@ -4,6 +4,7 @@ namespace App\Modules\Identity\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Identity\Application\PasswordService;
+use App\Modules\Tenancy\Application\TenantUrls;
 use App\Shared\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class AccountController extends Controller
         $passwords->requestReset(
             $request->attributes->get('tenant'),
             $data['email'],
-            $request->getSchemeAndHttpHost()
+            TenantUrls::base($request->attributes->get('tenant'))
         );
 
         // Misma respuesta exista o no la cuenta

@@ -15,6 +15,7 @@ use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Sales\Domain\Models\PaymentAttempt;
 use App\Modules\Sales\Http\OrderPresenter;
 use App\Modules\Tenancy\Application\TenantSettingsService;
+use App\Modules\Tenancy\Application\TenantUrls;
 use App\Shared\Export\ExcelExport;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
@@ -106,16 +107,16 @@ class OrderController extends Controller
             'return_url' => ['required', 'url:http,https', 'max:500'],
         ]);
 
-        $host = $request->attributes->get('tenant')->slug.'.'.config('tenancy.central_domain');
+        $tenant = $request->attributes->get('tenant');
 
-        if (parse_url($data['return_url'], PHP_URL_HOST) !== $host) {
+        if (! TenantUrls::owns($data['return_url'], $tenant)) {
             throw new ApiException(ErrorCode::ValidationError, 'Los datos no son válidos.', 422, ['return_url' => ['La dirección de retorno no es de esta academia.']]);
         }
 
         $attempt = GatewayErrors::forPayer(fn () => $this->online->start($this->own($request, $order), $data['gateway'], [
             'return' => $data['return_url'],
             // Los avisos solo llegan a una dirección pública con HTTPS
-            'webhook' => str_starts_with($data['return_url'], 'https://') ? "https://{$host}/api/v1/payments/webhooks/".strtolower($data['gateway']) : null,
+            'webhook' => str_starts_with($data['return_url'], 'https://') ? TenantUrls::webhook($tenant, $data['gateway']) : null,
         ]), 'No pudimos abrir el pago en este momento. No se te cobró nada. Inténtalo de nuevo en unos minutos; si sigue igual, avisa a la academia e indica el código de este mensaje.');
 
         return ApiResponse::success(['checkout_url' => $attempt->checkout_url], null, 201);

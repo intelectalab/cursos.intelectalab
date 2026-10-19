@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { currentToken } from '../auth/sessionStorage';
+import { pathTenant } from '../tenancy/hosts';
 
 // Formato de error estándar de la API
 export interface ApiError {
@@ -12,10 +13,12 @@ export interface ApiError {
 export const UNAUTHORIZED_EVENT = 'erp:unauthorized';
 
 // Mismo origen: el subdominio identifica a la organización en el backend.
+// En el modo por ruta (/a/{slug}) todas comparten el dominio: la organización va en X-Tenant.
 export const api = axios.create({
   baseURL: '/api/v1',
   headers: {
     Accept: 'application/json',
+    ...(pathTenant ? { 'X-Tenant': pathTenant } : {}),
   },
 });
 

@@ -7,6 +7,7 @@ import { Alert, Badge, Button, Card, CardHeader, ConfirmModal, EmptyState, Error
 import { formatMoney, type OnlineGatewayOption } from '../../sales/api';
 import { PlanCard, type AcademySubscription } from '../components/PlanCard';
 import { closeCheckoutTab, openCheckoutTab, sendToCheckout, useCheckoutTab } from '../../../shared/payments/checkoutTab';
+import { appUrl } from '../../../shared/tenancy/hosts';
 
 interface OfferedPlan {
   id: string;
@@ -103,7 +104,7 @@ const PendingOrder: React.FC<{
     setPayError(null);
     const tab = openCheckoutTab();
     try {
-      const response = await api.post(`/subscription/orders/${order.id}/pay`, { gateway, return_url: `${window.location.origin}/settings/plan` });
+      const response = await api.post(`/subscription/orders/${order.id}/pay`, { gateway, return_url: appUrl('/settings/plan') });
       if (sendToCheckout(tab, response.data.data.checkout_url)) {
         onCheckoutOpened();
         setPaying(null);

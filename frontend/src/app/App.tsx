@@ -1,6 +1,7 @@
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary';
 import { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { basename } from '../shared/tenancy/hosts';
 import { TenantProvider, useTenant } from '../shared/tenancy/TenantContext';
 import { AuthProvider } from '../features/auth/AuthContext';
 import { ProtectedRoute, PermissionGate } from '../features/auth/ProtectedRoute';
@@ -47,6 +48,7 @@ function CentralRoutes() {
       <Route path="/platform/tenants/:tenantId" element={<PlatformConsole />} />
       <Route path="/platform/plans" element={<PlatformConsole />} />
       <Route path="/platform/payments" element={<PlatformConsole />} />
+      <Route path="/platform/panel" element={<PlatformConsole />} />
       <Route path="*" element={<Navigate to="/register" replace />} />
     </Routes>
   );
@@ -243,7 +245,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <TenantProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={basename || undefined}>
         <DocumentTitle />
         <AppRoutes />
       </BrowserRouter>

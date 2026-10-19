@@ -8,6 +8,7 @@ import { formatDateTime } from '../../sales/api';
 import { cmsApi, type ImageRules, type Page, type PageNode } from '../api';
 import { PageContentView } from '../components/PageContentView';
 import { PageEditor } from '../components/PageEditor';
+import { appPath } from '../../../shared/tenancy/hosts';
 
 type Confirm = 'publish' | 'unpublish' | 'delete' | 'review' | 'return';
 
@@ -148,7 +149,7 @@ export const PageEditorPage: React.FC = () => {
             {inReview && <Badge tone="info">En revisión</Badge>}
             {returned && <Badge tone="danger">Devuelta con observaciones</Badge>}
             {published && (
-              <a href={page.path} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800">
+              <a href={appPath(page.path)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800">
                 <ExternalLink className="w-3 h-3" />
                 {window.location.host}
                 {page.path}

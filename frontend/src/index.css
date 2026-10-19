@@ -245,3 +245,45 @@
     display: none;
   }
 }
+
+/* ───────────────────────── Paneles: PDF con gráficos ─────────────────────────
+   «PDF (gráficos)» dibuja todas las secciones en .panel-print, directo en <body>, y abre la ventana
+   de impresión: en pantalla no se ve; al imprimir es lo único que sale, con sus colores. */
+.panel-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
+  body:has(> .panel-print) > :not(.panel-print) {
+    display: none !important;
+  }
+
+  body:has(> .panel-print) {
+    background: #fff;
+  }
+
+  .panel-print {
+    display: block;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .panel-print * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    animation: none !important;
+  }
+
+  .panel-print-section {
+    break-before: page;
+  }
+
+  .panel-print-section:first-of-type {
+    break-before: auto;
+  }
+}

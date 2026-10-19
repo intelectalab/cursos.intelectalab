@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Platform\Http\Controllers\PlatformAuthController;
+use App\Modules\Platform\Http\Controllers\PlatformDashboardController;
 use App\Modules\Platform\Http\Controllers\PlatformTenantController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,10 @@ Route::prefix('platform')->middleware('central')->group(function () {
     Route::middleware(['auth:sanctum', 'platform.admin'])->group(function () {
         Route::get('/auth/me', [PlatformAuthController::class, 'me']);
         Route::post('/auth/logout', [PlatformAuthController::class, 'logout']);
+
+        // Panel: una sección por pestaña y su descarga en Excel
+        Route::get('/dashboard/export', [PlatformDashboardController::class, 'export']);
+        Route::get('/dashboard/{section}', [PlatformDashboardController::class, 'show'])->where('section', '[a-z]+');
 
         Route::get('/tenants', [PlatformTenantController::class, 'index']);
         Route::post('/tenants', [PlatformTenantController::class, 'store']);

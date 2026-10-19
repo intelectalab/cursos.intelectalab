@@ -29,6 +29,7 @@ import { formatDateTime } from '../../sales/api';
 import { claimsApi, CLAIM_TYPE_LABEL, type Claim, type ClaimSummary } from '../api';
 import { ClaimSheet, ClaimStatusBadge } from '../components/ClaimSheet';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
+import { appPath } from '../../../shared/tenancy/hosts';
 
 const ClaimModal: React.FC<{ claimId: string; canManage: boolean; onClose: () => void; onChanged: () => void }> = ({ claimId, canManage, onClose, onChanged }) => {
   const [claim, setClaim] = useState<Claim | null>(null);
@@ -202,7 +203,7 @@ export const ClaimsPage: React.FC = () => {
         subtitle="Reclamos y quejas registrados por los consumidores en el formulario público."
         action={
           <a
-            href="/reclamaciones"
+            href={appPath('/reclamaciones')}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-[13px] font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 shadow-xs"

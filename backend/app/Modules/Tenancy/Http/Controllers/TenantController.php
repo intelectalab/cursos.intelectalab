@@ -5,6 +5,7 @@ namespace App\Modules\Tenancy\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Tenancy\Application\ProvisionTenant;
 use App\Modules\Tenancy\Application\TenantLogoService;
+use App\Modules\Tenancy\Application\TenantUrls;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Modules\Tenancy\Http\Requests\RegisterTenantRequest;
 use App\Shared\Http\ApiResponse;
@@ -24,7 +25,8 @@ class TenantController extends Controller
 
         return ApiResponse::success(
             $tenant ? $this->present($tenant) + ['logo_url' => $logo->url()] : null,
-            ['central_domain' => config('tenancy.central_domain')]
+            // La aplicación web arma con esto los enlaces hacia cada organización
+            ['central_domain' => config('tenancy.central_domain'), 'tenancy_mode' => TenantUrls::mode()]
         );
     }
 

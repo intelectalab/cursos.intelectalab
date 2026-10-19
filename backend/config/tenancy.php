@@ -15,9 +15,19 @@ return [
     'central_domain' => env('TENANCY_CENTRAL_DOMAIN', 'localhost'),
 
     /*
+    | Cómo se llega a cada organización:
+    |   subdomain  {slug}.{central_domain}           (por defecto)
+    |   path       {central_domain}/a/{slug}         (sin registro DNS comodín)
+    | En el modo por ruta la aplicación web envía la organización en el
+    | encabezado X-Tenant; los avisos de las pasarelas, en ?tenant=.
+    */
+
+    'mode' => env('TENANCY_MODE', 'subdomain'),
+
+    /*
     | Dirección pública de cada organización, con {tenant} en el lugar de su
-    | subdominio. La usan los enlaces de los correos que salen de tareas
-    | programadas. Vacío: https (o el esquema de APP_URL) y el dominio central.
+    | identificador. La usan los enlaces de los correos que salen de tareas
+    | programadas. Vacío: el esquema de APP_URL, el dominio central y el modo.
     */
 
     'public_url' => env('TENANCY_PUBLIC_URL'),

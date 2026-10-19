@@ -14,6 +14,7 @@ use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Files\Application\FileStorage;
 use App\Modules\Files\Domain\Models\File;
+use App\Modules\Tenancy\Application\TenantUrls;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
@@ -566,7 +567,7 @@ class CertificateController extends Controller
             ? ['layout' => $this->validatedLayout($request)] + $template->frozen()
             : $template->frozen();
 
-        return response($pdf->render($sample, $request->getSchemeAndHttpHost().'/verify/ABCD-EFGH-JKLM'), 200, [
+        return response($pdf->render($sample, TenantUrls::base($request->attributes->get('tenant')).'/verify/ABCD-EFGH-JKLM'), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="vista-previa-certificado.pdf"',
         ]);
@@ -593,7 +594,7 @@ class CertificateController extends Controller
         }
 
         // El QR lleva a la página pública de verificación de esta organización
-        $content = $pdf->render($certificate, $request->getSchemeAndHttpHost()."/verify/{$certificate->verification_code}");
+        $content = $pdf->render($certificate, TenantUrls::base($request->attributes->get('tenant'))."/verify/{$certificate->verification_code}");
 
         return response($content, 200, [
             'Content-Type' => 'application/pdf',

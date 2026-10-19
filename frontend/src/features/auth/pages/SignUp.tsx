@@ -7,6 +7,7 @@ import { nextPath, withNext } from '../../../shared/auth/next';
 import { useTenant } from '../../../shared/tenancy/TenantContext';
 import { Alert, Button, Field, INPUT_CLASS } from '../../../shared/ui';
 import { AuthShell } from '../../../shared/ui/AuthShell';
+import { appPath } from '../../../shared/tenancy/hosts';
 
 const EMPTY = { first_name: '', last_name: '', email: '', password: '', password_confirmation: '' };
 
@@ -118,7 +119,7 @@ export const SignUp: React.FC = () => {
                   <React.Fragment key={page.slug}>
                     {index > 0 && ', '}
                     <a
-                      href={`/p/${page.slug}`}
+                      href={appPath(`/p/${page.slug}`)}
                       target="_blank"
                       rel="noreferrer"
                       className="font-semibold text-brand-700 underline hover:text-brand-900"

@@ -1,6 +1,7 @@
 import { api } from '../../shared/api/client';
 import type { Tone } from '../../shared/ui';
 import type { PageMeta } from '../identity/api';
+import { appUrl } from '../../shared/tenancy/hosts';
 
 export type CertificateStatus = 'ISSUED' | 'REVOKED';
 
@@ -132,7 +133,7 @@ export function formatDate(value: string | null): string {
   return new Date(value).toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export const verifyUrl = (certificate: MyCertificate) => `${window.location.origin}${certificate.verify_path}`;
+export const verifyUrl = (certificate: MyCertificate) => appUrl(certificate.verify_path);
 
 // "Añadir a mi perfil" de LinkedIn: abre su formulario con los datos ya llenos (no usa su API)
 export function linkedInUrl(certificate: MyCertificate): string {

@@ -12,6 +12,7 @@ use App\Modules\Billing\Domain\Models\Plan;
 use App\Modules\Billing\Domain\Models\PlanOrder;
 use App\Modules\Files\Application\FileStorage;
 use App\Modules\Sales\Application\Payments\Online\GatewayErrors;
+use App\Modules\Tenancy\Application\TenantUrls;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
 use App\Shared\Http\ErrorCode;
@@ -135,7 +136,7 @@ class SubscriptionController extends Controller
             'return_url' => ['required', 'url:http,https', 'max:500'],
         ]);
 
-        if (parse_url($data['return_url'], PHP_URL_HOST) !== $request->attributes->get('tenant')->slug.'.'.config('tenancy.central_domain')) {
+        if (! TenantUrls::owns($data['return_url'], $request->attributes->get('tenant'))) {
             throw new ApiException(ErrorCode::ValidationError, 'Los datos no son válidos.', 422, ['return_url' => ['La dirección de retorno no es de esta academia.']]);
         }
 

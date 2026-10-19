@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Building2, Loader2 } from 'lucide-react';
 import { api, apiError } from '../api/client';
-import { centralUrl, guessCentralDomain } from './hosts';
+import { centralUrl, displayAddress, guessCentralDomain, setTenancyMode, type TenancyMode } from './hosts';
 
 export interface CurrentTenant {
   id: string;
@@ -52,6 +52,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .get('/tenant')
       .then((response) => {
         if (!active) return;
+        setTenancyMode(response.data.meta.tenancy_mode as TenancyMode | undefined);
         setState({
           status: 'ready',
           tenant: response.data.data,
@@ -113,7 +114,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return (
       <Notice
         title="Organización no encontrada"
-        text={`No existe un espacio de trabajo en ${window.location.hostname}. Verifica la dirección o registra tu organización.`}
+        text={`No existe un espacio de trabajo en ${displayAddress()}. Verifica la dirección o registra tu organización.`}
         action={
           <a
             href={centralUrl(guessCentralDomain(), '/register')}

@@ -6,6 +6,7 @@ import { visibleModules } from '../../../config/modules';
 import { api } from '../../../shared/api/client';
 import { Badge, Card, CardHeader, IconChip, StatCard } from '../../../shared/ui';
 import { StudentHome } from '../../enrollments/components/StudentHome';
+import { displayAddress } from '../../../shared/tenancy/hosts';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -159,7 +160,7 @@ export const Dashboard: React.FC = () => {
               <dt className="text-slate-500">Dirección</dt>
               <dd className="inline-flex items-center gap-1.5 font-medium text-slate-900 min-w-0">
                 <Globe className="w-3.5 h-3.5 text-brand-600 shrink-0" />
-                <span className="truncate">{window.location.hostname}</span>
+                <span className="truncate">{displayAddress()}</span>
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3 py-3">

@@ -4,6 +4,7 @@ import { Award, Download, ExternalLink, GraduationCap, Share2 } from 'lucide-rea
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, Card, EmptyState, ErrorState, LoadingState, PageHeader } from '../../../shared/ui';
 import { certificatesApi, formatDate, linkedInUrl, type MyCertificate } from '../api';
+import { appPath } from '../../../shared/tenancy/hosts';
 
 const CertificateCard: React.FC<{ certificate: MyCertificate }> = ({ certificate }) => {
   const [downloading, setDownloading] = useState(false);
@@ -45,7 +46,7 @@ const CertificateCard: React.FC<{ certificate: MyCertificate }> = ({ certificate
             Descargar PDF
           </Button>
           <a
-            href={certificate.verify_path}
+            href={appPath(certificate.verify_path)}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center justify-center h-9 px-3.5 gap-2 rounded-lg text-[13px] font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 shadow-xs transition-all"

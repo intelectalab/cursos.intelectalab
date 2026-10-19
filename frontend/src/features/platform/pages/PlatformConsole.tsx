@@ -10,6 +10,7 @@ import {
 } from '../../../shared/auth/sessionStorage';
 import { Alert, Avatar, Button, Field, INPUT_CLASS } from '../../../shared/ui';
 import { AuthShell, BrandMark } from '../../../shared/ui/AuthShell';
+import { DashboardPanel } from '../components/DashboardPanel';
 import { PaymentsPanel } from '../components/PaymentsPanel';
 import { PlansPanel } from '../components/PlansPanel';
 import { TenantProfile } from '../components/TenantProfile';
@@ -74,6 +75,7 @@ export const PlatformConsole: React.FC = () => {
   const { pathname } = useLocation();
   const onPlans = pathname === '/platform/plans';
   const onPayments = pathname === '/platform/payments';
+  const onPanel = pathname === '/platform/panel';
   const [session, setSession] = useState<PlatformSession | null>(loadPlatformSession);
   // Órdenes de plan que esperan a la plataforma: el contador de la pestaña Pagos
   const [waiting, setWaiting] = useState<{ pending: number; informed: number; review: number } | null>(null);
@@ -147,10 +149,11 @@ export const PlatformConsole: React.FC = () => {
           </div>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto p-6 sm:p-8 animate-rise">
+      <main className={`${onPanel ? 'max-w-7xl' : 'max-w-6xl'} mx-auto p-6 sm:p-8 animate-rise`}>
         <nav aria-label="Secciones de la consola" className="inline-flex gap-1 p-1 mb-6 rounded-xl bg-slate-100 border border-slate-200/70">
           {[
-            { to: '/platform', label: 'Academias', active: !onPlans && !onPayments, count: 0, urgent: false },
+            { to: '/platform/panel', label: 'Panel', active: onPanel, count: 0, urgent: false },
+            { to: '/platform', label: 'Academias', active: !onPlans && !onPayments && !onPanel, count: 0, urgent: false },
             { to: '/platform/plans', label: 'Planes', active: onPlans, count: 0, urgent: false },
             {
               to: '/platform/payments',
@@ -185,7 +188,7 @@ export const PlatformConsole: React.FC = () => {
             </NavLink>
           ))}
         </nav>
-        {onPayments ? <PaymentsPanel /> : onPlans ? <PlansPanel /> : tenantId ? <TenantProfile key={tenantId} tenantId={tenantId} /> : <TenantsPanel />}
+        {onPanel ? <DashboardPanel /> : onPayments ? <PaymentsPanel /> : onPlans ? <PlansPanel /> : tenantId ? <TenantProfile key={tenantId} tenantId={tenantId} /> : <TenantsPanel />}
       </main>
     </div>
   );

@@ -69,7 +69,7 @@ const ROLES = [
     base: CENTRAL,
     email: 'plataforma@intelectalab.test',
     loginPath: '/platform',
-    routes: ['/platform', '/platform/plans', '/platform/payments'],
+    routes: ['/platform/panel', '/platform', '/platform/plans', '/platform/payments'],
     extras: [
       { route: '/platform', name: 'nueva-academia', steps: [click('button:has-text("Nueva academia")')] },
       { route: '/platform/plans', name: 'cobros-en-linea', steps: [scroll('Cobros en línea')] },

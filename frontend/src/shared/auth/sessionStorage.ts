@@ -1,7 +1,9 @@
 import type { AuthSession } from '../../features/auth/types';
+import { pathTenant } from '../tenancy/hosts';
 
-// localStorage es por origen: cada subdominio guarda su propia sesión.
-const KEY = 'erp_session';
+// localStorage es por origen: cada subdominio guarda su propia sesión. En el modo por ruta
+// todas las academias comparten el origen, así que cada una guarda la suya con su nombre.
+const KEY = pathTenant ? `erp_session:${pathTenant}` : 'erp_session';
 // Sesión del administrador de plataforma (solo existe en el dominio central)
 const PLATFORM_KEY = 'erp_platform_session';
 
@@ -39,7 +41,9 @@ export function clearPlatformSession(): void {
   localStorage.removeItem(PLATFORM_KEY);
 }
 
-// Token de la sesión vigente en este origen, sea de academia o de plataforma
+// Token de la sesión vigente en este origen, sea de academia o de plataforma.
+// Dentro de una academia por ruta nunca se envía la sesión de la plataforma, que vive en el mismo origen.
 export function currentToken(): string | null {
+  if (pathTenant) return loadSession()?.token ?? null;
   return loadSession()?.token ?? loadPlatformSession()?.token ?? null;
 }
