@@ -23,6 +23,9 @@ DB_PORT="$(read_env DB_PORT)"
 DB_NAME="$(read_env DB_DATABASE)"
 DB_USER="$(read_env DB_USERNAME)"
 export PGPASSWORD="$(read_env DB_PASSWORD)"
+# El usuario de la aplicación no puede saltarse el aislamiento entre academias (RLS): para copiar
+# todas las filas activa el permiso que la propia política reconoce, solo en esta conexión
+export PGOPTIONS="-c app.bypass_rls=on"
 
 STAMP="$(date +%Y-%m-%d_%H%M)"
 TARGET="$BACKUP_DIR/$STAMP"
@@ -31,7 +34,8 @@ chmod 700 "$BACKUP_DIR"
 
 echo "[$(date '+%F %T')] Copia $STAMP: base de datos"
 # Formato propio de PostgreSQL: comprimido y restaurable tabla por tabla con pg_restore
-pg_dump --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" --format=custom --no-owner --file="$TARGET/base.dump" "$DB_NAME"
+# --enable-row-security: sin él pg_dump se niega a leer tablas con RLS forzado
+pg_dump --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" --format=custom --no-owner --enable-row-security --file="$TARGET/base.dump" "$DB_NAME"
 
 echo "[$(date '+%F %T')] Copia $STAMP: archivos de las academias"
 tar --create --gzip --file="$TARGET/archivos.tar.gz" --directory="$APP_DIR/backend/storage/app" private
