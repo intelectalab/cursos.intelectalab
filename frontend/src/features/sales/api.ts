@@ -360,7 +360,14 @@ export const salesApi = {
   },
   // Lo que espera al personal, en cifras; null = esa persona no atiende ese tema
   async alertSummary() {
-    return (await api.get('/alerts/summary')).data.data as { payment_reviews: number | null; tickets_waiting: number | null; pages_in_review: number | null };
+    return (await api.get('/alerts/summary')).data.data as {
+      payment_reviews: number | null;
+      tickets_waiting: number | null;
+      pages_in_review: number | null;
+      submissions_to_grade: number | null;
+      overdue_installments: number | null;
+      claims_unanswered: number | null;
+    };
   },
   async cancelOrder(order: string) {
     return (await api.post(`/orders/${order}/cancel`)).data.data as Order;

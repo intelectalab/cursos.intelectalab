@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Reports\Http\Controllers\AlertController;
+use App\Modules\Reports\Http\Controllers\DashboardController;
 use App\Modules\Reports\Http\Controllers\ReportController;
 use App\Modules\Reports\Http\Controllers\StudentController;
 use App\Modules\Reports\Http\Controllers\TeacherController;
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:reports.read'])->group(function () {
     Route::get('/reports/overview', [ReportController::class, 'overview']);
     Route::get('/reports/overview/export', [ReportController::class, 'exportOverview'])->middleware('permission:reports.export');
+
+    // Panel de la academia: cada pestaña exige además el permiso de su módulo (AcademyDashboard::SECTIONS)
+    Route::get('/dashboard/export', [DashboardController::class, 'export'])->middleware('permission:reports.export');
+    Route::get('/dashboard/{section}', [DashboardController::class, 'show'])->where('section', '[a-z]+');
 });
 
 // Alumnos y su ficha completa (Alumno 360): lectura que reúne matrículas, compras, certificados y soporte
@@ -27,4 +32,4 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:teachers
 
 // Lo que espera al personal, para la campana de avisos: cada cifra solo llega a quien puede atenderla
 Route::get('/alerts/summary', [AlertController::class, 'summary'])
-    ->middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:payments.confirm,orders.read,tickets.read,cms.publish']);
+    ->middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:payments.confirm,orders.read,tickets.read,cms.publish,submissions.review,submissions.assigned.review,claims.read']);

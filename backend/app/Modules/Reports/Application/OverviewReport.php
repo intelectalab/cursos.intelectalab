@@ -73,7 +73,7 @@ class OverviewReport
     private function totals(CarbonImmutable $start, CarbonImmutable $end, string $currency): array
     {
         $paid = $this->paidOrders($currency)->whereBetween('paid_at', [$start, $end]);
-        $collected = $this->collected($currency)->whereBetween('paid_at', [$start, $end]);
+        $collected = self::collected($currency)->whereBetween('paid_at', [$start, $end]);
         $enrollments = Enrollment::query()->whereBetween('enrolled_at', [$start, $end]);
 
         return [
@@ -147,7 +147,7 @@ class OverviewReport
             ->groupBy('day')
             ->pluck('total', 'day');
 
-        $revenue = $this->collected($currency)
+        $revenue = self::collected($currency)
             ->whereBetween('paid_at', [$start, $end])
             ->selectRaw('((paid_at at time zone ?)::date)::text as day, sum(amount) as total', [$timezone])
             ->groupBy('day')
@@ -183,7 +183,7 @@ class OverviewReport
     private function topCourses(CarbonImmutable $start, CarbonImmutable $end, string $currency): array
     {
         return OrderItem::query()
-            ->whereIn('order_id', $this->soldOrders($currency, $start, $end)->select('id'))
+            ->whereIn('order_id', self::soldOrders($currency, $start, $end)->select('id'))
             ->select('course_id', DB::raw('max(title) as title'), DB::raw('sum(quantity) as units'), DB::raw('sum(total_amount) as revenue'))
             ->groupBy('course_id')
             ->orderByDesc('revenue')
@@ -245,7 +245,7 @@ class OverviewReport
      * día de su pago; la que se paga en cuotas, el día de la primera, que es
      * cuando el comprador recibe el acceso.
      */
-    private function soldOrders(string $currency, CarbonImmutable $start, CarbonImmutable $end)
+    public static function soldOrders(string $currency, CarbonImmutable $start, CarbonImmutable $end)
     {
         return Order::query()
             ->whereHas('currency', fn ($q) => $q->where('code', $currency))
@@ -262,7 +262,7 @@ class OverviewReport
     /**
      * Pagos recibidos y no devueltos, en la moneda de la organización. Un pago reembolsado deja de contar.
      */
-    private function collected(string $currency)
+    public static function collected(string $currency)
     {
         return Payment::query()
             ->where('status', Payment::STATUS_CONFIRMED)

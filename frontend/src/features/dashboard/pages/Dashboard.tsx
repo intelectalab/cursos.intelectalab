@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Building2, Globe, KeyRound, ShieldCheck, Sparkles, UserCog } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CalendarClock,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardCheck,
+  FileCheck2,
+  LifeBuoy,
+  ScrollText,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { visibleModules } from '../../../config/modules';
-import { api } from '../../../shared/api/client';
-import { Badge, Card, CardHeader, IconChip, StatCard } from '../../../shared/ui';
+import { Card, CardHeader, IconChip, LoadingState } from '../../../shared/ui';
 import { StudentHome } from '../../enrollments/components/StudentHome';
-import { displayAddress } from '../../../shared/tenancy/hosts';
+import { salesApi } from '../../sales/api';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -14,39 +26,86 @@ function greeting(): string {
   return hour < 19 ? 'Buenas tardes' : 'Buenas noches';
 }
 
-export const Dashboard: React.FC = () => {
-  const { user, tenant, permissions, hasPermission } = useAuth();
-  const canSeeUsers = hasPermission('users.read');
-  const canSeeRoles = hasPermission('roles.read');
+type Summary = Awaited<ReturnType<typeof salesApi.alertSummary>>;
 
-  const [userCount, setUserCount] = useState<number | null>(null);
-  const [roleCount, setRoleCount] = useState<number | null>(null);
+// Quien atiende alguno de estos temas ve sus pendientes en Inicio (los mismos permisos que pide /alerts/summary)
+const PENDING_PERMISSIONS = ['payments.confirm', 'orders.read', 'tickets.read', 'cms.publish', 'submissions.review', 'submissions.assigned.review', 'claims.read'];
 
-  // Cifras reales de la organización, solo si el rol puede consultarlas
+// Cada pendiente con su texto en singular|plural y a dónde se atiende
+const PENDING: { key: keyof Summary; icon: LucideIcon; text: string; to: string }[] = [
+  { key: 'submissions_to_grade', icon: ClipboardCheck, text: 'tarea entregada espera nota|tareas entregadas esperan nota', to: '/courses' },
+  { key: 'tickets_waiting', icon: LifeBuoy, text: 'consulta de soporte espera respuesta|consultas de soporte esperan respuesta', to: '/support' },
+  { key: 'claims_unanswered', icon: ScrollText, text: 'reclamo o queja sin responder|reclamos o quejas sin responder', to: '/claims' },
+  { key: 'overdue_installments', icon: CalendarClock, text: 'cuota vencida por cobrar|cuotas vencidas por cobrar', to: '/billing' },
+  { key: 'payment_reviews', icon: ShieldAlert, text: 'cobro en revisión|cobros en revisión', to: '/billing' },
+  { key: 'pages_in_review', icon: FileCheck2, text: 'página espera tu revisión|páginas esperan tu revisión', to: '/pages' },
+];
+
+/** Lo que espera a esta persona, con un enlace a donde se atiende cada cosa. */
+const PendingCard: React.FC = () => {
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [failed, setFailed] = useState(false);
+
   useEffect(() => {
     let active = true;
-
-    if (canSeeUsers) {
-      api
-        .get('/users', { params: { per_page: 1 } })
-        .then((response) => active && setUserCount(response.data.meta.total))
-        .catch(() => undefined);
-    }
-    if (canSeeRoles) {
-      api
-        .get('/roles')
-        .then((response) => active && setRoleCount(response.data.data.length))
-        .catch(() => undefined);
-    }
-
+    salesApi
+      .alertSummary()
+      .then((data) => active && setSummary(data))
+      .catch(() => active && setFailed(true));
     return () => {
       active = false;
     };
-  }, [canSeeUsers, canSeeRoles]);
+  }, []);
 
-  const fullAccess = permissions.includes('*');
-  // Quien solo cursa (no administra) ve su avance en lugar de las cifras de la organización
+  const items = summary ? PENDING.filter((item) => (summary[item.key] ?? 0) > 0) : [];
+
+  return (
+    <Card>
+      <CardHeader title="Pendientes" text="Lo que espera tu atención." />
+      {failed ? (
+        <p className="px-5 pb-5 text-[13px] text-slate-500">No se pudieron cargar los pendientes. Vuelve a abrir Inicio en un momento.</p>
+      ) : !summary ? (
+        <LoadingState />
+      ) : items.length === 0 ? (
+        <p className="flex items-center gap-2 px-5 pb-5 text-[13px] text-slate-600">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+          Nada pendiente por ahora.
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-100 border-t border-slate-100">
+          {items.map(({ key, icon: Icon, text, to }) => {
+            const count = summary[key] ?? 0;
+            const [one, many] = text.split('|');
+            return (
+              <li key={key}>
+                <Link to={to} className="group flex items-center gap-3 px-5 py-3.5 hover:bg-brand-50/50 transition-colors">
+                  <span className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100 flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4" aria-hidden="true" />
+                  </span>
+                  <span className="flex-1 min-w-0 text-[13px] text-slate-700">
+                    <strong className="font-bold text-slate-900 tnum">{count}</strong> {count === 1 ? one : many}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-brand-600" aria-hidden="true" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+};
+
+/**
+ * Inicio: saludo, accesos rápidos a los módulos del rol y lo pendiente. Las
+ * cifras de la academia están en «Panel»; quien solo estudia ve su avance.
+ */
+export const Dashboard: React.FC = () => {
+  const { user, tenant, permissions, hasPermission } = useAuth();
+
+  // Quien solo cursa (no administra) ve su avance en lugar de los accesos del personal
   const isStudent = hasPermission('enrollments.self.read') && !hasPermission('users.read') && !hasPermission('courses.read');
+  const seesPending = !isStudent && hasPermission(PENDING_PERMISSIONS);
   const shortcuts = visibleModules(permissions, hasPermission).filter((module) => module.id !== 'dashboard');
   const today = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -82,8 +141,8 @@ export const Dashboard: React.FC = () => {
                 </>
               ) : (
                 <>
-                  Este es el resumen de <strong className="font-semibold text-white">{tenant?.name}</strong>. Desde aquí llegas a todo lo que tu
-                  rol te permite gestionar.
+                  Bienvenido a <strong className="font-semibold text-white">{tenant?.name}</strong>. Desde aquí llegas a todo lo que tu rol te
+                  permite gestionar{hasPermission('reports.read') ? '; las cifras de la academia están en «Panel»' : ''}.
                 </>
               )}
             </p>
@@ -105,34 +164,14 @@ export const Dashboard: React.FC = () => {
 
       {isStudent && <StudentHome />}
 
-      {/* Indicadores */}
-      <section className={isStudent ? 'hidden' : `grid grid-cols-1 sm:grid-cols-2 ${canSeeUsers ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} gap-4`}>
-        <StatCard label="Organización" value={tenant?.name} hint="Espacio de trabajo activo" icon={Building2} tone="brand" />
-        {canSeeUsers && <StatCard label="Usuarios" value={userCount ?? '—'} hint="Con acceso a la organización" icon={UserCog} tone="success" />}
-        <StatCard
-          label="Roles"
-          value={canSeeRoles ? (roleCount ?? '—') : user?.roles.length}
-          hint={canSeeRoles ? 'Base y propios' : 'Asignados a tu cuenta'}
-          icon={ShieldCheck}
-          tone="violet"
-        />
-        <StatCard
-          label="Tus permisos"
-          value={fullAccess ? 'Acceso total' : permissions.length}
-          hint={fullAccess ? 'Todos los módulos' : 'Otorgados por tus roles'}
-          icon={KeyRound}
-          tone="warning"
-        />
-      </section>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
+      <div className={`grid grid-cols-1 gap-4 items-start ${seesPending ? 'xl:grid-cols-3' : ''}`}>
         {/* Accesos rápidos */}
-        <Card className="xl:col-span-2">
+        <Card className={seesPending ? 'xl:col-span-2' : ''}>
           <CardHeader title="Accesos rápidos" text="Los módulos disponibles para tu rol." />
           {shortcuts.length === 0 ? (
             <p className="px-5 py-8 text-[13px] text-slate-500">Tu rol todavía no tiene módulos asignados.</p>
           ) : (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-slate-100 rounded-b-2xl overflow-hidden">
+            <ul className={`grid grid-cols-1 sm:grid-cols-2 ${seesPending ? '' : 'xl:grid-cols-3'} gap-px bg-slate-100 rounded-b-2xl overflow-hidden`}>
               {shortcuts.map((module) => (
                 <li key={module.id} className="bg-white">
                   <Link
@@ -152,39 +191,7 @@ export const Dashboard: React.FC = () => {
           )}
         </Card>
 
-        {/* Espacio de trabajo */}
-        <Card>
-          <CardHeader title="Tu espacio de trabajo" />
-          <dl className="px-5 py-2 divide-y divide-slate-100 text-[13px]">
-            <div className="flex items-center justify-between gap-3 py-3">
-              <dt className="text-slate-500">Dirección</dt>
-              <dd className="inline-flex items-center gap-1.5 font-medium text-slate-900 min-w-0">
-                <Globe className="w-3.5 h-3.5 text-brand-600 shrink-0" />
-                <span className="truncate">{displayAddress()}</span>
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-3 py-3">
-              <dt className="text-slate-500">Estado</dt>
-              <dd>
-                <Badge tone="success" dot>
-                  Activa
-                </Badge>
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-3 py-3">
-              <dt className="text-slate-500">Tu cuenta</dt>
-              <dd className="font-medium text-slate-900 truncate">{user?.email}</dd>
-            </div>
-          </dl>
-          <div className="px-5 pb-5">
-            <Link
-              to="/account"
-              className="flex items-center justify-center h-9 rounded-lg border border-slate-300 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors"
-            >
-              Ver mi cuenta y sesiones
-            </Link>
-          </div>
-        </Card>
+        {seesPending && <PendingCard />}
       </div>
     </div>
   );

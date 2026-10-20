@@ -41,7 +41,7 @@ const ROLES = [
     base: ACADEMY,
     email: 'admin@plataforma.com',
     find: { '/courses': 'Excel para finanzas' },
-    routes: ['/dashboard', '/courses', '/students', '/teachers', '/enrollments', '/question-banks', '/crm', '/billing', '/promotions', '/certificates', '/certificates/design', '/support', '/claims', '/reports', '/users', '/roles', '/settings', '/settings/plan', '/pages', '/audit', '/account'],
+    routes: ['/dashboard', '/panel', '/courses', '/students', '/teachers', '/enrollments', '/question-banks', '/crm', '/billing', '/promotions', '/certificates', '/certificates/design', '/support', '/claims', '/reports', '/users', '/roles', '/settings', '/settings/plan', '/pages', '/audit', '/account'],
     extras: [
       { route: '/courses', name: 'nuevo-curso', steps: [button('Nuevo curso')] },
       { route: '/students', name: 'nuevo-alumno', steps: [button('Nuevo alumno')] },
@@ -59,6 +59,9 @@ const ROLES = [
       { route: '/settings', name: 'errores-de-pasarelas', steps: [scroll('Últimos errores de las pasarelas'), click('button:has-text("Últimos errores de las pasarelas")')] },
       { route: '/settings', name: 'feriados', steps: [scroll('Feriados')] },
       { route: '/dashboard', name: 'campana', steps: [click('button[aria-label*="viso"]')] },
+      { route: '/panel', name: 'ventas', steps: [click('[role=tab]:has-text("Ventas")')] },
+      { route: '/panel', name: 'personas', steps: [click('[role=tab]:has-text("Personas")')] },
+      { route: '/panel', name: 'atencion', steps: [click('[role=tab]:has-text("Atención")')] },
     ],
   },
   { name: 'soporte', base: ACADEMY, email: 'soporte@plataforma.com', routes: ['/dashboard', '/support', '/claims', '/students', '/enrollments', '/billing', '/account'] },

@@ -75,7 +75,8 @@ const dateTimeFormat = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month:
 
 const Cell: React.FC<{ value: string | number | null; format: string; currency: string | null }> = ({ value, format, currency }) => {
   if (value === null || value === undefined || value === '') return <span className="text-slate-400">—</span>;
-  if (format === 'date') return <>{dateFormat.format(new Date(String(value)))}</>;
+  // Una fecha sin hora (AAAA-MM-DD) se lee al mediodía, para que la zona horaria no la cambie de día
+  if (format === 'date') return <>{dateFormat.format(new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? `${value}T12:00:00` : String(value)))}</>;
   if (format === 'datetime') return <>{dateTimeFormat.format(new Date(String(value)))}</>;
   if (format === 'number' || format === 'money') return <span className="tnum">{formatValue(Number(value), format, currency)}</span>;
   return <>{value}</>;
@@ -173,7 +174,7 @@ export const PeriodPicker: React.FC<{ preset: PeriodPreset; period: Period; onCh
  * para una hoja de cálculo o Power BI) y el PDF con los gráficos, que arma la
  * ventana de impresión del navegador («Guardar como PDF»).
  */
-export const PanelDownloads: React.FC<{ exportPath: string; period: Period; filename: string; onPrint: () => void; printing: boolean }> = ({
+export const PanelDownloads: React.FC<{ exportPath?: string; period: Period; filename: string; onPrint: () => void; printing: boolean }> = ({
   exportPath,
   period,
   filename,
@@ -184,6 +185,7 @@ export const PanelDownloads: React.FC<{ exportPath: string; period: Period; file
   const [error, setError] = useState<string | null>(null);
 
   const excel = async () => {
+    if (!exportPath) return;
     setDownloading(true);
     setError(null);
     try {
@@ -204,9 +206,11 @@ export const PanelDownloads: React.FC<{ exportPath: string; period: Period; file
   return (
     <div className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap gap-2">
-        <Button icon={<FileSpreadsheet className="w-4 h-4" />} processing={downloading} onClick={() => void excel()}>
-          Excel (datos)
-        </Button>
+        {exportPath && (
+          <Button icon={<FileSpreadsheet className="w-4 h-4" />} processing={downloading} onClick={() => void excel()}>
+            Excel (datos)
+          </Button>
+        )}
         <Button icon={<FileText className="w-4 h-4" />} processing={printing} onClick={onPrint}>
           PDF (gráficos)
         </Button>

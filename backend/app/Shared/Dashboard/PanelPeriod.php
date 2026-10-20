@@ -3,6 +3,7 @@
 namespace App\Shared\Dashboard;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 
 /**
@@ -91,6 +92,27 @@ final readonly class PanelPeriod
     public function monthExpression(string $column): string
     {
         return "to_char(timezone('{$this->timezone}', {$column}), 'YYYY-MM')";
+    }
+
+    /**
+     * Valores por mes de los últimos 12 meses, con los meses vacíos en cero.
+     *
+     * @param  Builder|\Illuminate\Database\Eloquent\Builder  $query  ya filtrado desde monthsStart()
+     * @param  string  $aggregate  expresión SQL, por ejemplo count(*) o sum(amount)
+     * @return array<string, float|int> nombre del mes => valor
+     */
+    public function perMonth($query, string $column, string $aggregate, bool $money = false): array
+    {
+        $values = $query->where($column, '<=', $this->end())
+            ->selectRaw($this->monthExpression($column).' as month, '.$aggregate.' as total')
+            ->groupBy('month')->pluck('total', 'month');
+
+        $result = [];
+        foreach ($this->months() as $key => $label) {
+            $result[$label] = $money ? round((float) ($values[$key] ?? 0), 2) : (int) ($values[$key] ?? 0);
+        }
+
+        return $result;
     }
 
     /**

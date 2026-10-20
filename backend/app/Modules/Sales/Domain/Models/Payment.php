@@ -67,6 +67,12 @@ class Payment extends Model
         return $this->belongsTo(Order::class);
     }
 
+    /** La cuota que paga, si la orden se vende en cuotas */
+    public function installment(): BelongsTo
+    {
+        return $this->belongsTo(OrderInstallment::class);
+    }
+
     /**
      * Lo cobró una pasarela en línea, no lo confirmó el personal.
      */

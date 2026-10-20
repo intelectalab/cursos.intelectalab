@@ -76,6 +76,31 @@ final class Panel
     }
 
     /**
+     * Cambia las claves por su nombre en pantalla, en el orden de los nombres,
+     * y deja fuera lo que está en cero.
+     *
+     * @param  array<string, float|int>  $values
+     * @param  array<string, string>  $labels
+     * @return array<string, float|int>
+     */
+    public static function labelled(array $values, array $labels): array
+    {
+        $result = [];
+        foreach ($labels as $key => $label) {
+            if (($values[$key] ?? 0) > 0) {
+                $result[$label] = $values[$key];
+            }
+        }
+        foreach ($values as $key => $value) {
+            if (! isset($labels[$key]) && $value > 0) {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Las hojas de Excel de esta sección: una con las cifras y los gráficos
      * (como filas, para usarlas en una hoja de cálculo o en Power BI) y otra
      * con la tabla.

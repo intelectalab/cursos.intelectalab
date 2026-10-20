@@ -9,7 +9,6 @@ use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Dashboard\Panel;
 use App\Shared\Dashboard\PanelPeriod;
 use Carbon\Carbon;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -78,7 +77,7 @@ class PlatformDashboard
             };
         })->sortDesc()->all();
 
-        $byMonth = $this->perMonth($period, DB::table('tenants')->where('created_at', '>=', $period->monthsStart()), 'created_at', 'count(*)');
+        $byMonth = $period->perMonth(DB::table('tenants')->where('created_at', '>=', $period->monthsStart()), 'created_at', 'count(*)');
 
         return (new Panel('Academias'))
             ->card('Academias', $tenants->count(), tone: 'brand', hint: $tenants->where('status', Tenant::STATUS_ACTIVE)->count().' activas')
@@ -86,7 +85,7 @@ class PlatformDashboard
             ->card('Con plan pagado', $situation->filter(fn ($value) => $value === 'PLAN')->count(), tone: 'info')
             ->card('En prueba gratuita', $situation->filter(fn ($value) => $value === 'TRIAL')->count(), tone: 'violet')
             ->card('Requieren atención', $attention, tone: $attention > 0 ? 'danger' : 'success', hint: 'En gracia, en solo lectura o suspendidas')
-            ->chart('Academias por situación', 'donut', $this->labelled($situation->countBy()->all(), self::SITUATIONS))
+            ->chart('Academias por situación', 'donut', Panel::labelled($situation->countBy()->all(), self::SITUATIONS))
             ->chart('Academias nuevas por mes', 'bar', $byMonth)
             ->chart('Academias por plan', 'hbar', $byPlan)
             ->table(
@@ -126,7 +125,7 @@ class PlatformDashboard
         $byPlan = (clone $inPeriod)->selectRaw('plan_name, sum(amount) as total')->groupBy('plan_name')->orderByDesc('total')->pluck('total', 'plan_name')->map(fn ($value) => round((float) $value, 2))->all();
         $byMethod = (clone $inPeriod)->selectRaw('coalesce(gateway, payment_method, \'OTHER\') as method, sum(amount) as total')->groupBy('method')->orderByDesc('total')->pluck('total', 'method')
             ->map(fn ($value) => round((float) $value, 2))->all();
-        $byMonth = $this->perMonth($period, $paid()->where('paid_at', '>=', $period->monthsStart()), 'paid_at', 'sum(amount)', money: true);
+        $byMonth = $period->perMonth($paid()->where('paid_at', '>=', $period->monthsStart()), 'paid_at', 'sum(amount)', money: true);
 
         $latest = PlanOrder::query()->with('tenant:id,name')->where('status', PlanOrder::STATUS_PAID)->orderByDesc('paid_at')->limit(10)->get();
 
@@ -137,7 +136,7 @@ class PlatformDashboard
             ->card('Por confirmar', $pendingAmount, 'money', $informed > 0 ? 'warning' : 'violet', $informed.' con pago informado', currency: self::CURRENCY)
             ->chart('Cobrado por mes', 'bar', $byMonth, 'money', self::CURRENCY)
             ->chart('Cobrado por plan en el periodo', 'donut', $byPlan, 'money', self::CURRENCY)
-            ->chart('Cobrado por medio de pago en el periodo', 'donut', $this->labelled($byMethod, self::METHODS), 'money', self::CURRENCY)
+            ->chart('Cobrado por medio de pago en el periodo', 'donut', Panel::labelled($byMethod, self::METHODS), 'money', self::CURRENCY)
             ->table(
                 'Últimos pagos de planes confirmados',
                 ['code' => 'Orden', 'tenant' => 'Academia', 'plan' => 'Plan', 'amount' => 'Importe', 'method' => 'Medio', 'paid_at' => 'Fecha de pago'],
@@ -167,7 +166,7 @@ class PlatformDashboard
 
         $enrollmentsBefore = DB::table('enrollments')->whereBetween('created_at', [$previousStart, $previousEnd])->count();
         $salesBefore = array_sum($this->salesByTenant($previousStart, $previousEnd)->all());
-        $byMonth = $this->perMonth($period, DB::table('enrollments')->where('created_at', '>=', $period->monthsStart()), 'created_at', 'count(*)');
+        $byMonth = $period->perMonth(DB::table('enrollments')->where('created_at', '>=', $period->monthsStart()), 'created_at', 'count(*)');
 
         $top = fn (Collection $values) => $values->filter(fn ($value) => (float) $value > 0)->sortDesc()->take(8)
             ->mapWithKeys(fn ($value, string $tenantId) => [$names[$tenantId] ?? 'Academia' => round((float) $value, 2)])->all();
@@ -266,7 +265,7 @@ class PlatformDashboard
             ->card('Por vencer en 7 días', $expiring, tone: $expiring > 0 ? 'warning' : 'success')
             ->card('En gracia o solo lectura', $grace + $readOnly, tone: $grace + $readOnly > 0 ? 'danger' : 'success', hint: "{$grace} en gracia · {$readOnly} en solo lectura")
             ->card('Cupo al 90 % o más', $fullQuota, tone: $fullQuota > 0 ? 'warning' : 'success')
-            ->chart('Órdenes de plan del periodo, por estado', 'donut', $this->labelled($ordersByStatus, ['PENDING' => 'Por confirmar', 'PAID' => 'Pagadas', 'CANCELLED' => 'Canceladas', 'EXPIRED' => 'Vencidas']))
+            ->chart('Órdenes de plan del periodo, por estado', 'donut', Panel::labelled($ordersByStatus, ['PENDING' => 'Por confirmar', 'PAID' => 'Pagadas', 'CANCELLED' => 'Canceladas', 'EXPIRED' => 'Vencidas']))
             ->chart('Uso del cupo de alumnos', 'hbar', array_slice($quota, 0, 8, true), 'percent', note: 'Academias con tope de alumnos')
             ->table(
                 'Lo que requiere atención',
@@ -298,50 +297,6 @@ class PlatformDashboard
             ->whereBetween('payments.paid_at', [$from, $to])
             ->groupBy('payments.tenant_id')->selectRaw('payments.tenant_id, sum(payments.amount) as value')
             ->pluck('value', 'tenant_id')->map(fn ($value) => (float) $value);
-    }
-
-    /**
-     * Valores por mes de los últimos 12 meses, con los meses vacíos en cero.
-     *
-     * @param  Builder  $query
-     * @return array<string, float|int>
-     */
-    private function perMonth(PanelPeriod $period, $query, string $column, string $aggregate, bool $money = false): array
-    {
-        $values = $query->where($column, '<=', $period->end())
-            ->selectRaw($period->monthExpression($column).' as month, '.$aggregate.' as total')
-            ->groupBy('month')->pluck('total', 'month');
-
-        $result = [];
-        foreach ($period->months() as $key => $label) {
-            $result[$label] = $money ? round((float) ($values[$key] ?? 0), 2) : (int) ($values[$key] ?? 0);
-        }
-
-        return $result;
-    }
-
-    /**
-     * Cambia las claves por su nombre en pantalla, en el orden de los nombres.
-     *
-     * @param  array<string, float|int>  $values
-     * @param  array<string, string>  $labels
-     * @return array<string, float|int>
-     */
-    private function labelled(array $values, array $labels): array
-    {
-        $result = [];
-        foreach ($labels as $key => $label) {
-            if (($values[$key] ?? 0) > 0) {
-                $result[$label] = $values[$key];
-            }
-        }
-        foreach ($values as $key => $value) {
-            if (! isset($labels[$key]) && $value > 0) {
-                $result[$key] = $value;
-            }
-        }
-
-        return $result;
     }
 
     private function situation(Tenant $tenant, ?TenantSubscription $subscription): string

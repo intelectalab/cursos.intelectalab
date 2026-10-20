@@ -1,6 +1,7 @@
 import type React from 'react';
 import {
   LayoutDashboard,
+  LineChart,
   BookOpen,
   GraduationCap,
   Presentation,
@@ -30,6 +31,7 @@ import { lazyPage } from '../app/lazyPage';
 
 // Cada módulo se descarga cuando se abre
 const Dashboard = lazyPage(() => import('../features/dashboard/pages/Dashboard'), 'Dashboard');
+const AcademyPanel = lazyPage(() => import('../features/dashboard/pages/AcademyPanel'), 'AcademyPanel');
 const CoursesPage = lazyPage(() => import('../features/courses/pages/CoursesPage'), 'CoursesPage');
 const QuestionBanksPage = lazyPage(() => import('../features/academic/pages/QuestionBanksPage'), 'QuestionBanksPage');
 const MyCoursesPage = lazyPage(() => import('../features/enrollments/pages/MyCoursesPage'), 'MyCoursesPage');
@@ -95,6 +97,17 @@ export const APP_MODULES: ModuleItem[] = [
     tone: 'brand',
     group: 'general',
     component: Dashboard,
+  },
+  {
+    id: 'panel',
+    name: 'Panel',
+    description: 'Cifras y gráficos de la academia por periodo',
+    href: '/panel',
+    icon: LineChart,
+    tone: 'brand',
+    group: 'general',
+    permission: 'reports.read',
+    component: AcademyPanel,
   },
   {
     id: 'my-courses',
