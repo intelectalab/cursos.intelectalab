@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Pruebas de aislamiento entre academias contra el servidor: una academia «seguridad», registrada por la
 # página pública con el MISMO correo que el administrador de «demo», intenta entrar a la demo de todas las
-# formas conocidas (35 pruebas). Se ejecuta en el servidor, como root, después de cada publicación:
+# formas conocidas (44 pruebas). Se ejecuta en el servidor, como root, después de cada publicación:
 #   bash /var/www/erp/deploy/scripts/prueba-aislamiento.sh
 # Las contraseñas se leen de /root/.erp-demo-password y /root/.erp-seguridad-password y nunca se imprimen.
 set -u
@@ -57,7 +57,7 @@ rm -f /root/.aisl.json
 
 echo
 echo "== 2. Usar la sesión de la otra academia apuntando a la demo"
-for path in /auth/me /users /students /courses /orders /settings /roles /audit-events /crm/companies /reports/overview; do
+for path in /auth/me /users /students /courses /orders /settings /roles /audit-events /crm/companies /reports/overview /dashboard/academic /dashboard/sales /dashboard/people /dashboard/support /dashboard/export /alerts/summary; do
   check "Sesión ajena + X-Tenant: demo → $path" "401|403" -H "X-Tenant: demo" -H "Authorization: Bearer $ATK" "$BASE$path"
 done
 check "Sesión ajena + X-Tenant: DEMO (mayúsculas)" "401|403" -H "X-Tenant: DEMO" -H "Authorization: Bearer $ATK" "$BASE/users"
@@ -78,6 +78,10 @@ check "Ver una empresa de la demo" "404" "${H[@]}" "$BASE/crm/companies/$DEMO_CO
 check "Editar un rol de la demo" "404" -X PUT -H "Content-Type: application/json" "${H[@]}" --data "{\"name\":\"Hackeado\",\"permissions\":[]}" "$BASE/roles/$DEMO_ROLE"
 check "Ponerse un rol de la demo" "422|404" -X PUT -H "Content-Type: application/json" "${H[@]}" --data "{\"roles\":[\"$DEMO_ROLE\"]}" "$BASE/users/$(curl -s $RESOLVE -H "Accept: application/json" "${H[@]}" "$BASE/auth/me" | json data.user.id)/roles"
 
+ATK_USERS=$(curl -s $RESOLVE -H "Accept: application/json" "${H[@]}" "$BASE/users" | json meta.total)
+ATK_PANEL=$(curl -s $RESOLVE -H "Accept: application/json" "${H[@]}" "$BASE/dashboard/people" | php8.4 -r '$d=json_decode(stream_get_contents(STDIN),true); foreach($d["data"]["cards"]??[] as $c){ if($c["label"]==="Usuarios activos"){ echo $c["value"]; } }')
+if [ -n "$ATK_PANEL" ] && [ "$ATK_PANEL" -le "${ATK_USERS:-0}" ]; then PASS=$((PASS+1)); echo "OK        El Panel de la atacante cuenta solo sus usuarios ($ATK_PANEL de $ATK_USERS)"; else FAIL=$((FAIL+1)); echo "FALLA     El Panel de la atacante cuenta $ATK_PANEL usuarios y ella tiene $ATK_USERS"; fi
+
 echo
 echo "== 4. Colar datos en la demo"
 check "Crear un usuario con tenant_id de la demo en el cuerpo" "201|422" -X POST -H "Content-Type: application/json" "${H[@]}" --data "{\"first_name\":\"Intruso\",\"last_name\":\"Prueba\",\"email\":\"intruso@seguridad.test\",\"password\":\"Intruso2026\",\"tenant_id\":\"$DEMO_TENANT\",\"roles\":[\"$(curl -s $RESOLVE -H "Accept: application/json" "${H[@]}" "$BASE/roles" | json data.0.id)\"]}" "$BASE/users"
@@ -90,6 +94,8 @@ echo
 echo "== 5. Sin sesión, y la consola"
 check "Sin sesión: usuarios de la demo" "401" -H "X-Tenant: demo" "$BASE/users"
 check "Sin sesión: alumnos de la demo" "401" -H "X-Tenant: demo" "$BASE/students"
+check "Sin sesión: Panel de la demo" "401" -H "X-Tenant: demo" "$BASE/dashboard/sales"
+check "Sin sesión: Excel del Panel de la demo" "401" -H "X-Tenant: demo" "$BASE/dashboard/export"
 check "Sesión de academia en la consola de plataforma" "401|403" -H "Authorization: Bearer $ATK" "$BASE/platform/tenants"
 check "Sesión de academia pidiendo acceso de soporte a la demo" "401|403|404" -X POST -H "Authorization: Bearer $ATK" "$BASE/platform/tenants/$DEMO_TENANT/support-session"
 check "Academia inventada en el encabezado" "404" -H "X-Tenant: no-existe-zz" "$BASE/tenant"

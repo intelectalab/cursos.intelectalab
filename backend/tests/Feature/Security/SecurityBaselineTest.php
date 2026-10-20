@@ -116,6 +116,15 @@ class SecurityBaselineTest extends TestCase
             ->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
 
+    public function test_without_a_session_the_api_answers_401_even_if_the_client_does_not_ask_for_json(): void
+    {
+        $this->provisionTenant('acme');
+
+        // Sin «Accept: application/json» Laravel intentaba redirigir a una pantalla de acceso que no existe (500)
+        $this->get($this->tenantUrl('acme', '/users'))->assertUnauthorized()->assertJsonPath('code', 'UNAUTHENTICATED');
+        $this->get($this->tenantUrl('acme', '/dashboard/sales?from=2026-01-01'))->assertUnauthorized();
+    }
+
     public function test_forwarded_https_is_believed_only_from_a_trusted_proxy(): void
     {
         $this->provisionTenant('acme');

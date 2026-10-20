@@ -34,6 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [SecurityHeaders::class, EnforcePlanAccess::class]);
         // Tope general por usuario o dirección (AppServiceProvider); las rutas sensibles tienen el suyo
         $middleware->throttleApi();
+        // La API no tiene pantalla de acceso: sin sesión responde 401, aunque el cliente no pida JSON
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/');
 
         $middleware->alias([
             'tenant' => RequireTenant::class,
