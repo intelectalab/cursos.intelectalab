@@ -14,6 +14,10 @@ enum ErrorCode: string
     case MethodNotAllowed = 'METHOD_NOT_ALLOWED';
     case TooManyRequests = 'TOO_MANY_REQUESTS';
     case HttpError = 'HTTP_ERROR';
+    case BadRequest = 'BAD_REQUEST';
+    case Conflict = 'CONFLICT';
+    case RecordExists = 'RECORD_EXISTS';
+    case RecordInUse = 'RECORD_IN_USE';
     case InternalError = 'INTERNAL_ERROR';
     case IdempotencyKeyReused = 'IDEMPOTENCY_KEY_REUSED';
     case IdempotencyInProgress = 'IDEMPOTENCY_IN_PROGRESS';

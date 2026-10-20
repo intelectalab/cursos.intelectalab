@@ -28,7 +28,7 @@ export const PublicShell: React.FC<{ hero?: React.ReactNode; children: React.Rea
         <div className="absolute -bottom-32 right-0 w-[420px] h-[420px] rounded-full bg-sky-400/20 blur-[120px] pointer-events-none" />
 
         <header className="relative max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <Link to="/catalog" className="flex items-center gap-3 min-w-0">
+          <Link to="/" className="flex items-center gap-3 min-w-0">
             <span className="w-9 h-9 shrink-0 rounded-xl bg-white/10 ring-1 ring-white/20 flex items-center justify-center overflow-hidden">
               {tenant?.logo_url ? (
                 <img src={tenant.logo_url} alt="" className="w-full h-full object-contain bg-white" />

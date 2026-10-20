@@ -32,16 +32,24 @@ export class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (!this.state.error) return this.props.children;
 
+    // La pantalla no se pudo descargar: casi siempre, porque se publicó una versión nueva
+    const outdated = /dynamically imported module|Loading chunk|Importing a module script failed|Failed to fetch/i.test(this.state.error.message);
+
     return (
       <div role="alert" className="max-w-xl mx-auto my-10 p-6 sm:p-8 bg-white border border-slate-200/80 rounded-2xl shadow-card text-center">
         <span className="inline-flex w-12 h-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 mb-4">
           <TriangleAlert className="w-6 h-6" />
         </span>
-        <h1 className="text-lg font-bold text-slate-900">Esta pantalla no se pudo mostrar</h1>
+        <h1 className="text-lg font-bold text-slate-900">{outdated ? 'Hay una versión nueva del sistema' : 'Esta pantalla no se pudo mostrar'}</h1>
         <p className="mt-1.5 text-[13px] leading-relaxed text-slate-600">
-          Ocurrió un error al armarla. Tus datos no se perdieron. Vuelve a cargar la página; si se repite, avisa a soporte e indica qué pantalla era y este detalle:
+          {outdated
+            ? 'Esta pantalla cambió desde que abriste la página, o se cortó la conexión mientras se descargaba. Vuelve a cargar la página para seguir.'
+            : 'Ocurrió un error al armarla. Tus datos no se perdieron. Vuelve a cargar la página; si se repite, avisa a soporte e indica qué pantalla era.'}
         </p>
-        <p className="mt-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 break-words">{this.state.error.message}</p>
+        <details className="mt-3 text-left">
+          <summary className="text-xs text-slate-500 cursor-pointer select-none">Detalle técnico para soporte</summary>
+          <p className="mt-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 break-words">{this.state.error.message}</p>
+        </details>
         <button
           type="button"
           onClick={() => window.location.reload()}

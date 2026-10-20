@@ -28,7 +28,7 @@ class DashboardController extends Controller
     public function show(Request $request, string $section): JsonResponse
     {
         abort_unless(array_key_exists($section, AcademyDashboard::SECTIONS), 404);
-        abort_unless(in_array($section, AcademyDashboard::sectionsFor($request->user()), true), 403, 'Tu rol no puede ver esta parte del panel.');
+        abort_unless(in_array($section, AcademyDashboard::sectionsFor($request->user()), true), 403, 'Tu rol no puede ver esta parte del Panel.');
         $period = $this->period($request);
 
         return ApiResponse::success(

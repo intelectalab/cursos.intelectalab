@@ -32,6 +32,7 @@ class SecurityBaselineTest extends TestCase
         'POST api/v1/platform/auth/login',
         'POST api/v1/tenants',
         'GET api/v1/tenant',
+        'GET api/v1/public/plans',
         'GET api/v1/public-files/{file}',
         'GET api/v1/catalog/courses',
         'GET api/v1/catalog/courses/{course}',

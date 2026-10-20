@@ -22,10 +22,19 @@ export const api = axios.create({
   },
 });
 
+// Tiempo máximo de espera: sin él, una petición sin respuesta deja la pantalla cargando para siempre.
+// Subir archivos y descargar reportes tarda más con conexiones lentas.
+const TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 5 * 60_000;
+const DOWNLOAD_TIMEOUT_MS = 2 * 60_000;
+
 api.interceptors.request.use((config) => {
   const token = currentToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (!config.timeout) {
+    config.timeout = config.data instanceof FormData ? UPLOAD_TIMEOUT_MS : config.responseType === 'blob' ? DOWNLOAD_TIMEOUT_MS : TIMEOUT_MS;
   }
   return config;
 });

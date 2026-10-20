@@ -97,6 +97,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'erp,public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Las fechas se guardan sin zona: la sesión debe estar en la misma que la aplicación (UTC),
+            // aunque el servidor de base de datos tenga otra. En el VPS estaba en Europe/Berlin y todo quedaba 2 h corrido.
+            'timezone' => 'UTC',
         ],
 
         'sqlsrv' => [

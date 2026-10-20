@@ -22,7 +22,7 @@ const ROLES = [
     name: 'visitante',
     base: ACADEMY,
     email: null,
-    routes: ['/login', '/signup', '/forgot-password', '/catalog', '/verify', '/reclamaciones', '/reclamaciones/seguimiento', '/p/terminos-y-condiciones'],
+    routes: ['/', '/login', '/signup', '/forgot-password', '/catalog', '/verify', '/reclamaciones', '/reclamaciones/seguimiento', '/p/terminos-y-condiciones'],
   },
   {
     name: 'alumno',
@@ -78,7 +78,7 @@ const ROLES = [
       { route: '/platform/plans', name: 'cobros-en-linea', steps: [scroll('Cobros en línea')] },
     ],
   },
-  { name: 'registro', base: CENTRAL, email: null, routes: ['/register'] },
+  { name: 'registro', base: CENTRAL, email: null, routes: ['/', '/register'] },
 ];
 
 // Fichas que se abren desde los listados: una por tipo

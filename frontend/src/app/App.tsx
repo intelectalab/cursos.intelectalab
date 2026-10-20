@@ -1,6 +1,6 @@
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary';
 import { Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { basename } from '../shared/tenancy/hosts';
 import { TenantProvider, useTenant } from '../shared/tenancy/TenantContext';
 import { AuthProvider } from '../features/auth/AuthContext';
@@ -38,6 +38,9 @@ const ClaimFormPage = lazyPage(() => import('../features/claims/pages/PublicClai
 const ClaimLookupPage = lazyPage(() => import('../features/claims/pages/PublicClaimPages'), 'ClaimLookupPage');
 const PageEditorPage = lazyPage(() => import('../features/cms/pages/PageEditorPage'), 'PageEditorPage');
 const PublicPage = lazyPage(() => import('../features/cms/pages/PublicPage'), 'PublicPage');
+const PlatformLanding = lazyPage(() => import('../features/landing/pages/PlatformLanding'), 'PlatformLanding');
+const AcademyHomePage = lazyPage(() => import('../features/sales/pages/AcademyHomePage'), 'AcademyHomePage');
+const NotFoundPage = lazyPage(() => import('../shared/ui/NotFoundPage'), 'NotFoundPage');
 
 // Dominio central de la plataforma: alta de organizaciones
 function CentralRoutes() {
@@ -49,7 +52,8 @@ function CentralRoutes() {
       <Route path="/platform/plans" element={<PlatformConsole />} />
       <Route path="/platform/payments" element={<PlatformConsole />} />
       <Route path="/platform/panel" element={<PlatformConsole />} />
-      <Route path="*" element={<Navigate to="/register" replace />} />
+      <Route path="/" element={<PlatformLanding />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
@@ -198,8 +202,9 @@ function TenantRoutes() {
           </Route>
         </Route>
 
-        {/* Ruta por defecto */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Portada pública de la academia; quien ya entró va a su Inicio */}
+        <Route path="/" element={<AcademyHomePage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AuthProvider>
   );
@@ -214,7 +219,8 @@ function DocumentTitle() {
   useEffect(() => {
     const sync = () => {
       const heading = document.querySelector('h1')?.textContent?.trim();
-      const title = heading ? `${heading} · ${site}` : site;
+      // En la portada el encabezado ya es el nombre del sitio: no se repite
+      const title = heading && heading !== site ? `${heading} · ${site}` : site;
       if (document.title !== title) document.title = title;
     };
 

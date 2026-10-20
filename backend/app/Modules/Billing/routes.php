@@ -3,8 +3,12 @@
 use App\Modules\Billing\Http\Controllers\PlatformGatewayController;
 use App\Modules\Billing\Http\Controllers\PlatformPlanController;
 use App\Modules\Billing\Http\Controllers\PlatformPlanOrderController;
+use App\Modules\Billing\Http\Controllers\PublicPlanController;
 use App\Modules\Billing\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
+
+// Portada de la plataforma: los planes vigentes, sin iniciar sesión
+Route::get('/public/plans', [PublicPlanController::class, 'index'])->middleware(['central', 'throttle:60,1']);
 
 // Plataforma: catálogo de planes y suscripción de cada organización
 Route::prefix('platform')->middleware(['central', 'auth:sanctum', 'platform.admin'])->group(function () {
