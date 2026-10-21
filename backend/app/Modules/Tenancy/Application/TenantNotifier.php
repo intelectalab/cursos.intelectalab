@@ -28,30 +28,31 @@ class TenantNotifier
     public function __construct(
         private readonly TenantContext $context,
         private readonly TenantLogoService $logo,
+        private readonly EmailTemplates $templates,
     ) {}
 
     /**
-     * Avisa a una persona con cuenta. Las cuentas desactivadas no reciben avisos.
+     * Avisa a una persona con cuenta, con el texto que la academia tenga para
+     * ese correo (EmailCatalog). Las cuentas desactivadas no reciben avisos.
      *
-     * @param  list<string|null>  $lines  párrafos; los vacíos se omiten
-     * @param  array{label: string, path: string}|null  $action  botón y a qué pantalla lleva
+     * @param  array<string, string|int|float|null>  $values  datos variables del correo
+     * @param  string|null  $path  pantalla a la que lleva el botón
      */
-    public function toUser(?User $user, string $title, array $lines, ?array $action = null): void
+    public function notify(?User $user, string $key, array $values = [], ?string $path = null): void
     {
         if ($user === null || $user->status !== User::STATUS_ACTIVE) {
             return;
         }
 
-        $this->toEmail($user->email, $user->first_name, $title, $lines, $action);
+        $this->notifyEmail($user->email, $user->first_name, $key, $values, $path);
     }
 
     /**
      * Avisa a una dirección de correo (por ejemplo, la de quien dejó un reclamo sin tener cuenta).
      *
-     * @param  list<string|null>  $lines
-     * @param  array{label: string, path: string}|null  $action
+     * @param  array<string, string|int|float|null>  $values
      */
-    public function toEmail(?string $email, ?string $name, string $title, array $lines, ?array $action = null): void
+    public function notifyEmail(?string $email, ?string $name, string $key, array $values = [], ?string $path = null): void
     {
         $tenant = $this->tenant();
 
@@ -59,19 +60,58 @@ class TenantNotifier
             return;
         }
 
-        $origin = $this->origin($tenant);
+        // Apagado por la academia: no sale
+        $content = $this->templates->render($key, $values + ['nombre' => $name, 'academia' => $tenant->name]);
+        if ($content === null) {
+            return;
+        }
+
+        $this->send($email, $this->mail($tenant, $name, $content, $path), $content['subject']);
+    }
+
+    /**
+     * El correo armado con el diseño de la academia: logo, nombre, saludo y pie.
+     *
+     * @param  array{subject: string, lines: list<string>, button: ?string}  $content
+     */
+    public function mail(Tenant $tenant, ?string $name, array $content, ?string $path): TenantNoticeMail
+    {
+        return new TenantNoticeMail(...$this->parts($tenant, $name, $content, $path === null ? null : $this->origin($tenant).$path));
+    }
+
+    /**
+     * Las piezas de un aviso de la academia, para armar otra clase de correo
+     * con el mismo diseño (por ejemplo, el de recuperar la contraseña).
+     *
+     * @param  array{subject: string, lines: list<string>, button: ?string}  $content
+     * @param  string|null  $url  dirección completa a la que lleva el botón
+     * @return array{organization: string, logoUrl: ?string, title: string, greeting: ?string, lines: list<string>, action: ?array{label: string, url: string}}
+     */
+    public function parts(Tenant $tenant, ?string $name, array $content, ?string $url): array
+    {
         $logo = $this->logo->url();
 
-        $mail = new TenantNoticeMail(
-            organization: $tenant->name,
+        return [
+            'organization' => $tenant->name,
             // El logo lo sirve la API, que cuelga de la raíz del sitio y no de la ruta de la academia
-            logoUrl: $logo ? TenantUrls::root($tenant).$logo : null,
-            title: $title,
-            greeting: filled($name) ? "Hola {$name}:" : null,
-            lines: array_values(array_filter($lines, fn (?string $line) => filled($line))),
-            action: $action ? ['label' => $action['label'], 'url' => $origin.$action['path']] : null,
-        );
+            'logoUrl' => $logo ? TenantUrls::root($tenant).$logo : null,
+            'title' => $content['subject'],
+            'greeting' => filled($name) ? "Hola {$name}:" : null,
+            'lines' => $content['lines'],
+            'action' => $content['button'] !== null && $url !== null ? ['label' => $content['button'], 'url' => $url] : null,
+        ];
+    }
 
+    /**
+     * La academia de la petición o de la tarea en curso.
+     */
+    public function currentTenant(): ?Tenant
+    {
+        return $this->tenant();
+    }
+
+    private function send(string $email, TenantNoticeMail $mail, string $title): void
+    {
         DB::afterCommit(function () use ($email, $mail, $title) {
             try {
                 // Con muchos destinatarios conviene enviar en segundo plano (MAIL_QUEUE=true y un proceso de cola)

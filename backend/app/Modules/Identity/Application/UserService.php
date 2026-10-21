@@ -38,10 +38,7 @@ class UserService
             $this->audit->record('users.created', $user, null, $this->snapshot($user));
             $this->roles->assignToUser($actor, $user, $data['roles']);
 
-            $this->notifier->toUser($user, 'Tu cuenta está lista', [
-                "Te crearon una cuenta. Entra con tu correo ({$user->email}) y la contraseña que te entregaron.",
-                'Si no la tienes, usa «¿Olvidaste tu contraseña?» en la pantalla de acceso para crear una.',
-            ], ['label' => 'Iniciar sesión', 'path' => '/login']);
+            $this->notifier->notify($user, 'cuenta_nueva', ['correo' => $user->email], '/login');
 
             return $user;
         });

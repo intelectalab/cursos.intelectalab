@@ -2,27 +2,28 @@
 
 namespace App\Modules\Identity\Mail;
 
-use App\Modules\Identity\Domain\Models\User;
-use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
+use App\Modules\Tenancy\Mail\TenantNoticeMail;
 
-class PasswordResetMail extends Mailable
+/**
+ * Enlace para crear una contraseña nueva. Tiene el diseño de los avisos de
+ * la academia y el texto del correo «recuperar_contrasena»; guarda además el
+ * enlace, que el botón abre.
+ */
+class PasswordResetMail extends TenantNoticeMail
 {
+    /**
+     * @param  list<string>  $lines
+     * @param  array{label: string, url: string}|null  $action
+     */
     public function __construct(
-        public readonly User $user,
-        public readonly string $organization,
+        string $organization,
+        ?string $logoUrl,
+        string $title,
+        ?string $greeting,
+        array $lines,
+        ?array $action,
         public readonly string $url,
-        public readonly int $minutes,
-    ) {}
-
-    public function envelope(): Envelope
-    {
-        return new Envelope(subject: "Restablece tu contraseña de {$this->organization}");
-    }
-
-    public function content(): Content
-    {
-        return new Content(view: 'mail.password-reset');
+    ) {
+        parent::__construct($organization, $logoUrl, $title, $greeting, $lines, $action);
     }
 }

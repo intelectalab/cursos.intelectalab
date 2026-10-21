@@ -82,12 +82,11 @@ class ClaimService
 
             $this->audit->record('claims.registered', $claim, null, ['code' => $claim->code, 'type' => $claim->type]);
 
-            $kind = $claim->type === Claim::TYPE_CLAIM ? 'reclamo' : 'queja';
-            $this->notifier->toEmail($claim->email, $claim->first_name, "Constancia de tu {$kind} {$claim->code}", [
-                "Registramos tu {$kind} en el Libro de Reclamaciones con el código {$claim->code}.",
-                'Te responderemos a más tardar el '.$claim->due_at->format('d/m/Y').'.',
-                'Guarda este código: con él y tu número de documento puedes consultar el estado y la respuesta.',
-            ], ['label' => 'Consultar mi hoja', 'path' => '/reclamaciones/seguimiento']);
+            $this->notifier->notifyEmail($claim->email, $claim->first_name, 'reclamo_registrado', [
+                'tipo' => $claim->type === Claim::TYPE_CLAIM ? 'reclamo' : 'queja',
+                'codigo' => $claim->code,
+                'fecha_limite' => $claim->due_at->format('d/m/Y'),
+            ], '/reclamaciones/seguimiento');
 
             return $claim;
         });
@@ -128,10 +127,7 @@ class ClaimService
             $claim->messages()->create(['author_id' => $actor->id, 'body' => $body, 'is_public' => true]);
             $claim->update(['answered_at' => now()]);
 
-            $this->notifier->toEmail($claim->email, $claim->first_name, "Respondimos tu hoja {$claim->code}", [
-                "Ya está la respuesta a tu hoja {$claim->code} del Libro de Reclamaciones.",
-                'Para leerla, consulta tu hoja con el código y tu número de documento.',
-            ], ['label' => 'Ver la respuesta', 'path' => '/reclamaciones/seguimiento']);
+            $this->notifier->notifyEmail($claim->email, $claim->first_name, 'reclamo_respondido', ['codigo' => $claim->code], '/reclamaciones/seguimiento');
 
             return $this->move($claim, Claim::STATUS_ANSWERED, $actor);
         });

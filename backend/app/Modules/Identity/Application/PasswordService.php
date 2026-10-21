@@ -6,6 +6,8 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Identity\Domain\Models\PasswordResetToken;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Identity\Mail\PasswordResetMail;
+use App\Modules\Tenancy\Application\EmailTemplates;
+use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
@@ -20,7 +22,11 @@ use Illuminate\Support\Str;
  */
 class PasswordService
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly EmailTemplates $templates,
+        private readonly TenantNotifier $notifier,
+    ) {}
 
     /**
      * Envía el enlace de recuperación si el correo pertenece a una cuenta
@@ -54,7 +60,9 @@ class PasswordService
 
         $url = $origin.'/reset-password?'.http_build_query(['token' => $token, 'email' => $user->email]);
 
-        Mail::to($user->email)->send(new PasswordResetMail($user, $tenant->name, $url, $minutes));
+        // Es indispensable: la academia puede cambiar el texto, pero no apagarlo
+        $content = $this->templates->render('recuperar_contrasena', ['nombre' => $user->first_name, 'academia' => $tenant->name, 'minutos' => $minutes]);
+        Mail::to($user->email)->send(new PasswordResetMail(...$this->notifier->parts($tenant, $user->first_name, $content, $url), url: $url));
     }
 
     public function reset(string $email, string $token, string $password): void

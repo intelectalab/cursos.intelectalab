@@ -136,10 +136,10 @@ class EnrollmentService
 
                     // Quien compra ya recibe el aviso de su pago
                     if ($source !== Enrollment::SOURCE_PURCHASE) {
-                        $this->notifier->toUser($student, "Ya tienes acceso a «{$course->title}»", [
-                            "Te matricularon en el curso «{$course->title}».",
-                            $endsAt ? 'Tu acceso está disponible hasta el '.$endsAt->format('d/m/Y').'.' : null,
-                        ], ['label' => 'Entrar al curso', 'path' => "/my-courses/{$course->id}"]);
+                        $this->notifier->notify($student, 'matricula', [
+                            'curso' => $course->title,
+                            'vigencia' => $endsAt?->format('d/m/Y'),
+                        ], "/my-courses/{$course->id}");
                     }
 
                     return $enrollment;

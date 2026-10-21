@@ -138,9 +138,10 @@ class TicketService
                 ]);
 
                 $ticket->loadMissing('requester');
-                $this->notifier->toUser($ticket->requester, 'Respondimos tu consulta #'.str_pad((string) $ticket->number, 4, '0', STR_PAD_LEFT), [
-                    "Hay una respuesta nueva en tu consulta «{$ticket->subject}».",
-                ], ['label' => 'Ver la respuesta', 'path' => '/help']);
+                $this->notifier->notify($ticket->requester, 'respuesta_soporte', [
+                    'numero' => '#'.str_pad((string) $ticket->number, 4, '0', STR_PAD_LEFT),
+                    'asunto' => $ticket->subject,
+                ], '/help');
             }
 
             return $ticket;

@@ -7,6 +7,7 @@ import {
   Globe2,
   GraduationCap,
   ImageUp,
+  Mail,
   Pencil,
   Phone,
   Plus,
@@ -688,6 +689,18 @@ export const SettingsPage: React.FC = () => {
             </Field>
           </div>
         </Section>
+
+        {hasPermission('email_templates.manage') && (
+          <Section icon={Mail} tone="info" title="Correos automáticos" text="Los avisos que la academia envía sola: cuenta nueva, matrícula, pagos, certificado…">
+            <p className="text-[13px] text-slate-600">
+              Puedes cambiar el texto de cada correo, apagar los que no necesites y enviarte una prueba en{' '}
+              <Link to="/settings/emails" className="font-semibold text-brand-700 underline hover:text-brand-900">
+                Correos
+              </Link>
+              . La pantalla trae una guía paso a paso.
+            </p>
+          </Section>
+        )}
 
         <Section icon={FileText} tone="violet" title="Textos legales" text="Términos, privacidad y otros textos que ven tus alumnos y clientes.">
           <p className="text-[13px] text-slate-600">

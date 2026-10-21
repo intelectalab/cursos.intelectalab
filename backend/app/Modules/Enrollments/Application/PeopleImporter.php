@@ -173,10 +173,7 @@ class PeopleImporter extends Importer
                 'must_change_password' => true,
             ]);
             $this->audit->record('users.created', $user, null, $user->only(['email', 'first_name', 'last_name']) + ['source' => 'import']);
-            $this->notifier->toUser($user, 'Tu cuenta está lista', [
-                "Te crearon una cuenta. Entra con tu correo ({$user->email}); tu contraseña temporal es tu número de documento.",
-                'Al entrar por primera vez el sistema te pedirá cambiarla.',
-            ], ['label' => 'Iniciar sesión', 'path' => '/login']);
+            $this->notifier->notify($user, 'cuenta_importada', ['correo' => $user->email], '/login');
             $this->roles->grantBaseRole($user, RoleCatalog::STUDENT);
 
             $messages[] = 'Cuenta nueva: entra con su correo y su documento como contraseña temporal.';

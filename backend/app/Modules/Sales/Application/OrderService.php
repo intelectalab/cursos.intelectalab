@@ -201,14 +201,14 @@ class OrderService
 
             if ($total === self::money('0')) {
                 $this->settle($order, $customer);
-                $this->notifier->toUser($customer, "Ya estás inscrito en «{$productName}»", [
-                    'Tu inscripción quedó confirmada: ya puedes empezar.',
-                ], ['label' => 'Ir a mis cursos', 'path' => '/my-courses']);
+                $this->notifier->notify($customer, 'inscripcion_gratuita', ['curso' => $productName], '/my-courses');
             } else {
-                $this->notifier->toUser($customer, "Recibimos tu orden {$code}", [
-                    "Tu compra de «{$productName}» por ".TenantNotifier::money($currency->code, $total).' está pendiente de pago.',
-                    'Tienes hasta el '.$order->expires_at->timezone($this->settings->timezone())->format('d/m/Y, H:i').' para pagarla; después la orden vence.',
-                ], ['label' => 'Ver cómo pagar', 'path' => "/my-orders/{$order->id}"]);
+                $this->notifier->notify($customer, 'orden_recibida', [
+                    'orden' => $code,
+                    'curso' => $productName,
+                    'importe' => TenantNotifier::money($currency->code, $total),
+                    'fecha_limite' => $order->expires_at->timezone($this->settings->timezone())->format('d/m/Y, H:i'),
+                ], "/my-orders/{$order->id}");
             }
 
             return $order;
@@ -306,10 +306,7 @@ class OrderService
 
             if ($installment === null) {
                 $this->settle($order, $actor);
-                $this->notifier->toUser($order->customer, 'Pago confirmado: ya tienes acceso', [
-                    "Recibimos tu pago de {$money} por la orden ".self::code($order).'.',
-                    'Tu matrícula está activa: el curso ya está en «Mis cursos».',
-                ], ['label' => 'Ir a mis cursos', 'path' => '/my-courses']);
+                $this->notifier->notify($order->customer, 'pago_confirmado', ['orden' => self::code($order), 'importe' => $money], '/my-courses');
 
                 return $order;
             }
@@ -329,13 +326,18 @@ class OrderService
                 $this->markPaid($order, $actor, Order::STATUS_PARTIAL);
             }
 
-            $this->notifier->toUser($order->customer, "Recibimos el pago de tu cuota {$installment->number}", [
-                "Registramos tu pago de {$money} por la cuota {$installment->number} de la orden ".self::code($order).'.',
-                $installment->number === 1 ? 'Ya tienes acceso al curso: está en «Mis cursos».' : null,
-                $next
-                    ? 'Tu siguiente cuota es de '.TenantNotifier::money($order->currency->code, $next->amount).' y vence el '.$next->due_date->format('d/m/Y').'.'
-                    : 'Con esta cuota terminaste de pagar tu compra. ¡Gracias!',
-            ], ['label' => 'Ver mi orden', 'path' => "/my-orders/{$order->id}"]);
+            // La primera cuota da el acceso y la última cierra la compra: cada una tiene su propio correo
+            $this->notifier->notify($order->customer, match (true) {
+                $next === null => 'ultima_cuota_pagada',
+                $installment->number === 1 => 'primera_cuota_pagada',
+                default => 'cuota_pagada',
+            }, [
+                'orden' => self::code($order),
+                'cuota' => $installment->number,
+                'importe' => $money,
+                'siguiente_importe' => $next ? TenantNotifier::money($order->currency->code, $next->amount) : null,
+                'siguiente_vencimiento' => $next?->due_date->format('d/m/Y'),
+            ], "/my-orders/{$order->id}");
 
             return $order;
         });
@@ -385,11 +387,10 @@ class OrderService
             ]);
 
             $order->loadMissing(['customer', 'currency']);
-            $this->notifier->toUser($order->customer, 'Tu compra fue reembolsada', [
-                'Se te devolvió '.TenantNotifier::money($order->currency->code, $refunded->sum('amount')).' de la orden '.self::code($order).'.',
-                'Si pagaste en línea, el dinero vuelve al medio con el que pagaste; el plazo depende de tu banco.',
-                'Ya no tienes acceso al curso de esa compra.',
-            ], ['label' => 'Ver mi orden', 'path' => "/my-orders/{$order->id}"]);
+            $this->notifier->notify($order->customer, 'reembolso', [
+                'orden' => self::code($order),
+                'importe' => TenantNotifier::money($order->currency->code, $refunded->sum('amount')),
+            ], "/my-orders/{$order->id}");
 
             return $order;
         });

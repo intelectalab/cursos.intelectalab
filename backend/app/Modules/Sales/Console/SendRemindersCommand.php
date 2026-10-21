@@ -64,17 +64,12 @@ class SendRemindersCommand extends Command
             $money = TenantNotifier::money($order->currency->code, $installment->amount);
             $late = $installment->due_date->toDateString() === $yesterday;
 
-            $notifier->toUser(
-                $order->customer,
-                $late ? "Tu cuota {$installment->number} venció ayer" : "Tu cuota {$installment->number} vence en ".self::INSTALLMENT_DAYS.' días',
-                [
-                    $late
-                        ? "La cuota {$installment->number} de tu compra, por {$money}, venció el ".$installment->due_date->format('d/m/Y').' y aún no registramos tu pago.'
-                        : "La cuota {$installment->number} de tu compra, por {$money}, vence el ".$installment->due_date->format('d/m/Y').'.',
-                    $late ? 'Págala cuanto antes para mantener tu acceso al curso. Si ya pagaste, ignora este mensaje.' : 'Puedes pagarla desde tu orden, en línea o con los datos de pago de la academia.',
-                ],
-                ['label' => 'Pagar mi cuota', 'path' => "/my-orders/{$order->id}"]
-            );
+            $notifier->notify($order->customer, $late ? 'cuota_vencida' : 'recordatorio_cuota', [
+                'cuota' => $installment->number,
+                'importe' => $money,
+                'vencimiento' => $installment->due_date->format('d/m/Y'),
+                'dias' => self::INSTALLMENT_DAYS,
+            ], "/my-orders/{$order->id}");
         }
 
         return $installments->count();
@@ -92,10 +87,11 @@ class SendRemindersCommand extends Command
             ->get();
 
         foreach ($enrollments as $enrollment) {
-            $notifier->toUser($enrollment->student, "Tu acceso a «{$enrollment->course->title}» vence en ".self::ACCESS_DAYS.' días', [
-                "Tu acceso al curso «{$enrollment->course->title}» termina el ".$day->format('d/m/Y').'.',
-                'Aprovecha estos días para terminarlo. Si necesitas más tiempo, comunícate con la academia.',
-            ], ['label' => 'Continuar el curso', 'path' => "/my-courses/{$enrollment->course_id}"]);
+            $notifier->notify($enrollment->student, 'acceso_por_vencer', [
+                'curso' => $enrollment->course->title,
+                'fecha_fin' => $day->format('d/m/Y'),
+                'dias' => self::ACCESS_DAYS,
+            ], "/my-courses/{$enrollment->course_id}");
         }
 
         return $enrollments->count();

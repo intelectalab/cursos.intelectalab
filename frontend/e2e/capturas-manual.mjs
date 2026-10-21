@@ -41,7 +41,7 @@ const ROLES = [
     base: ACADEMY,
     email: 'admin@plataforma.com',
     find: { '/courses': 'Excel para finanzas' },
-    routes: ['/dashboard', '/panel', '/courses', '/students', '/teachers', '/enrollments', '/question-banks', '/crm', '/billing', '/promotions', '/certificates', '/certificates/design', '/support', '/claims', '/reports', '/users', '/roles', '/settings', '/settings/plan', '/pages', '/audit', '/account'],
+    routes: ['/dashboard', '/panel', '/courses', '/students', '/teachers', '/enrollments', '/question-banks', '/crm', '/billing', '/promotions', '/certificates', '/certificates/design', '/support', '/claims', '/reports', '/users', '/roles', '/settings', '/settings/plan', '/settings/emails', '/pages', '/audit', '/account'],
     extras: [
       { route: '/courses', name: 'nuevo-curso', steps: [button('Nuevo curso')] },
       { route: '/students', name: 'nuevo-alumno', steps: [button('Nuevo alumno')] },
@@ -58,6 +58,7 @@ const ROLES = [
       { route: '/settings', name: 'cobros-en-linea', steps: [scroll('Cobros en línea')] },
       { route: '/settings', name: 'errores-de-pasarelas', steps: [scroll('Últimos errores de las pasarelas'), click('button:has-text("Últimos errores de las pasarelas")')] },
       { route: '/settings', name: 'feriados', steps: [scroll('Feriados')] },
+      { route: '/settings/emails', name: 'editor', steps: [scroll('Datos que puedes usar')] },
       { route: '/dashboard', name: 'campana', steps: [click('button[aria-label*="viso"]')] },
       { route: '/panel', name: 'ventas', steps: [click('[role=tab]:has-text("Ventas")')] },
       { route: '/panel', name: 'personas', steps: [click('[role=tab]:has-text("Personas")')] },
@@ -72,7 +73,7 @@ const ROLES = [
     base: CENTRAL,
     email: 'plataforma@intelectalab.test',
     loginPath: '/platform',
-    routes: ['/platform/panel', '/platform', '/platform/plans', '/platform/payments'],
+    routes: ['/platform/panel', '/platform', '/platform/plans', '/platform/payments', '/platform/emails'],
     extras: [
       { route: '/platform', name: 'nueva-academia', steps: [click('button:has-text("Nueva academia")')] },
       { route: '/platform/plans', name: 'cobros-en-linea', steps: [scroll('Cobros en línea')] },

@@ -60,10 +60,7 @@ class MemberService
 
                 $this->audit->record('users.created', $user, null, $user->only(['email', 'first_name', 'last_name', 'status']));
 
-                $this->notifier->toUser($user, 'Tu cuenta está lista', [
-                    "Tu empresa te registró para llevar cursos. Entra con tu correo ({$user->email}) y la contraseña que te entregaron.",
-                    'Si no la tienes, usa «¿Olvidaste tu contraseña?» en la pantalla de acceso para crear una.',
-                ], ['label' => 'Iniciar sesión', 'path' => '/login']);
+                $this->notifier->notify($user, 'cuenta_empresa', ['correo' => $user->email], '/login');
             }
 
             $role = Role::query()

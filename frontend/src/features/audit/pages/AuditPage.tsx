@@ -46,6 +46,8 @@ const ACTION_LABEL: Record<string, string> = {
   'tenants.provisioned': 'Organización creada',
   'tenants.status_changed': 'Estado de la organización cambiado',
   'tenant_settings.updated': 'Configuración actualizada',
+  'email_templates.updated': 'Texto de un correo cambiado',
+  'email_templates.restored': 'Correo vuelto a su texto original',
   'tenant_settings.logo_updated': 'Logo actualizado',
   'tenant_settings.logo_removed': 'Logo eliminado',
   'courses.created': 'Curso creado',

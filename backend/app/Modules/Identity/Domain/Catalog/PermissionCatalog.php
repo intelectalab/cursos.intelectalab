@@ -45,6 +45,7 @@ class PermissionCatalog
                 'permissions' => [
                     'tenant_settings.read' => 'Consultar la configuración de la organización',
                     'tenant_settings.update' => 'Editar la configuración de la organización',
+                    'email_templates.manage' => 'Gestionar los correos automáticos (textos, apagar, probar)',
                     'audit.read' => 'Consultar auditoría',
                 ],
             ],

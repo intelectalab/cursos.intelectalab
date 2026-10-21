@@ -40,6 +40,7 @@ const PageEditorPage = lazyPage(() => import('../features/cms/pages/PageEditorPa
 const PublicPage = lazyPage(() => import('../features/cms/pages/PublicPage'), 'PublicPage');
 const PlatformLanding = lazyPage(() => import('../features/landing/pages/PlatformLanding'), 'PlatformLanding');
 const AcademyHomePage = lazyPage(() => import('../features/sales/pages/AcademyHomePage'), 'AcademyHomePage');
+const EmailSettingsPage = lazyPage(() => import('../features/emails/pages/EmailSettingsPage'), 'EmailSettingsPage');
 const NotFoundPage = lazyPage(() => import('../shared/ui/NotFoundPage'), 'NotFoundPage');
 
 // Dominio central de la plataforma: alta de organizaciones
@@ -52,6 +53,7 @@ function CentralRoutes() {
       <Route path="/platform/plans" element={<PlatformConsole />} />
       <Route path="/platform/payments" element={<PlatformConsole />} />
       <Route path="/platform/panel" element={<PlatformConsole />} />
+      <Route path="/platform/emails" element={<PlatformConsole />} />
       <Route path="/" element={<PlatformLanding />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
@@ -134,6 +136,14 @@ function TenantRoutes() {
               element={
                 <PermissionGate permission="tenant_settings.read">
                   <PlanPage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/settings/emails"
+              element={
+                <PermissionGate permission="email_templates.manage">
+                  <EmailSettingsPage />
                 </PermissionGate>
               }
             />

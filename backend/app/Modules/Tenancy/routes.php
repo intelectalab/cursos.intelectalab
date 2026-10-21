@@ -1,7 +1,9 @@
 <?php
 
+use App\Modules\Tenancy\Http\Controllers\EmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\GradeScaleController;
 use App\Modules\Tenancy\Http\Controllers\HolidayController;
+use App\Modules\Tenancy\Http\Controllers\PlatformEmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\TenantController;
 use App\Modules\Tenancy\Http\Controllers\TenantSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -11,6 +13,26 @@ Route::get('/tenant', [TenantController::class, 'current']);
 // Alta de organizaciones: solo desde el dominio central
 Route::post('/tenants', [TenantController::class, 'register'])
     ->middleware(['central', 'throttle:10,1']);
+
+// Correos automáticos: la academia cambia sus textos, apaga los que no le sirven y los prueba
+Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:email_templates.manage'])->prefix('/settings/emails')->group(function () {
+    Route::get('/', [EmailTemplateController::class, 'index']);
+    Route::get('/{key}', [EmailTemplateController::class, 'show'])->where('key', '[a-z_]+');
+    Route::put('/{key}', [EmailTemplateController::class, 'update'])->where('key', '[a-z_]+');
+    Route::delete('/{key}', [EmailTemplateController::class, 'destroy'])->where('key', '[a-z_]+');
+    Route::post('/{key}/preview', [EmailTemplateController::class, 'preview'])->where('key', '[a-z_]+')->middleware('throttle:60,1');
+    Route::post('/{key}/test', [EmailTemplateController::class, 'test'])->where('key', '[a-z_]+')->middleware('throttle:10,1');
+});
+
+// Consola: correos de la plataforma y texto base de los de las academias
+Route::prefix('platform/emails')->middleware(['central', 'auth:sanctum', 'platform.admin'])->group(function () {
+    Route::get('/', [PlatformEmailTemplateController::class, 'index']);
+    Route::get('/{key}', [PlatformEmailTemplateController::class, 'show'])->where('key', '[a-z_]+');
+    Route::put('/{key}', [PlatformEmailTemplateController::class, 'update'])->where('key', '[a-z_]+');
+    Route::delete('/{key}', [PlatformEmailTemplateController::class, 'destroy'])->where('key', '[a-z_]+');
+    Route::post('/{key}/preview', [PlatformEmailTemplateController::class, 'preview'])->where('key', '[a-z_]+')->middleware('throttle:60,1');
+    Route::post('/{key}/test', [PlatformEmailTemplateController::class, 'test'])->where('key', '[a-z_]+')->middleware('throttle:10,1');
+});
 
 // Configuración general de la organización
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () {

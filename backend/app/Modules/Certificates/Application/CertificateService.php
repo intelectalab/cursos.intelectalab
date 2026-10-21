@@ -87,10 +87,10 @@ class CertificateService
                 'automatic' => $actor === null,
             ], $actor?->id);
 
-            $this->notifier->toUser($enrollment->student, "Tu certificado de «{$enrollment->course->title}» está listo", [
-                "Completaste el curso «{$enrollment->course->title}» y ya puedes descargar tu certificado.",
-                "Código de verificación: {$certificate->verification_code}. Cualquiera puede comprobarlo en la página de verificación.",
-            ], ['label' => 'Ver mi certificado', 'path' => '/my-certificates']);
+            $this->notifier->notify($enrollment->student, 'certificado', [
+                'curso' => $enrollment->course->title,
+                'codigo' => $certificate->verification_code,
+            ], '/my-certificates');
 
             return $certificate;
         });

@@ -7,6 +7,7 @@ use App\Modules\Billing\Mail\PlanOrderMail;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Platform\Domain\Models\PlatformAdmin;
+use App\Modules\Tenancy\Application\EmailTemplates;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -19,92 +20,95 @@ use Throwable;
  */
 class PlanOrderNotifier
 {
-    public function __construct(private readonly TenantContext $context) {}
+    public function __construct(
+        private readonly TenantContext $context,
+        private readonly EmailTemplates $templates,
+    ) {}
 
     public function orderRequested(PlanOrder $order): void
     {
-        $this->toPlatform("Nueva orden de plan {$order->code()} · {$order->tenant->name}", [
-            "«{$order->tenant->name}» pidió el plan «{$order->plan_name}» por {$order->currency} {$order->amount}.",
-            'Aún no informó su pago. Cuando lo recibas, confírmalo en la consola, sección Pagos.',
-        ]);
+        $this->toPlatform('plan_pedido', $order);
     }
 
     public function paymentInformed(PlanOrder $order): void
     {
-        $this->toPlatform("Pago informado en la orden {$order->code()} · {$order->tenant->name}", array_values(array_filter([
-            "«{$order->tenant->name}» informó que pagó el plan «{$order->plan_name}» ({$order->currency} {$order->amount}).",
-            filled($order->payer_reference) ? "Cómo ubicar el pago: {$order->payer_reference}" : null,
-            $order->proof_file_id !== null ? 'Adjuntó su constancia: puedes verla en la consola.' : null,
-            'Revísalo y confírmalo en la consola, sección Pagos.',
-        ])));
+        $this->toPlatform('plan_pago_informado', $order, [
+            'referencia' => $order->payer_reference,
+            'constancia' => $order->proof_file_id !== null ? 'Adjuntó su constancia' : null,
+        ]);
     }
 
     public function needsReview(PlanOrder $order): void
     {
-        $this->toPlatform("Cobro por revisar en la orden {$order->code()} · {$order->tenant->name}", [
-            "La pasarela cobró un pago que no se aplicó a la orden. {$order->review_reason}",
-            'Revísalo en la cuenta de la pasarela y en la consola, sección Pagos.',
-        ]);
+        $this->toPlatform('plan_cobro_revision', $order, ['motivo' => $order->review_reason]);
     }
 
     public function confirmed(PlanOrder $order): void
     {
-        $this->toTenant($order, "Tu pago fue confirmado: plan «{$order->plan_name}» vigente", array_values(array_filter([
-            "IntelectaLab confirmó el pago de tu orden {$order->code()}.",
-            $order->applied_period_ends_at ? 'Tu plan está vigente hasta el '.$order->applied_period_ends_at->format('d/m/Y').'.' : null,
-        ])));
+        $this->toTenant('plan_confirmado', $order, ['vigencia' => $order->applied_period_ends_at?->format('d/m/Y')]);
     }
 
     public function cancelledByPlatform(PlanOrder $order): void
     {
-        $this->toTenant($order, "Tu orden de plan {$order->code()} fue cancelada", array_values(array_filter([
-            "IntelectaLab canceló tu orden del plan «{$order->plan_name}».",
-            filled($order->notes) ? "Motivo: {$order->notes}" : null,
-            'Puedes pedir otro plan en Configuración → Mi plan.',
-        ])));
+        $this->toTenant('plan_cancelado', $order, ['motivo' => $order->notes]);
     }
 
     public function expired(PlanOrder $order): void
     {
-        $this->toTenant($order, "Tu orden de plan {$order->code()} venció", [
-            "La orden del plan «{$order->plan_name}» pasó su plazo sin que se informara un pago.",
-            'Si aún quieres el plan, pídelo de nuevo en Configuración → Mi plan.',
-        ]);
+        $this->toTenant('plan_vencido', $order);
     }
 
     public function confirmationReverted(PlanOrder $order, string $reason): void
     {
-        $this->toTenant($order, "Se anuló la confirmación de tu orden {$order->code()}", [
-            "IntelectaLab anuló la confirmación del pago de tu orden del plan «{$order->plan_name}»: tu plan volvió a como estaba antes.",
-            "Motivo: {$reason}",
-            'La orden quedó otra vez pendiente de pago. Revísala en Configuración → Mi plan.',
-        ]);
+        $this->toTenant('plan_confirmacion_anulada', $order, ['motivo' => $reason]);
     }
 
     public function refunded(PlanOrder $order, string $reason): void
     {
-        $this->toTenant($order, "Se devolvió el pago de tu orden {$order->code()}", [
-            "IntelectaLab devolvió el pago de tu orden del plan «{$order->plan_name}» ({$order->currency} {$order->amount}): tu plan volvió a como estaba antes.",
-            "Motivo: {$reason}",
-            'El dinero vuelve al medio con el que pagaste; el plazo depende de la pasarela y de tu banco.',
-        ]);
+        $this->toTenant('plan_reembolsado', $order, ['motivo' => $reason]);
     }
 
     /**
-     * @param  list<string>  $lines
+     * El texto que la plataforma tenga para ese correo, con los datos de la orden; null si lo apagó.
+     *
+     * @param  array<string, string|null>  $values
+     * @return array{subject: string, lines: list<string>, button: ?string}|null
      */
-    private function toPlatform(string $title, array $lines): void
+    private function content(string $key, PlanOrder $order, array $values): ?array
     {
-        $this->send(PlatformAdmin::query()->where('status', PlatformAdmin::STATUS_ACTIVE)->pluck('email')->all(), $title, $lines);
+        $order->loadMissing('tenant');
+
+        return $this->context->runAsSystem(fn () => $this->templates->render($key, $values + [
+            'academia' => $order->tenant?->name,
+            'orden' => $order->code(),
+            'plan' => $order->plan_name,
+            'importe' => $order->currency.' '.$order->amount,
+        ], forAcademy: false));
+    }
+
+    /**
+     * @param  array<string, string|null>  $values
+     */
+    private function toPlatform(string $key, PlanOrder $order, array $values = []): void
+    {
+        $content = $this->content($key, $order, $values);
+        if ($content !== null) {
+            $this->send(PlatformAdmin::query()->where('status', PlatformAdmin::STATUS_ACTIVE)->pluck('email')->all(), $content);
+        }
     }
 
     /**
      * A quien pidió la orden y a los administradores de la organización.
      *
-     * @param  list<string>  $lines
+     * @param  array<string, string|null>  $values
      */
-    private function toTenant(PlanOrder $order, string $title, array $lines): void
+    private function toTenant(string $key, PlanOrder $order, array $values = []): void
     {
+        $content = $this->content($key, $order, $values);
+        if ($content === null) {
+            return;
+        }
+
         $emails = $this->context->runForTenant($order->tenant_id, fn () => User::query()
             ->where('status', User::STATUS_ACTIVE)
             ->where(fn ($query) => $query
@@ -113,18 +117,18 @@ class PlanOrderNotifier
             ->pluck('email')
             ->all());
 
-        $this->send($emails, $title, $lines);
+        $this->send($emails, $content);
     }
 
     /**
      * @param  list<string>  $emails
-     * @param  list<string>  $lines
+     * @param  array{subject: string, lines: list<string>, button: ?string}  $content
      */
-    private function send(array $emails, string $title, array $lines): void
+    private function send(array $emails, array $content): void
     {
         foreach (array_unique($emails) as $email) {
             try {
-                Mail::to($email)->send(new PlanOrderMail($title, $lines));
+                Mail::to($email)->send(new PlanOrderMail($content['subject'], $content['lines']));
             } catch (Throwable $e) {
                 report($e);
             }
