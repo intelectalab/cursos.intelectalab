@@ -68,7 +68,12 @@ class NoClassDaysAndAttendanceRuleTest extends TestCase
     {
         Mail::fake();
 
-        // Un jueves normal: hay clase y sale el recordatorio
+        // A la 1 de la tarde de la academia no sale nada
+        $this->artisan('live-classes:remind')->assertSuccessful();
+        Mail::assertNotSent(TenantNoticeMail::class);
+
+        // Un jueves normal a las 7:30 en Lima: hay clase y sale el recordatorio
+        $this->travelTo('2026-11-05 12:30:00');
         $this->artisan('live-classes:remind')->assertSuccessful();
         Mail::assertSent(TenantNoticeMail::class, fn (TenantNoticeMail $mail) => $mail->hasTo('ana@acme.com') && $mail->title === 'Hoy tienes clase en vivo de Excel para finanzas');
 
@@ -87,7 +92,7 @@ class NoClassDaysAndAttendanceRuleTest extends TestCase
 
         // El 12 no sale recordatorio
         Mail::fake();
-        $this->travelTo('2026-11-12 12:00:00');
+        $this->travelTo('2026-11-12 12:30:00');
         $this->artisan('live-classes:remind')->assertSuccessful();
         Mail::assertNotSent(TenantNoticeMail::class);
     }

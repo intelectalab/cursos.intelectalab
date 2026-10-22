@@ -25,8 +25,8 @@ Schedule::command('exchange-rates:sync')->dailyAt('07:00');
 // Recordatorios por correo: cuotas por vencer y vencidas, y accesos a cursos por terminar
 Schedule::command('reminders:send')->dailyAt('08:00');
 
-// Aviso a los alumnos de las clases en vivo del día
-Schedule::command('live-classes:remind')->dailyAt('07:30');
+// Aviso a los alumnos de las clases en vivo del día: corre cada hora y sale a las 7:30 de cada academia
+Schedule::command('live-classes:remind')->hourlyAt(30);
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

@@ -15,8 +15,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 
 /**
- * Recordatorio a los alumnos el día de su clase en vivo, una vez al día por
- * la mañana. No sale los feriados de la academia ni los días sin clase del
+ * Recordatorio a los alumnos el día de su clase en vivo, a las 7 de la mañana
+ * de cada academia: la tarea corre cada hora y solo avisa en las academias
+ * donde ya son las 7. No sale los feriados de la academia ni los días sin clase del
  * docente. El correo se puede editar o apagar en Configuración → Correos.
  */
 class RemindLiveClassesCommand extends Command
@@ -25,16 +26,22 @@ class RemindLiveClassesCommand extends Command
 
     protected $description = 'Avisa a los alumnos de las clases en vivo que tienen hoy';
 
+    /** Hora local de la academia a la que sale el recordatorio */
+    public const SEND_HOUR = 7;
+
     public function handle(TenantContext $context, TenantNotifier $notifier, TenantSettingsService $settings): int
     {
         $sent = 0;
 
         foreach (Tenant::query()->where('status', Tenant::STATUS_ACTIVE)->pluck('id') as $tenantId) {
             $sent += $context->runForTenant($tenantId, function () use ($notifier, $settings) {
-                // El día es el de la academia, no el del servidor
-                $today = CarbonImmutable::now($settings->timezone())->toDateString();
+                // El día y la hora son los de la academia, no los del servidor
+                $now = CarbonImmutable::now($settings->timezone());
+                if ($now->hour !== self::SEND_HOUR) {
+                    return 0;
+                }
 
-                return $this->remind($notifier, $today);
+                return $this->remind($notifier, $now->toDateString());
             });
         }
 
