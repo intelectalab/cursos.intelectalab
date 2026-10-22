@@ -33,6 +33,7 @@ class CoursePresenter
             'issues_certificate' => $course->issues_certificate,
             'sequential' => $course->sequential,
             'passing_percent' => $course->passing_percent,
+            'min_attendance_percent' => $course->min_attendance_percent,
             'language' => $course->language,
             'status' => $course->status,
             'cover_url' => $course->cover?->publicUrl(),

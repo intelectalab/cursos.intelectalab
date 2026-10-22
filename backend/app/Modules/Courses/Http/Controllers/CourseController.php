@@ -198,6 +198,8 @@ class CourseController extends Controller
             'sequential' => ['nullable', 'boolean'],
             // Nota final mínima para aprobar, en porcentaje; vacío = no se exige
             'passing_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            // Asistencia mínima a las clases en vivo para el certificado, en porcentaje; vacío = no se exige
+            'min_attendance_percent' => ['nullable', 'integer', 'min:1', 'max:100'],
             'language' => ['required', Rule::in(Course::LANGUAGES)],
         ]);
     }

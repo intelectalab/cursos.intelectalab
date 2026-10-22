@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CardHeader, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, PageHeader } from '../../../shared/ui';
 import { WeekGrid } from '../components/WeekGrid';
+import { NoClassDaysCard } from '../components/NoClassDaysCard';
 import { BLOCK_TYPES, DAYS, formatDay, schedulesApi, STATUS_META, type BlockType, type Schedule, type ScheduleBlock } from '../api';
 
 type Data = Awaited<ReturnType<typeof schedulesApi.show>>;
@@ -252,6 +253,8 @@ export const ScheduleEditorPage: React.FC = () => {
             {preview.length === 0 ? <EmptyState icon={CalendarDays} title="Sin bloques" text={canManage ? 'Agrega bloques arriba para verlos aquí.' : 'Todavía no se armó su horario.'} /> : <WeekGrid blocks={preview} />}
           </div>
         </Card>
+
+        <NoClassDaysCard teacherId={teacherId} canManage={canManage} />
 
         {schedule?.confirmed && schedule.status !== 'CONFIRMED' && (
           <Card>

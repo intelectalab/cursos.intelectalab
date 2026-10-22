@@ -8,6 +8,7 @@ import { formatMoney, salesApi, type CouponCheck } from '../api';
 import { CouponBox } from '../components/CouponBox';
 import { CourseCover, CourseFacts } from '../components/CourseCatalog';
 import { CourseCompanions } from '../components/CourseCompanions';
+import { RefundPolicyNote } from '../components/RefundPolicyNote';
 
 // Checkout (FP-02): resumen de la compra y confirmación. El precio que vale es el del servidor.
 export const CheckoutPage: React.FC = () => {
@@ -149,6 +150,8 @@ export const CheckoutPage: React.FC = () => {
             </dl>
 
             {Number(course.price) > 0 && <CouponBox product={{ course_id: course.id }} applied={coupon} onChange={setCoupon} />}
+
+            {Number(course.price) > 0 && <RefundPolicyNote />}
 
             <p className="flex items-start gap-2 text-xs text-slate-500">
               <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600" />

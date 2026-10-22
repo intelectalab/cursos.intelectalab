@@ -3,6 +3,7 @@
 namespace App\Modules\Schedules\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
+use App\Modules\Certificates\Application\CertificateService;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Models\User;
@@ -25,6 +26,7 @@ class AttendanceService
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly TenantSettingsService $settings,
+        private readonly CertificateService $certificates,
     ) {}
 
     public function today(): string
@@ -42,12 +44,16 @@ class AttendanceService
         $weekday = CarbonImmutable::parse($date)->dayOfWeekIso;
 
         $sessions = [];
-        TeacherSchedule::query()
+        $schedules = TeacherSchedule::query()
             ->whereIn('teacher_id', $course->teachers()->select('users.id'))
             ->whereNotNull('confirmed_blocks')
             ->where('confirmed_valid_from', '<=', $date)
             ->with('teacher:id,first_name,last_name')
-            ->get()
+            ->get();
+        $noClass = NoClassDays::between($schedules->pluck('teacher_id'), $date, $date);
+
+        $schedules
+            ->reject(fn (TeacherSchedule $schedule) => $noClass->blocks($schedule->teacher_id, $date))
             ->each(function (TeacherSchedule $schedule) use ($course, $weekday, &$sessions) {
                 foreach ($schedule->confirmed_blocks as $block) {
                     if ($block['type'] === TeacherSchedule::TYPE_LIVE_CLASS && ($block['course_id'] ?? null) === $course->id && $block['day'] === $weekday) {
@@ -116,6 +122,11 @@ class AttendanceService
                 'present' => collect($records)->whereIn('status', [LiveClassAttendance::STATUS_PRESENT, LiveClassAttendance::STATUS_LATE])->count(),
             ]);
         });
+
+        // Con la asistencia al día, quien ya completó el curso y ahora cumple recibe su certificado
+        if ($course->issues_certificate && $course->min_attendance_percent !== null) {
+            User::query()->whereIn('id', collect($records)->pluck('student_id'))->get()->each(fn (User $student) => $this->certificates->syncFor($student));
+        }
 
         return count($records);
     }

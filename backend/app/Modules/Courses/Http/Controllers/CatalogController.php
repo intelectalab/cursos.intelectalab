@@ -86,6 +86,7 @@ class CatalogController extends Controller
                 'comment' => $review->comment,
                 'author' => CourseCommunity::publicName($review->student),
                 'updated_at' => $review->updated_at?->toIso8601String(),
+                'response' => $review->response,
             ])->values(),
         ]);
     }

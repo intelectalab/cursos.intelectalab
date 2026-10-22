@@ -41,6 +41,7 @@ class SecurityBaselineTest extends TestCase
         'GET api/v1/catalog/courses/{course}/companions',
         'GET api/v1/catalog/packages',
         'GET api/v1/catalog/packages/{package}',
+        'GET api/v1/refund-policy',
         'GET api/v1/certificates/verify/{code}',
         'GET api/v1/claims/form',
         'POST api/v1/claims',

@@ -13,6 +13,13 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     });
     Route::put('/schedules/{teacher}', [ScheduleController::class, 'update'])->whereUuid('teacher')->middleware('permission:schedules.manage');
 
+    // Días sin clase de cada docente
+    Route::get('/schedules/{teacher}/exceptions', [ScheduleController::class, 'exceptions'])->whereUuid('teacher')->middleware('permission:schedules.read');
+    Route::middleware('permission:schedules.manage')->group(function () {
+        Route::post('/schedules/{teacher}/exceptions', [ScheduleController::class, 'addException'])->whereUuid('teacher');
+        Route::delete('/schedules/{teacher}/exceptions/{exception}', [ScheduleController::class, 'removeException'])->whereUuid(['teacher', 'exception']);
+    });
+
     // Docente: su horario, que confirma u observa
     Route::middleware('permission:schedules.self')->group(function () {
         Route::get('/me/schedule', [MyScheduleController::class, 'show']);

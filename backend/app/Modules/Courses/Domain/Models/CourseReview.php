@@ -30,6 +30,9 @@ class CourseReview extends Model
         'hidden_reason',
         'hidden_by',
         'hidden_at',
+        'response',
+        'responded_by',
+        'responded_at',
     ];
 
     protected function casts(): array
@@ -37,6 +40,7 @@ class CourseReview extends Model
         return [
             'rating' => 'integer',
             'hidden_at' => 'datetime',
+            'responded_at' => 'datetime',
         ];
     }
 

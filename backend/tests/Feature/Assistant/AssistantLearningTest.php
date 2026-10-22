@@ -134,4 +134,46 @@ class AssistantLearningTest extends TestCase
         $this->flushHeaders()->withToken($this->login('acme', 'rosa@acme.com'))->getJson($this->api('/alerts/summary'))
             ->assertJsonPath('data.inactive_students', null);
     }
+
+    public function test_wrong_synonyms_can_be_forgotten(): void
+    {
+        $excel = $this->course('Excel para finanzas');
+        $this->withToken($this->admin)->postJson($this->api('/assistant/search-feedback'), ['term' => 'cocina', 'target_type' => 'COURSE', 'target_id' => $excel])->assertOk();
+
+        $alias = $this->withToken($this->admin)->getJson($this->api('/assistant/search-aliases/learned'))
+            ->assertOk()
+            ->assertJsonPath('data.0.term', 'cocina')
+            ->assertJsonPath('data.0.title', 'Excel para finanzas')
+            ->json('data.0.id');
+
+        $this->withToken($this->admin)->deleteJson($this->api("/assistant/search-aliases/{$alias}"))->assertOk()->assertJsonPath('data', []);
+        $this->withToken($this->admin)->getJson($this->api('/assistant/search-aliases'))->assertJsonPath('data', []);
+
+        // Un alumno puede enseñar sinónimos al buscar, pero no revisarlos ni borrarlos
+        $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'ana@acme.com']);
+        $this->flushHeaders()->withToken($this->login('acme', 'ana@acme.com'))->getJson($this->api('/assistant/search-aliases/learned'))->assertForbidden();
+    }
+
+    public function test_packages_bought_by_the_same_people_are_suggested_too(): void
+    {
+        $excel = $this->course('Excel para finanzas');
+        $powerBi = $this->course('Power BI', 250);
+        $word = $this->course('Word básico', 80);
+        $package = $this->withToken($this->admin)->postJson($this->api('/packages'), ['title' => 'Ruta de datos', 'price' => 300, 'status' => 'ACTIVE', 'course_ids' => [$powerBi, $word]])->assertCreated()->json('data.id');
+
+        foreach (['ana', 'luis'] as $name) {
+            $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => "{$name}@acme.com"]);
+            $this->buy("{$name}@acme.com", $excel);
+            $this->flushHeaders();
+            $order = $this->withToken($this->login('acme', "{$name}@acme.com"))->postJson($this->api('/orders'), ['package_id' => $package])->assertCreated()->json('data.id');
+            $this->flushHeaders()->withToken($this->admin)->postJson($this->api("/orders/{$order}/confirm-payment"), ['method' => 'YAPE'])->assertOk();
+        }
+
+        $this->flushHeaders()->getJson($this->api("/catalog/courses/{$excel}/companions"))
+            ->assertOk()
+            ->assertJsonFragment(['type' => 'PACKAGE', 'title' => 'Ruta de datos', 'people' => 2]);
+
+        // Para quien mira Power BI, el paquete que ya lo trae no es una sugerencia nueva
+        $this->getJson($this->api("/catalog/courses/{$powerBi}/companions"))->assertJsonMissing(['type' => 'PACKAGE']);
+    }
 }

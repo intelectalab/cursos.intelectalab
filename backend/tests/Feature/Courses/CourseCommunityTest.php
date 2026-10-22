@@ -119,4 +119,21 @@ class CourseCommunityTest extends TestCase
         $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'eva@acme.com']);
         $this->withToken($this->as('eva@acme.com'))->putJson($this->api("/me/courses/{$this->course}/review"), ['rating' => 5])->assertNotFound();
     }
+
+    public function test_the_academy_answers_a_review_in_public(): void
+    {
+        $this->withToken($this->as('ana@acme.com'))->putJson($this->api("/me/courses/{$this->course}/review"), ['rating' => 3, 'comment' => 'Faltan ejemplos.'])->assertOk();
+
+        $admin = $this->as('admin@acme.com');
+        $review = $this->withToken($admin)->getJson($this->api("/courses/{$this->course}/reviews"))->json('data.0.id');
+        $this->withToken($admin)->putJson($this->api("/courses/{$this->course}/reviews/{$review}/response"), ['response' => 'Gracias, agregamos un módulo de ejemplos.'])
+            ->assertOk()
+            ->assertJsonPath('data.response', 'Gracias, agregamos un módulo de ejemplos.');
+
+        $this->flushHeaders()->getJson($this->api("/catalog/courses/{$this->course}"))->assertJsonPath('data.reviews.0.response', 'Gracias, agregamos un módulo de ejemplos.');
+        $this->withToken($this->as('ana@acme.com'))->getJson($this->api("/me/courses/{$this->course}/review"))->assertJsonPath('data.response', 'Gracias, agregamos un módulo de ejemplos.');
+
+        // El docente no responde en nombre de la academia
+        $this->withToken($this->as('rosa@acme.com'))->putJson($this->api("/courses/{$this->course}/reviews/{$review}/response"), ['response' => 'x'])->assertForbidden();
+    }
 }

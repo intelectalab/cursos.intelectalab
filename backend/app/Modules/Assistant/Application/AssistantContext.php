@@ -13,6 +13,7 @@ use App\Modules\Reports\Application\StudentDirectory;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\OrderItem;
+use App\Modules\Schedules\Application\NoClassDays;
 use App\Modules\Schedules\Application\ScheduleService;
 use App\Modules\Schedules\Domain\Models\TeacherSchedule;
 use App\Modules\Tenancy\Application\TenantSettingsService;
@@ -225,13 +226,14 @@ class AssistantContext
     {
         $now = CarbonImmutable::now($this->settings->timezone());
         $next = null;
+        $noClass = NoClassDays::between($course->teachers->pluck('id'), $now->toDateString(), $now->addWeeks(8)->toDateString());
 
         TeacherSchedule::query()
             ->whereIn('teacher_id', $course->teachers->pluck('id'))
             ->whereNotNull('confirmed_blocks')
             ->with('teacher:id,first_name,last_name')
             ->get()
-            ->each(function (TeacherSchedule $schedule) use ($course, $now, &$next) {
+            ->each(function (TeacherSchedule $schedule) use ($course, $now, $noClass, &$next) {
                 $from = $schedule->confirmed_valid_from ? CarbonImmutable::parse($schedule->confirmed_valid_from->toDateString(), $now->timezone) : $now;
 
                 foreach ($schedule->confirmed_blocks as $block) {
@@ -241,7 +243,7 @@ class AssistantContext
 
                     // El primer día de la semana que toca, que no haya pasado y desde que vale el horario
                     $date = $now->startOfDay()->max($from->startOfDay());
-                    while ($date->dayOfWeekIso !== $block['day'] || $date->setTimeFromTimeString($block['end'])->lessThan($now)) {
+                    while ($date->dayOfWeekIso !== $block['day'] || $date->setTimeFromTimeString($block['end'])->lessThan($now) || $noClass->blocks($schedule->teacher_id, $date->toDateString())) {
                         $date = $date->addDay();
                     }
                     $at = $date->setTimeFromTimeString($block['start']);

@@ -32,6 +32,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::get('/reviews', [CourseCommunityController::class, 'reviews']);
         Route::post('/reviews/{review}/hide', [CourseCommunityController::class, 'hide'])->middleware('permission:reviews.moderate');
         Route::post('/reviews/{review}/show', [CourseCommunityController::class, 'show'])->middleware('permission:reviews.moderate');
+        Route::put('/reviews/{review}/response', [CourseCommunityController::class, 'respond'])->middleware('permission:reviews.moderate');
     });
 
     // Alumno: los anuncios de su curso y su reseña

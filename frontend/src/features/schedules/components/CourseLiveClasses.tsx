@@ -57,6 +57,11 @@ export const CourseLiveClasses: React.FC<{ courseId: string }> = ({ courseId }) 
               Con {item.teacher}
               {item.note && ` · ${item.note}`}
             </span>
+            {item.cancelled && item.cancelled.length > 0 && (
+              <span className="basis-full text-xs text-amber-800">
+                Sin clase: {item.cancelled.map((day) => `${formatDay(day.date)}${day.reason ? ` (${day.reason})` : ''}`).join('; ')}.
+              </span>
+            )}
             {item.meeting_url ? (
               <a href={item.meeting_url} target="_blank" rel="noreferrer noopener" className="font-semibold text-violet-700 underline">
                 Entrar a la clase

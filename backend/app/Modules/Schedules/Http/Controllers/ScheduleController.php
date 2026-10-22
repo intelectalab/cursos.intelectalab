@@ -111,6 +111,34 @@ class ScheduleController extends Controller
         return ApiResponse::success(SchedulePresenter::schedule($schedule, SchedulePresenter::courseTitles(collect([$schedule]))));
     }
 
+    public function exceptions(string $teacher): JsonResponse
+    {
+        return ApiResponse::success($this->schedules->exceptionsOf($this->teacher($teacher)));
+    }
+
+    /**
+     * Un día sin clase del docente (permiso, viaje…). Los feriados de la academia ya cuentan solos.
+     */
+    public function addException(Request $request, string $teacher): JsonResponse
+    {
+        $data = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d'],
+            'reason' => ['nullable', 'string', 'max:150'],
+        ], [], ['date' => 'fecha', 'reason' => 'motivo']);
+
+        $this->schedules->addException($this->teacher($teacher), $data['date'], $data['reason'] ?? null, $request->user());
+
+        return ApiResponse::success($this->schedules->exceptionsOf($this->teacher($teacher)), null, 201);
+    }
+
+    public function removeException(string $teacher, string $exception): JsonResponse
+    {
+        $record = $this->teacher($teacher);
+        $this->schedules->removeException($record, $exception);
+
+        return ApiResponse::success($this->schedules->exceptionsOf($record));
+    }
+
     private function teacher(string $id): User
     {
         // Quien no es docente no tiene horario

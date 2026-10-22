@@ -57,6 +57,8 @@ export interface CourseSummary {
   sequential: boolean;
   // Nota final mínima para aprobar el curso, en porcentaje; null = no se exige
   passing_percent: number | null;
+  // Asistencia mínima a las clases en vivo para el certificado (%); null = no se exige
+  min_attendance_percent: number | null;
   language: string;
   status: CourseStatus;
   cover_url: string | null;
@@ -132,6 +134,7 @@ export interface CourseInput {
   issues_certificate: boolean;
   sequential: boolean;
   passing_percent: number | null;
+  min_attendance_percent: number | null;
   language: string;
 }
 
@@ -147,6 +150,7 @@ export const EMPTY_COURSE: CourseInput = {
   issues_certificate: false,
   sequential: false,
   passing_percent: null,
+  min_attendance_percent: null,
   language: 'es',
 };
 

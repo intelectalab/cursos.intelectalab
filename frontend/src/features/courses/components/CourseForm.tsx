@@ -105,6 +105,22 @@ export const CourseFields: React.FC<{
             onChange={(event) => set('passing_percent', event.target.value !== '' ? toPercent(Number(event.target.value), gradeScale) : null)}
           />
         </Field>
+        <Field
+          label="Asistencia mínima a clases en vivo (%, opcional)"
+          hint="Si el curso entrega certificado, el alumno debe alcanzar este porcentaje de asistencia. Cuentan presentes y tardanzas; las faltas justificadas no. Mientras no se tome asistencia, no se exige. Vacío: no se exige."
+        >
+          <input
+            className={INPUT_CLASS}
+            type="number"
+            min={1}
+            max={100}
+            step={1}
+            placeholder="Sin asistencia mínima"
+            disabled={disabled}
+            value={value.min_attendance_percent ?? ''}
+            onChange={(event) => set('min_attendance_percent', event.target.value !== '' ? Number(event.target.value) : null)}
+          />
+        </Field>
         <Field label="Idioma">
           <select className={INPUT_CLASS} disabled={disabled} value={value.language} onChange={(event) => set('language', event.target.value)}>
             {(options?.languages ?? ['es']).map((language) => (

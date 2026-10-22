@@ -97,6 +97,14 @@ class CourseCommunityController extends Controller
         return ApiResponse::success(self::review($this->community->hide($item, $data['reason'], $request->user())));
     }
 
+    public function respond(Request $request, string $course, string $review): JsonResponse
+    {
+        $item = $this->moderated($request, $course, $review);
+        $data = $request->validate(['response' => ['nullable', 'string', 'max:1000']], [], ['response' => 'respuesta']);
+
+        return ApiResponse::success(self::review($this->community->respond($item, $data['response'] ?? null, $request->user())));
+    }
+
     public function show(Request $request, string $course, string $review): JsonResponse
     {
         return ApiResponse::success(self::review($this->community->show($this->moderated($request, $course, $review))));
@@ -161,6 +169,9 @@ class CourseCommunityController extends Controller
             'comment' => $review->comment,
             'status' => $review->status,
             'updated_at' => $review->updated_at?->toIso8601String(),
+            // Respuesta pública de la academia
+            'response' => $review->response,
+            'responded_at' => $review->responded_at?->toIso8601String(),
         ];
     }
 

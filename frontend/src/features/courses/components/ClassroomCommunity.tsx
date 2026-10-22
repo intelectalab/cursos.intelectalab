@@ -143,6 +143,12 @@ export const ClassroomReview: React.FC<{ courseId: string }> = ({ courseId }) =>
           </div>
           {review.comment && <p className="text-[13px] text-slate-700 whitespace-pre-line">{review.comment}</p>}
           {review.status === 'HIDDEN' && <p className="text-xs text-amber-700">La academia ocultó tu opinión. Si la corriges, vuelve a publicarse.</p>}
+          {review.response && (
+            <p className="mt-1 pl-3 border-l-2 border-brand-200 text-[13px] text-slate-600 whitespace-pre-line">
+              <span className="font-semibold text-slate-800">Respuesta de la academia: </span>
+              {review.response}
+            </p>
+          )}
         </div>
       )}
     </section>

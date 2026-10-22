@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { EyeOff, Megaphone, Pencil, Send, Star, Trash2, Eye } from 'lucide-react';
+import { EyeOff, Megaphone, MessageSquareReply, Pencil, Send, Star, Trash2, Eye } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CardHeader, CHECKBOX_CLASS, ConfirmModal, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, Modal } from '../../../shared/ui';
 import { communityApi, formatWhen, type Announcement, type StaffReview } from '../community';
@@ -24,6 +24,10 @@ export const CommunityTab: React.FC<{ courseId: string }> = ({ courseId }) => {
   const [removing, setRemoving] = useState<Announcement | null>(null);
   const [hiding, setHiding] = useState<StaffReview | null>(null);
   const [reason, setReason] = useState('');
+  // Filtro de reseñas por estrellas: 0 = todas
+  const [stars, setStars] = useState(0);
+  const [answering, setAnswering] = useState<StaffReview | null>(null);
+  const [answer, setAnswer] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -136,12 +140,32 @@ export const CommunityTab: React.FC<{ courseId: string }> = ({ courseId }) => {
               ? `Promedio ${reviews.average} de 5 con ${reviews.count} ${reviews.count === 1 ? 'reseña visible' : 'reseñas visibles'}. Se ve en el catálogo público del curso.`
               : 'Los alumnos matriculados opinan desde el aula. Se publican al momento y la academia puede ocultarlas.'
           }
+          action={
+            reviews.data.length > 0 && (
+              <div role="group" aria-label="Filtrar por estrellas" className="flex flex-wrap gap-1">
+                {[0, 5, 4, 3, 2, 1].map((value) => {
+                  const count = value === 0 ? reviews.data.length : reviews.data.filter((review) => review.rating === value).length;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={stars === value}
+                      onClick={() => setStars(value)}
+                      className={`h-7 px-2.5 rounded-lg text-xs font-semibold cursor-pointer ${stars === value ? 'bg-brand-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                    >
+                      {value === 0 ? 'Todas' : `${value} ★`} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            )
+          }
         />
         {reviews.data.length === 0 ? (
           <EmptyState icon={Star} title="Aún no hay reseñas" />
         ) : (
           <ul className="divide-y divide-slate-100">
-            {reviews.data.map((review) => (
+            {reviews.data.filter((review) => stars === 0 || review.rating === stars).map((review) => (
               <li key={review.id} className="px-5 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2.5">
@@ -150,19 +174,38 @@ export const CommunityTab: React.FC<{ courseId: string }> = ({ courseId }) => {
                     <span className="text-xs text-slate-500">{formatWhen(review.updated_at)}</span>
                     {review.status === 'HIDDEN' && <Badge tone="neutral">Oculta</Badge>}
                   </div>
-                  {reviews.canModerate &&
-                    (review.status === 'VISIBLE' ? (
-                      <Button size="sm" icon={<EyeOff className="w-4 h-4" />} onClick={() => setHiding(review)}>
-                        Ocultar
+                  {reviews.canModerate && (
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        icon={<MessageSquareReply className="w-4 h-4" />}
+                        onClick={() => {
+                          setAnswering(review);
+                          setAnswer(review.response ?? '');
+                        }}
+                      >
+                        {review.response ? 'Editar respuesta' : 'Responder'}
                       </Button>
-                    ) : (
-                      <Button size="sm" icon={<Eye className="w-4 h-4" />} onClick={() => void communityApi.show(courseId, review.id).then(load)}>
-                        Volver a mostrar
-                      </Button>
-                    ))}
+                      {review.status === 'VISIBLE' ? (
+                        <Button size="sm" icon={<EyeOff className="w-4 h-4" />} onClick={() => setHiding(review)}>
+                          Ocultar
+                        </Button>
+                      ) : (
+                        <Button size="sm" icon={<Eye className="w-4 h-4" />} onClick={() => void communityApi.show(courseId, review.id).then(load)}>
+                          Volver a mostrar
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {review.comment && <p className="text-[13px] text-slate-700 mt-2 whitespace-pre-line">{review.comment}</p>}
                 {review.status === 'HIDDEN' && review.hidden_reason && <p className="text-xs text-slate-500 mt-1">Motivo para ocultarla: {review.hidden_reason}</p>}
+                {review.response && (
+                  <p className="mt-2 ml-3 pl-3 border-l-2 border-brand-200 text-[13px] text-slate-600 whitespace-pre-line">
+                    <span className="font-semibold text-slate-800">Respuesta de la academia: </span>
+                    {review.response}
+                  </p>
+                )}
               </li>
             ))}
           </ul>
@@ -197,6 +240,48 @@ export const CommunityTab: React.FC<{ courseId: string }> = ({ courseId }) => {
               </label>
             )}
           </div>
+        </Modal>
+      )}
+
+      {answering && (
+        <Modal
+          title="Responder la reseña"
+          subtitle="La respuesta se publica debajo de la reseña, en el catálogo y en el aula del alumno. Déjala vacía para quitarla."
+          onClose={() => setAnswering(null)}
+          footer={
+            <>
+              <Button onClick={() => setAnswering(null)}>Cancelar</Button>
+              <Button
+                variant="primary"
+                processing={saving}
+                onClick={async () => {
+                  setSaving(true);
+                  setDraftError(null);
+                  try {
+                    await communityApi.respond(courseId, answering.id, answer.trim() || null);
+                    setAnswering(null);
+                    await load();
+                  } catch (err) {
+                    setDraftError(apiErrorMessage(err, 'No se pudo guardar la respuesta.'));
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                {answer.trim() ? 'Publicar respuesta' : 'Quitar respuesta'}
+              </Button>
+            </>
+          }
+        >
+          {draftError && (
+            <div className="mb-3">
+              <Alert>{draftError}</Alert>
+            </div>
+          )}
+          <p className="text-[13px] text-slate-600 mb-3">«{answering.comment ?? 'Sin comentario'}» · {answering.rating} de 5</p>
+          <Field label="Respuesta">
+            <textarea className={`${INPUT_CLASS} h-auto min-h-28 py-2`} maxLength={1000} aria-label="Respuesta" value={answer} onChange={(event) => setAnswer(event.target.value)} />
+          </Field>
         </Modal>
       )}
 

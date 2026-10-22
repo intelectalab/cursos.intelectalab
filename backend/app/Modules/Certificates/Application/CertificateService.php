@@ -12,6 +12,8 @@ use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Http\ClassroomPresenter;
 use App\Modules\Files\Domain\Models\File;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Schedules\Application\AttendanceService;
+use App\Modules\Schedules\Domain\Models\LiveClassAttendance;
 use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Http\ApiException;
@@ -46,6 +48,7 @@ class CertificateService
             ! $enrollment->course->issues_certificate => 'Este curso no entrega certificado.',
             $enrollment->completed_at === null => 'El alumno aún no completa el curso.',
             ! $this->meetsPassingGrade($enrollment) => 'El alumno no alcanza la nota mínima para aprobar el curso.',
+            ! $this->meetsAttendance($enrollment) => "El alumno no alcanza la asistencia mínima a las clases en vivo ({$enrollment->course->min_attendance_percent} %).",
             $this->valid($enrollment)->exists() => 'El alumno ya tiene un certificado vigente de este curso.',
             default => null,
         };
@@ -253,7 +256,52 @@ class CertificateService
             ->where('status', Enrollment::STATUS_ACTIVE)
             ->whereNotNull('completed_at')
             ->whereIn('course_id', Course::query()->where('issues_certificate', true)->select('id'))
-            ->whereNotIn('id', $this->belowPassingGrade($studentId));
+            ->whereNotIn('id', $this->belowPassingGrade($studentId))
+            ->whereNotIn('id', $this->belowAttendance($studentId));
+    }
+
+    /**
+     * Si el curso exige asistencia, el alumno debe alcanzarla. Mientras no se
+     * haya tomado asistencia de ninguna clase, no se exige.
+     */
+    private function meetsAttendance(Enrollment $enrollment): bool
+    {
+        $minimum = $enrollment->course->min_attendance_percent;
+
+        if ($minimum === null) {
+            return true;
+        }
+
+        $percent = AttendanceService::tally(LiveClassAttendance::query()->where('course_id', $enrollment->course_id)->where('student_id', $enrollment->student_id)->get(['status']))['percent'];
+
+        return $percent === null || $percent >= $minimum;
+    }
+
+    /**
+     * Matrículas completadas que no alcanzan la asistencia mínima de su curso.
+     *
+     * @return list<string>
+     */
+    private function belowAttendance(?string $studentId): array
+    {
+        $courses = Course::query()->where('issues_certificate', true)->whereNotNull('min_attendance_percent')->get(['id', 'min_attendance_percent']);
+        $below = [];
+
+        foreach ($courses as $course) {
+            $marks = LiveClassAttendance::query()
+                ->where('course_id', $course->id)
+                ->when($studentId, fn (Builder $query) => $query->where('student_id', $studentId))
+                ->get(['student_id', 'status'])
+                ->groupBy('student_id');
+
+            $students = $marks->filter(fn ($records) => ($percent = AttendanceService::tally($records)['percent']) !== null && $percent < $course->min_attendance_percent)->keys();
+
+            if ($students->isNotEmpty()) {
+                array_push($below, ...Enrollment::query()->where('course_id', $course->id)->whereIn('student_id', $students)->pluck('id')->all());
+            }
+        }
+
+        return $below;
     }
 
     private function meetsPassingGrade(Enrollment $enrollment): bool

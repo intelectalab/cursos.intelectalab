@@ -20,6 +20,9 @@ export interface Review {
   comment: string | null;
   status: 'VISIBLE' | 'HIDDEN';
   updated_at: string;
+  // Respuesta pública de la academia
+  response: string | null;
+  responded_at: string | null;
 }
 
 export interface StaffReview extends Review {
@@ -58,6 +61,9 @@ export const communityApi = {
   },
   async show(course: string, review: string) {
     return (await api.post(`/courses/${course}/reviews/${review}/show`)).data.data as Review;
+  },
+  async respond(course: string, review: string, response: string | null) {
+    return (await api.put(`/courses/${course}/reviews/${review}/response`, { response })).data.data as Review;
   },
   async myAnnouncements(course: string) {
     return (await api.get(`/me/courses/${course}/announcements`)).data.data as Announcement[];

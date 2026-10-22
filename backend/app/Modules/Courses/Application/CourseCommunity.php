@@ -116,6 +116,18 @@ class CourseCommunity
         return $review;
     }
 
+    /**
+     * Respuesta pública de la academia a una reseña; vacía la quita.
+     */
+    public function respond(CourseReview $review, ?string $response, User $actor): CourseReview
+    {
+        $text = filled($response) ? trim($response) : null;
+        $review->update(['response' => $text, 'responded_by' => $text ? $actor->id : null, 'responded_at' => $text ? now() : null]);
+        $this->audit->record($text ? 'reviews.responded' : 'reviews.response_removed', $review, null, ['rating' => $review->rating]);
+
+        return $review;
+    }
+
     public function show(CourseReview $review): CourseReview
     {
         $review->update(['status' => CourseReview::STATUS_VISIBLE, 'hidden_reason' => null, 'hidden_by' => null, 'hidden_at' => null]);

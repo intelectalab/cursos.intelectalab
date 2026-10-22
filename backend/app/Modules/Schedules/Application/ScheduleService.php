@@ -6,10 +6,13 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Schedules\Domain\Models\ScheduleException;
 use App\Modules\Schedules\Domain\Models\TeacherSchedule;
 use App\Modules\Tenancy\Application\TenantNotifier;
+use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -33,6 +36,7 @@ class ScheduleService
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly TenantNotifier $notifier,
+        private readonly TenantSettingsService $settings,
     ) {}
 
     /**
@@ -195,6 +199,8 @@ class ScheduleService
                         'meeting_url' => $block['meeting_url'] ?? null,
                         'note' => $block['note'] ?? null,
                         'valid_from' => $schedule->confirmed_valid_from?->toDateString(),
+                        // Próximos días de esta clase en que no habrá clase (feriado o permiso del docente)
+                        'cancelled' => $this->cancelledDays($schedule->teacher_id, (int) $block['day']),
                     ];
                 }
             });
@@ -202,6 +208,59 @@ class ScheduleService
         usort($classes, fn (array $a, array $b) => [$a['day'], $a['start']] <=> [$b['day'], $b['start']]);
 
         return $classes;
+    }
+
+    /**
+     * Las próximas fechas (4 semanas) de ese día de la semana en que el docente no tiene clase.
+     *
+     * @return list<array{date: string, reason: ?string}>
+     */
+    private function cancelledDays(string $teacherId, int $weekday): array
+    {
+        $today = CarbonImmutable::now($this->settings->timezone())->startOfDay();
+        $until = $today->addWeeks(4);
+        $noClass = NoClassDays::between([$teacherId], $today->toDateString(), $until->toDateString());
+        $days = [];
+
+        for ($date = $today; $date->lte($until); $date = $date->addDay()) {
+            if ($date->dayOfWeekIso === $weekday && ($reason = $noClass->reason($teacherId, $date->toDateString())) !== null) {
+                $days[] = ['date' => $date->toDateString(), 'reason' => $reason];
+            }
+        }
+
+        return $days;
+    }
+
+    /**
+     * Días sin clase de un docente, del más próximo al más lejano.
+     *
+     * @return list<array{id: string, date: string, reason: ?string}>
+     */
+    public function exceptionsOf(User $teacher): array
+    {
+        return ScheduleException::query()
+            ->where('teacher_id', $teacher->id)
+            ->where('date', '>=', CarbonImmutable::now($this->settings->timezone())->subDays(30)->toDateString())
+            ->orderBy('date')
+            ->get()
+            ->map(fn (ScheduleException $exception) => ['id' => $exception->id, 'date' => $exception->date->toDateString(), 'reason' => $exception->reason])
+            ->all();
+    }
+
+    public function addException(User $teacher, string $date, ?string $reason, User $actor): ScheduleException
+    {
+        $exception = ScheduleException::query()->firstOrNew(['teacher_id' => $teacher->id, 'date' => $date]);
+        $exception->fill(['reason' => filled($reason) ? trim($reason) : null, 'created_by' => $actor->id])->save();
+        $this->audit->record('schedules.exception_added', $exception, null, ['teacher' => trim("{$teacher->first_name} {$teacher->last_name}"), 'date' => $date]);
+
+        return $exception;
+    }
+
+    public function removeException(User $teacher, string $id): void
+    {
+        $exception = ScheduleException::query()->where('teacher_id', $teacher->id)->findOrFail($id);
+        $this->audit->record('schedules.exception_removed', $exception, ['date' => $exception->date->toDateString()], null);
+        $exception->delete();
     }
 
     /**

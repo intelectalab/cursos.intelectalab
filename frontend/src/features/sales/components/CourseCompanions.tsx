@@ -5,6 +5,7 @@ import { api } from '../../../shared/api/client';
 import { priceLabel } from '../api';
 
 interface Companion {
+  type: 'COURSE' | 'PACKAGE';
   id: string;
   title: string;
   price: string;
@@ -39,9 +40,12 @@ export const CourseCompanions: React.FC<{ courseId: string; currency: string; cl
       <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {items.map((item) => (
           <li key={item.id}>
-            <Link to={`/catalog/${item.id}`} className="block rounded-xl border border-slate-200 px-3.5 py-2.5 hover:border-brand-300 hover:bg-brand-50/50">
+            <Link to={item.type === 'PACKAGE' ? `/catalog/packages/${item.id}` : `/catalog/${item.id}`} className="block rounded-xl border border-slate-200 px-3.5 py-2.5 hover:border-brand-300 hover:bg-brand-50/50">
               <span className="block text-[13px] font-semibold text-slate-900">{item.title}</span>
-              <span className="block text-xs text-slate-500">{priceLabel(item.price, currency)}</span>
+              <span className="block text-xs text-slate-500">
+                {item.type === 'PACKAGE' ? 'Paquete · ' : ''}
+                {priceLabel(item.price, currency)}
+              </span>
             </Link>
           </li>
         ))}

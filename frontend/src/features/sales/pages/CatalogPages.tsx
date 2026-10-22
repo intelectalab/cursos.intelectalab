@@ -12,6 +12,7 @@ import { COURSE_CARD_CLASS, salesApi, type CatalogMeta, type CatalogPackage } fr
 import { PackageCard } from './PackagePages';
 import { CourseCardBody, CourseCover, CourseFacts, CourseOverview, CoursePrice } from '../components/CourseCatalog';
 import { CourseCompanions } from '../components/CourseCompanions';
+import { RefundPolicyNote } from '../components/RefundPolicyNote';
 import { PublicShell } from '../components/PublicShell';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
@@ -321,6 +322,7 @@ export const PublicCoursePage: React.FC = () => {
             <p className="text-[13px] text-slate-500 mt-2">
               {course.access_days ? `Acceso por ${course.access_days} días desde que se activa tu matrícula.` : 'Acceso sin vencimiento.'}
             </p>
+            {!free && <RefundPolicyNote className="mt-3" />}
 
             <Button
               variant="primary"

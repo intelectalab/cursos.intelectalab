@@ -340,6 +340,24 @@ final class EmailCatalog
         ],
 
         // ── Atención ─────────────────────────────────────────────
+        'clase_en_vivo_hoy' => [
+            'scope' => self::SCOPE_ACADEMY,
+            'group' => 'Cursos',
+            'name' => 'Clase en vivo hoy',
+            'when' => 'La mañana del día de una clase en vivo confirmada (no los feriados ni los días sin clase del docente).',
+            'to' => 'Los alumnos con acceso al curso',
+            'variables' => [
+                'curso' => ['Nombre del curso', 'Excel para finanzas'],
+                'hora' => ['Hora de inicio', '19:00'],
+                'docente' => ['Quién dicta la clase', 'Rosa Quispe'],
+                'enlace' => ['Enlace de la videollamada (vacío si no hay)', 'https://meet.google.com/abc-defg-hij'],
+            ],
+            'subject' => 'Hoy tienes clase en vivo de {curso}',
+            'body' => 'Hoy a las {hora} tienes clase en vivo de «{curso}» con {docente}.
+
+Enlace de la clase: {enlace}',
+            'button' => 'Ir al curso',
+        ],
         'horario_por_confirmar' => [
             'scope' => self::SCOPE_ACADEMY,
             'group' => 'Docentes',

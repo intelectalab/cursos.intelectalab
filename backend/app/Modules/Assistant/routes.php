@@ -21,6 +21,12 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:assistan
     Route::get('/search-aliases', [AssistantController::class, 'aliases']);
     Route::post('/search-feedback', [AssistantController::class, 'feedback'])->middleware('throttle:30,1');
     Route::get('/companions', [AssistantController::class, 'companions']);
+
+    // Revisar y borrar sinónimos equivocados: quien edita la configuración
+    Route::middleware('permission:tenant_settings.update')->group(function () {
+        Route::get('/search-aliases/learned', [AssistantController::class, 'aliasList']);
+        Route::delete('/search-aliases/{alias}', [AssistantController::class, 'forgetAlias'])->whereUuid('alias');
+    });
 });
 
 // Ficha pública del curso: «Quienes llevaron este curso también tomaron…», sin iniciar sesión

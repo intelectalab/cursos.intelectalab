@@ -46,6 +46,7 @@ import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
 import { PaymentReviewList } from '../components/PaymentReviews';
 import { ExportButton } from '../../../shared/ui/ExportButton';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
+import { RefundWindowAlert } from '../components/RefundWindowAlert';
 
 // Detalle de una orden con sus acciones: confirmar el pago recibido o cancelarla
 const OrderModal: React.FC<{
@@ -365,6 +366,7 @@ const OrderModal: React.FC<{
               );
             }}
           >
+            <RefundWindowAlert paidAt={order.paid_at ?? order.payment?.paid_at ?? null} />
             <Alert tone="info">
               {hasPlan && (
                 <>

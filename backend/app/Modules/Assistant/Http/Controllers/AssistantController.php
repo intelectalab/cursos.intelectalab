@@ -9,6 +9,7 @@ use App\Modules\Assistant\Application\AssistantInsights;
 use App\Modules\Assistant\Application\CompanionCourses;
 use App\Modules\Assistant\Application\SearchMemory;
 use App\Modules\Assistant\Domain\Models\SearchAlias;
+use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Reports\Application\StudentDirectory;
 use App\Modules\Tenancy\Application\TenantSettingsService;
@@ -79,6 +80,21 @@ class AssistantController extends Controller
     public function aliases(SearchMemory $memory): JsonResponse
     {
         return ApiResponse::success($memory->aliases());
+    }
+
+    /**
+     * Configuración → Asistente: los sinónimos aprendidos, para borrar los equivocados.
+     */
+    public function aliasList(SearchMemory $memory): JsonResponse
+    {
+        return ApiResponse::success($memory->review());
+    }
+
+    public function forgetAlias(string $alias, SearchMemory $memory, AuditLogger $audit): JsonResponse
+    {
+        $memory->forget($alias, $audit);
+
+        return ApiResponse::success($memory->review());
     }
 
     /**

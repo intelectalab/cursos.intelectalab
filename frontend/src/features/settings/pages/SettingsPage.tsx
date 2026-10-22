@@ -38,6 +38,8 @@ import {
 } from '../../../shared/ui';
 import { ExchangeRateSection } from '../components/ExchangeRateSection';
 import { HolidaysSection } from '../components/HolidaysSection';
+import { RefundPolicySection } from '../components/RefundPolicySection';
+import { AssistantAliasesSection } from '../components/AssistantAliasesSection';
 import { PaymentGatewaysSection } from '../components/PaymentGatewaysSection';
 import { PlanCard } from '../components/PlanCard';
 
@@ -746,6 +748,16 @@ export const SettingsPage: React.FC = () => {
       <div className="mt-5">
         <HolidaysSection editable={editable} />
       </div>
+
+      <div className="mt-5">
+        <RefundPolicySection editable={editable} />
+      </div>
+
+      {editable && hasPermission('assistant.use') && (
+        <div className="mt-5">
+          <AssistantAliasesSection />
+        </div>
+      )}
 
       {scaleDialog?.kind === 'edit' && (
         <GradeScaleModal scale={scaleDialog.scale} limits={maxScoreLimits} onClose={() => setScaleDialog(null)} onSaved={applyScales} />

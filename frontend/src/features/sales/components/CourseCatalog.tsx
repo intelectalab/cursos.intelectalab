@@ -123,6 +123,12 @@ export const CourseOverview: React.FC<{ detail: AvailableCourseDetail }> = ({ de
                 <span className="text-[13px] font-semibold text-slate-800">{review.author}</span>
               </div>
               {review.comment && <p className="text-[13px] text-slate-600 mt-1 whitespace-pre-line">{review.comment}</p>}
+              {review.response && (
+                <p className="mt-1.5 ml-3 pl-3 border-l-2 border-brand-200 text-[13px] text-slate-600 whitespace-pre-line">
+                  <span className="font-semibold text-slate-800">Respuesta de la academia: </span>
+                  {review.response}
+                </p>
+              )}
             </li>
           ))}
         </ul>

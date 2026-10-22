@@ -199,7 +199,7 @@ export interface AvailableCourseDetail extends AvailableCourse {
   teachers: string[];
   sections: { title: string; items: { kind: 'RESOURCE' | 'ACTIVITY'; type: ResourceType | ActivityType; title: string }[] }[];
   // Reseñas visibles más recientes (solo en el catálogo público)
-  reviews?: { rating: number; comment: string | null; author: string; updated_at: string }[];
+  reviews?: { rating: number; comment: string | null; author: string; updated_at: string; response: string | null }[];
 }
 
 // Fecha de vigencia (AAAA-MM-DD) sin corrimiento por zona horaria

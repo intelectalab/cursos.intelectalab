@@ -193,6 +193,7 @@ return [
         'published_at' => 'Cuándo se publicó',
     ],
     'courses' => [
+        'min_attendance_percent' => 'Asistencia mínima a las clases en vivo (en %) para recibir el certificado; vacío = no se exige',
         'summary' => 'Resumen corto que se muestra en el catálogo',
         'category' => 'Categoría, en texto libre',
         'level' => 'Nivel: básico, intermedio o avanzado',
@@ -411,9 +412,17 @@ return [
         'hidden_reason' => 'Por qué la academia ocultó la reseña',
         'hidden_by' => 'Quién la ocultó',
         'hidden_at' => 'Cuándo se ocultó',
+        'response' => 'Respuesta pública de la academia a la reseña',
+        'responded_by' => 'Quién respondió',
+        'responded_at' => 'Cuándo se respondió',
     ],
 
     // ── Horarios ──
+    'schedule_exceptions' => [
+        'date' => 'Día en que el docente no tiene su horario habitual: ese día no hay clase en vivo',
+        'reason' => 'Motivo (permiso, viaje…), opcional',
+        'created_by' => 'Quién lo registró',
+    ],
     'live_class_attendances' => [
         'session_date' => 'Día de la clase en vivo',
         'session_start' => 'Hora de inicio de la clase en vivo (según el horario confirmado)',

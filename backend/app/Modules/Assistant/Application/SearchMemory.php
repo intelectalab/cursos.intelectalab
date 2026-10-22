@@ -3,6 +3,7 @@
 namespace App\Modules\Assistant\Application;
 
 use App\Modules\Assistant\Domain\Models\SearchAlias;
+use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Sales\Domain\Models\Package;
 use App\Shared\Http\ApiException;
@@ -46,6 +47,37 @@ class SearchMemory
             ->groupBy('term')
             ->map(fn ($group) => $group->pluck('target_id')->values()->all())
             ->all();
+    }
+
+    /**
+     * Los sinónimos aprendidos con el nombre de lo elegido, para revisarlos.
+     *
+     * @return list<array{id: string, term: string, target_type: string, target_id: string, title: ?string, hits: int}>
+     */
+    public function review(): array
+    {
+        $aliases = SearchAlias::query()->orderByDesc('hits')->orderBy('term')->get();
+        $courses = Course::query()->whereIn('id', $aliases->where('target_type', SearchAlias::TYPE_COURSE)->pluck('target_id'))->pluck('title', 'id');
+        $packages = Package::query()->whereIn('id', $aliases->where('target_type', SearchAlias::TYPE_PACKAGE)->pluck('target_id'))->pluck('title', 'id');
+
+        return $aliases->map(fn (SearchAlias $alias) => [
+            'id' => $alias->id,
+            'term' => $alias->term,
+            'target_type' => $alias->target_type,
+            'target_id' => $alias->target_id,
+            'title' => $alias->target_type === SearchAlias::TYPE_COURSE ? $courses->get($alias->target_id) : $packages->get($alias->target_id),
+            'hits' => $alias->hits,
+        ])->values()->all();
+    }
+
+    /**
+     * Olvida un sinónimo equivocado.
+     */
+    public function forget(string $id, AuditLogger $audit): void
+    {
+        $alias = SearchAlias::query()->findOrFail($id);
+        $audit->record('search_aliases.deleted', $alias, ['term' => $alias->term, 'target_id' => $alias->target_id], null);
+        $alias->delete();
     }
 
     /**

@@ -4,18 +4,25 @@ use App\Modules\Sales\Http\Controllers\ExchangeRateController;
 use App\Modules\Sales\Http\Controllers\OrderController;
 use App\Modules\Sales\Http\Controllers\PackageController;
 use App\Modules\Sales\Http\Controllers\PaymentGatewayController;
+use App\Modules\Sales\Http\Controllers\RefundPolicyController;
 use Illuminate\Support\Facades\Route;
 
 // Catálogo público: paquetes en venta, sin iniciar sesión
 Route::middleware(['tenant', 'throttle:120,1'])->group(function () {
     Route::get('/catalog/packages', [PackageController::class, 'catalog']);
     Route::get('/catalog/packages/{package}', [PackageController::class, 'catalogShow'])->whereUuid('package');
+    // Política de reembolsos publicada por la academia (checkout y página pública)
+    Route::get('/refund-policy', [RefundPolicyController::class, 'published']);
 });
 
 // Avisos de las pasarelas de pago: llegan sin sesión; el pago se comprueba en la propia pasarela
 Route::post('/payments/webhooks/{gateway}', [PaymentGatewayController::class, 'webhook'])->middleware(['tenant', 'throttle:120,1']);
 
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () {
+    // Política de reembolsos: la ve quien consulta la configuración y la cambia quien la edita
+    Route::get('/settings/refund-policy', [RefundPolicyController::class, 'show'])->middleware('permission:tenant_settings.read');
+    Route::put('/settings/refund-policy', [RefundPolicyController::class, 'update'])->middleware('permission:tenant_settings.update');
+
     // Paquetes: gestión del personal
     Route::middleware('permission:packages.read')->group(function () {
         Route::get('/packages', [PackageController::class, 'index']);

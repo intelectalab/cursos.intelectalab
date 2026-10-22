@@ -48,6 +48,14 @@ export interface LiveClass {
   meeting_url: string | null;
   note: string | null;
   valid_from: string | null;
+  // Próximos días de esta clase en que no habrá clase (feriado o permiso del docente)
+  cancelled?: { date: string; reason: string | null }[];
+}
+
+export interface ScheduleExceptionRow {
+  id: string;
+  date: string;
+  reason: string | null;
 }
 
 export const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -110,6 +118,15 @@ export const schedulesApi = {
   // Guarda la semana y la envía al docente para que la confirme
   async send(teacher: string, payload: { valid_from: string; blocks: ScheduleBlock[] }) {
     return (await api.put(`/schedules/${teacher}`, payload)).data.data as Schedule;
+  },
+  async exceptions(teacher: string) {
+    return (await api.get(`/schedules/${teacher}/exceptions`)).data.data as ScheduleExceptionRow[];
+  },
+  async addException(teacher: string, date: string, reason: string | null) {
+    return (await api.post(`/schedules/${teacher}/exceptions`, { date, reason })).data.data as ScheduleExceptionRow[];
+  },
+  async removeException(teacher: string, id: string) {
+    return (await api.delete(`/schedules/${teacher}/exceptions/${id}`)).data.data as ScheduleExceptionRow[];
   },
   async mine() {
     const response = await api.get('/me/schedule');
