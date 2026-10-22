@@ -35,6 +35,73 @@ export interface Catalog {
   items: CatalogItem[];
 }
 
+export interface CourseContext {
+  id: string;
+  title: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  version: number | null;
+  price: string | null;
+  currency: string;
+  teachers: string[];
+  students: { with_access: number; enrolled: number; completed: number; expiring: number };
+  // null = el rol no revisa entregas de este curso
+  pending_submissions: number | null;
+  // null = el rol no ve ventas
+  sales: { days: number; units: number; revenue: string; last_sale_at: string | null } | null;
+  rating: { average: number; count: number } | null;
+  next_class: { date: string; start: string; end: string; teacher: string } | null;
+}
+
+export interface StudentRow {
+  id: string;
+  name: string;
+  email: string;
+  document: string | null;
+  active_enrollments: number;
+  completed_courses: number;
+}
+
+export interface Debt {
+  currency: string;
+  total: string;
+  overdue: string;
+  next_due: string | null;
+  orders: number;
+}
+
+export interface EnrollmentLine {
+  id: string;
+  course_id: string;
+  course_title: string;
+  state: string;
+  ends_at: string | null;
+  progress_percent: number | null;
+  final_percent: number | null;
+}
+
+export interface StudentContext {
+  student: StudentRow & { status: string };
+  enrollments: EnrollmentLine[];
+  certificates: { id: string; course_title: string | null; status: string }[];
+  tickets: { id: string; number: number; subject: string; status: string }[];
+  debt: Debt[];
+  grade_scale: number;
+}
+
+export interface DaySchedule {
+  teacher: string;
+  teacher_id: string;
+  blocks: { start: string; end: string; type: 'AVAILABLE' | 'LIVE_CLASS' | 'GRADING'; course_title: string | null }[];
+}
+
+export interface MineContext {
+  enrollments: EnrollmentLine[];
+  certificates: { id: string; course_title: string | null; status: string }[];
+  debt: Debt[];
+  live_classes: { course_id: string; course_title: string; teacher: string; day: number; start: string; end: string; meeting_url: string | null }[];
+  grade_scale: number;
+}
+
 // El catálogo se pide una vez por persona y queda en memoria mientras dure la sesión
 let cached: { key: string; promise: Promise<Catalog> } | null = null;
 
@@ -52,6 +119,21 @@ export const assistantApi = {
       cached = { key, promise };
     }
     return cached.promise;
+  },
+  async course(id: string) {
+    return (await api.get(`/assistant/courses/${id}/context`)).data.data as CourseContext;
+  },
+  async findStudents(search: string) {
+    return (await api.get('/assistant/students', { params: { search } })).data.data as StudentRow[];
+  },
+  async student(id: string) {
+    return (await api.get(`/assistant/students/${id}/context`)).data.data as StudentContext;
+  },
+  async day(day: number) {
+    return (await api.get('/assistant/schedule', { params: { day } })).data.data as DaySchedule[];
+  },
+  async mine() {
+    return (await api.get('/assistant/me')).data.data as MineContext;
   },
   forgetCatalog() {
     cached = null;

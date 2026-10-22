@@ -2,8 +2,9 @@
 // devuelve una tarjeta. Cada enlace solo se incluye si el rol puede abrir ese módulo.
 
 import { apiErrorMessage } from '../../shared/api/client';
-import { detectPeriod, type ParsedIntent } from './assistantIntents';
-import { assistantApi, type Catalog, type Insights } from './api';
+import { detectPeriod, detectWeekday, type ParsedIntent } from './assistantIntents';
+import { schedulesApi } from '../schedules/api';
+import { assistantApi, type Catalog, type CourseContext, type DaySchedule, type Insights, type MineContext, type StudentContext, type StudentRow } from './api';
 import { findGuides, type Guide } from './howto';
 import { searchCatalog, type ScoredItem } from './search';
 
@@ -29,7 +30,13 @@ export type Card =
   | { kind: 'top'; period: string; currency: string; top: NonNullable<Insights['sales']>['top']; actions: Action[]; courseLink: boolean }
   | { kind: 'enrollments'; period: string; enrollments: NonNullable<Insights['enrollments']>; actions: Action[] }
   | { kind: 'pending'; lines: PendingLine[]; plan: Insights['plan'] }
-  | { kind: 'results'; term: string; results: ScoredItem[]; catalog: Catalog; note?: string; actions?: Action[] };
+  | { kind: 'results'; term: string; results: ScoredItem[]; catalog: Catalog; note?: string; actions?: Action[] }
+  | { kind: 'course'; course: CourseContext; actions: Action[] }
+  | { kind: 'students'; term: string; students: StudentRow[] }
+  | { kind: 'student'; context: StudentContext; actions: Action[] }
+  | { kind: 'day'; weekday: number; rows: DaySchedule[]; actions: Action[] }
+  | { kind: 'classes'; title: string; classes: { day: number; start: string; end: string; course_title?: string | null; teacher?: string; meeting_url?: string | null }[]; actions: Action[] }
+  | { kind: 'mine'; context: MineContext; actions: Action[] };
 
 export interface Context {
   can: Can;
@@ -66,6 +73,24 @@ function capabilities(can: Can): string[] {
   list.push('Buscar cursos y paquetes por su nombre o su tema, con su precio.');
   list.push('Cómo hacer algo en el sistema, paso a paso.');
   return list;
+}
+
+async function studentCard(id: string, can: Can): Promise<Card> {
+  const context = await assistantApi.student(id);
+  return {
+    kind: 'student',
+    context,
+    actions: [...action(can, 'Ver ficha completa', `/students/${id}`, 'students.read'), ...action(can, 'Ventas y pagos', '/billing', ['orders.read', 'orders.support.read'])],
+  };
+}
+
+/** La ficha de una persona elegida de la lista de coincidencias. */
+export async function pickStudent(id: string, ctx: Context): Promise<Card[]> {
+  try {
+    return [await studentCard(id, ctx.can)];
+  } catch (err) {
+    return [{ kind: 'text', tone: 'error', text: apiErrorMessage(err, 'No pude abrir la ficha. Inténtalo otra vez.') }];
+  }
 }
 
 /** Responde una pregunta ya interpretada. Nunca lanza: los errores vuelven como tarjeta. */
@@ -122,40 +147,70 @@ export async function answer(parsed: ParsedIntent, ctx: Context): Promise<Card[]
         const catalog = await assistantApi.catalog(ctx.userKey);
         const term = parsed.term ?? '';
         const results = searchCatalog(term, catalog.items);
-        const note = parsed.intent === 'course' && results.length > 0 ? 'Abre el curso para ver sus alumnos, su avance y sus notas. La ficha del curso dentro del asistente llega en la próxima entrega.' : undefined;
-        return [{ kind: 'results', term, results, catalog, note }];
+        const best = results[0];
+
+        // Ficha del curso: para el personal, cuando la búsqueda da con un curso
+        if (parsed.intent === 'course' && catalog.staff && best?.item.type === 'COURSE') {
+          const course = await assistantApi.course(best.item.id);
+          return [
+            {
+              kind: 'course',
+              course,
+              actions: [
+                ...action(can, 'Abrir el curso', `/courses/${course.id}`, ['courses.read', 'courses.assigned.read']),
+                ...action(can, 'Matrículas', '/enrollments', ['enrollments.read', 'enrollments.support.read']),
+              ],
+            },
+          ];
+        }
+        return [{ kind: 'results', term, results, catalog }];
       }
 
-      case 'student':
+      case 'student': {
         if (!can('students.read')) return [{ kind: 'text', tone: 'info', text: 'Tu rol no puede ver las fichas de los alumnos.' }];
-        return [
-          {
-            kind: 'text',
-            title: parsed.term ? `Buscar a «${parsed.term}»` : 'Fichas de alumnos',
-            text: 'La ficha de cada alumno (sus cursos, lo que debe y sus certificados) está en «Alumnos». Dentro del asistente llega en la próxima entrega.',
-            actions: action(can, 'Ir a Alumnos', '/students', 'students.read'),
-          },
-        ];
+        if (!parsed.term || parsed.term.length < 2) return [{ kind: 'text', tone: 'info', text: 'Dime el nombre, el correo o el documento de la persona. Por ejemplo: «¿Qué debe Luis Vega?».' }];
 
-      case 'schedule':
-        return [
-          {
-            kind: 'text',
-            title: 'Horarios',
-            text: 'Los horarios y las clases en vivo están en estas pantallas. Responderlos aquí llega en la próxima entrega.',
-            actions: [...action(can, 'Ver Horarios', '/schedules', 'schedules.read'), ...action(can, 'Mi horario', '/my-schedule', 'schedules.self'), ...action(can, 'Mis cursos', '/my-courses', 'enrollments.self.read')],
-          },
-        ];
+        const students = await assistantApi.findStudents(parsed.term);
+        if (students.length === 0) return [{ kind: 'text', tone: 'info', text: `No encontré alumnos con «${parsed.term}».`, actions: action(can, 'Ir a Alumnos', '/students', 'students.read') }];
+        if (students.length > 1) return [{ kind: 'students', term: parsed.term, students }];
+        return [await studentCard(students[0].id, can)];
+      }
 
-      case 'mine':
+      case 'schedule': {
+        const catalog = await assistantApi.catalog(ctx.userKey);
+        const mineOnly = /\b(mi|mis)\b/.test(parsed.text);
+
+        // Quien arma horarios ve el día pedido (hoy si no dice cuál)
+        if (can('schedules.read') && !mineOnly) {
+          const weekday = parsed.weekday ?? detectWeekday('hoy', catalog.timezone) ?? 1;
+          return [{ kind: 'day', weekday, rows: await assistantApi.day(weekday), actions: action(can, 'Ver Horarios', '/schedules', 'schedules.read') }];
+        }
+
+        // El docente: sus clases en vivo confirmadas
+        if (can('schedules.self')) {
+          const { schedule } = await schedulesApi.mine();
+          const classes = (schedule?.confirmed?.blocks ?? []).filter((block) => block.type === 'LIVE_CLASS');
+          return [{ kind: 'classes', title: 'Tus clases en vivo', classes, actions: action(can, 'Mi horario', '/my-schedule', 'schedules.self') }];
+        }
+
+        // El alumno: las clases en vivo de sus cursos
+        if (can('enrollments.self.read')) {
+          const classes = await schedulesApi.liveClasses();
+          return [{ kind: 'classes', title: 'Tus clases en vivo', classes, actions: action(can, 'Mis cursos', '/my-courses', 'enrollments.self.read') }];
+        }
+        return [{ kind: 'text', tone: 'info', text: 'Tu rol no tiene horarios para consultar.' }];
+      }
+
+      case 'mine': {
+        if (!can('enrollments.self.read')) return [{ kind: 'text', tone: 'info', text: 'Esto es para alumnos: sus cursos, lo que les falta pagar y sus certificados.' }];
         return [
           {
-            kind: 'text',
-            title: 'Lo tuyo',
-            text: 'Tu avance, lo que te falta pagar y tus certificados están en estas pantallas. Responderlo aquí llega en la próxima entrega.',
+            kind: 'mine',
+            context: await assistantApi.mine(),
             actions: [...action(can, 'Mis cursos', '/my-courses', 'enrollments.self.read'), ...action(can, 'Mis compras', '/my-orders', 'student.portal'), ...action(can, 'Mis certificados', '/my-certificates', 'certificates.self')],
           },
         ];
+      }
     }
   } catch (err) {
     return [{ kind: 'text', tone: 'error', text: apiErrorMessage(err, 'No pude consultar los datos. Revisa tu conexión e inténtalo otra vez.') }];

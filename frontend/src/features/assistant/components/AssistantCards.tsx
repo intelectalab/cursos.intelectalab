@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, ArrowRight, BookOpen, CalendarClock, CheckCircle2, ListChecks, Package, TrendingUp, Trophy, UsersRound } from 'lucide-react';
+import { AlertCircle, ArrowRight, BookOpen, CalendarClock, CheckCircle2, GraduationCap, ListChecks, Package, TrendingUp, Trophy, UsersRound, Video } from 'lucide-react';
 import { Badge } from '../../../shared/ui';
 import { formatMoney, priceLabel } from '../../sales/api';
 import type { Action, Card } from '../answers';
+import type { Debt, EnrollmentLine } from '../api';
 
 const Actions: React.FC<{ actions?: Action[]; onNavigate: () => void }> = ({ actions, onNavigate }) =>
   actions && actions.length > 0 ? (
@@ -33,9 +34,212 @@ const Shell: React.FC<{ icon: typeof BookOpen; title: string; children: React.Re
   </div>
 );
 
+const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const BLOCK_LABEL = { AVAILABLE: 'Disponible', LIVE_CLASS: 'Clase en vivo', GRADING: 'Revisión de trabajos' } as const;
+const formatDate = (value: string) => new Date(value.length === 10 ? `${value}T12:00:00` : value).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
+const grade = (percent: number | null, scale: number) => (percent === null ? null : Math.round(((percent * scale) / 100) * 10) / 10);
+
+const Stat: React.FC<{ label: string; value: React.ReactNode; hint?: string }> = ({ label, value, hint }) => (
+  <div className="rounded-xl bg-slate-50 px-3 py-2">
+    <p className="text-[11px] text-slate-500">{label}</p>
+    <p className="text-base font-bold text-slate-900 tnum">{value}</p>
+    {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
+  </div>
+);
+
+const DebtLines: React.FC<{ debt: Debt[]; empty: string }> = ({ debt, empty }) =>
+  debt.length === 0 ? (
+    <p className="flex items-center gap-1.5 text-[13px] text-emerald-700">
+      <CheckCircle2 className="w-4 h-4" /> {empty}
+    </p>
+  ) : (
+    <ul className="space-y-1 text-[13px]">
+      {debt.map((line) => (
+        <li key={line.currency}>
+          <span className="font-semibold text-slate-900">{formatMoney(line.total, line.currency)}</span>
+          <span className="text-slate-600">
+            {' '}
+            en {line.orders === 1 ? '1 compra' : `${line.orders} compras`}
+            {Number(line.overdue) > 0 && <span className="text-rose-700"> · vencido {formatMoney(line.overdue, line.currency)}</span>}
+            {line.next_due && ` · próxima cuota el ${formatDate(line.next_due)}`}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+
+const Enrollments: React.FC<{ items: EnrollmentLine[]; scale: number }> = ({ items, scale }) =>
+  items.length === 0 ? (
+    <p className="text-[13px] text-slate-600">No tiene cursos.</p>
+  ) : (
+    <ul className="space-y-1.5 text-[13px]">
+      {items.slice(0, 6).map((item) => {
+        const final = grade(item.final_percent, scale);
+        return (
+          <li key={item.id} className="flex items-center justify-between gap-2">
+            <span className="truncate text-slate-800">{item.course_title}</span>
+            <span className="text-xs text-slate-500 whitespace-nowrap tnum">
+              {item.state === 'CANCELLED' ? 'Cancelada' : item.state === 'EXPIRED' ? 'Vencida' : item.progress_percent === null ? '—' : `${item.progress_percent} %`}
+              {final !== null && ` · nota ${final}`}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
 /** Una respuesta del asistente como tarjeta, con botones que llevan al módulo. */
-export const AnswerCard: React.FC<{ card: Card; onAsk: (question: string) => void; onNavigate: () => void }> = ({ card, onAsk, onNavigate }) => {
+export const AnswerCard: React.FC<{ card: Card; onAsk: (question: string) => void; onNavigate: () => void; onStudent: (id: string, name: string) => void }> = ({ card, onAsk, onNavigate, onStudent }) => {
   switch (card.kind) {
+    case 'course': {
+      const { course } = card;
+      return (
+        <Shell icon={BookOpen} title={course.title}>
+          <p className="text-xs text-slate-500 mb-2">
+            {course.status === 'PUBLISHED' ? `Publicado${course.version ? `, versión ${course.version}` : ''}` : course.status === 'DRAFT' ? 'Borrador' : 'Archivado'}
+            {course.teachers.length > 0 && ` · ${course.teachers.join(', ')}`}
+            {course.price !== null && ` · ${priceLabel(course.price, course.currency)}`}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Stat label="Alumnos con acceso" value={course.students.with_access} hint={`${course.students.completed} lo completaron`} />
+            {course.sales ? (
+              <Stat label={`Ventas en ${course.sales.days} días`} value={formatMoney(course.sales.revenue, course.currency)} hint={course.sales.units === 1 ? '1 venta' : `${course.sales.units} ventas`} />
+            ) : (
+              <Stat label="Por vencer (7 días)" value={course.students.expiring} />
+            )}
+          </div>
+          <ul className="mt-2.5 space-y-1 text-[13px] text-slate-700">
+            {course.sales && course.students.expiring > 0 && <li>{course.students.expiring} matrículas vencen en los próximos 7 días.</li>}
+            {course.pending_submissions !== null && course.pending_submissions > 0 && <li>{course.pending_submissions} tareas esperan nota.</li>}
+            {course.sales?.last_sale_at && <li>Última venta: {formatDate(course.sales.last_sale_at)}.</li>}
+            {course.rating && (
+              <li>
+                Reseñas: {course.rating.average.toFixed(1)} de 5 ({course.rating.count}).
+              </li>
+            )}
+            <li>{course.next_class ? `Próxima clase en vivo: ${formatDate(course.next_class.date)}, ${course.next_class.start} con ${course.next_class.teacher}.` : 'Sin clases en vivo en el horario confirmado.'}</li>
+          </ul>
+          <Actions actions={card.actions} onNavigate={onNavigate} />
+        </Shell>
+      );
+    }
+
+    case 'students':
+      return (
+        <Shell icon={UsersRound} title={`Encontré ${card.students.length} personas con «${card.term}»`}>
+          <ul className="space-y-1">
+            {card.students.map((student) => (
+              <li key={student.id}>
+                <button
+                  type="button"
+                  onClick={() => onStudent(student.id, student.name)}
+                  className="w-full text-left rounded-lg px-2 py-1.5 hover:bg-slate-50 cursor-pointer"
+                >
+                  <span className="block text-[13px] font-semibold text-slate-900">{student.name}</span>
+                  <span className="block text-xs text-slate-500">{[student.email, student.document].filter(Boolean).join(' · ')}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Shell>
+      );
+
+    case 'student': {
+      const { context } = card;
+      const open = context.tickets.filter((ticket) => ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS').length;
+      return (
+        <Shell icon={UsersRound} title={context.student.name}>
+          <p className="text-xs text-slate-500 mb-2">
+            {context.student.email}
+            {context.student.status !== 'ACTIVE' && ' · cuenta inactiva'}
+          </p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Cursos</p>
+          <Enrollments items={context.enrollments} scale={context.grade_scale} />
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mt-3 mb-1">Lo que debe</p>
+          <DebtLines debt={context.debt} empty="No debe nada." />
+          <p className="text-xs text-slate-600 mt-2.5">
+            {context.certificates.filter((certificate) => certificate.status === 'ISSUED').length} certificados
+            {open > 0 && ` · ${open} ${open === 1 ? 'consulta abierta' : 'consultas abiertas'}`}
+          </p>
+          <Actions actions={card.actions} onNavigate={onNavigate} />
+        </Shell>
+      );
+    }
+
+    case 'day':
+      return (
+        <Shell icon={CalendarClock} title={`Horarios del ${DAYS[card.weekday - 1].toLowerCase()}`}>
+          {card.rows.length === 0 ? (
+            <p className="text-[13px] text-slate-600">Ningún docente tiene bloques confirmados ese día.</p>
+          ) : (
+            <ul className="space-y-2">
+              {card.rows.map((row) => (
+                <li key={row.teacher_id}>
+                  <p className="text-[13px] font-semibold text-slate-900">{row.teacher}</p>
+                  <ul className="mt-0.5 space-y-0.5 text-xs text-slate-600">
+                    {row.blocks.map((block, index) => (
+                      <li key={index} className="tnum">
+                        {block.start}–{block.end} · {block.type === 'LIVE_CLASS' && block.course_title ? `Clase: ${block.course_title}` : BLOCK_LABEL[block.type]}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-[11px] text-slate-500 mt-2">Solo cuentan los horarios que el docente confirmó.</p>
+          <Actions actions={card.actions} onNavigate={onNavigate} />
+        </Shell>
+      );
+
+    case 'classes':
+      return (
+        <Shell icon={Video} title={card.title}>
+          {card.classes.length === 0 ? (
+            <p className="text-[13px] text-slate-600">No hay clases en vivo en los horarios confirmados.</p>
+          ) : (
+            <ul className="space-y-1.5 text-[13px]">
+              {card.classes.map((item, index) => (
+                <li key={index} className="flex flex-wrap items-center justify-between gap-x-3">
+                  <span className="text-slate-800">
+                    <span className="font-semibold tnum">
+                      {DAYS[item.day - 1]} {item.start}–{item.end}
+                    </span>
+                    {item.course_title && ` · ${item.course_title}`}
+                    {item.teacher && ` · ${item.teacher}`}
+                  </span>
+                  {item.meeting_url && (
+                    <a href={item.meeting_url} target="_blank" rel="noreferrer noopener" className="text-xs font-semibold text-brand-700 underline">
+                      Entrar
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <Actions actions={card.actions} onNavigate={onNavigate} />
+        </Shell>
+      );
+
+    case 'mine': {
+      const { context } = card;
+      return (
+        <Shell icon={GraduationCap} title="Lo tuyo">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Tus cursos</p>
+          <Enrollments items={context.enrollments} scale={context.grade_scale} />
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mt-3 mb-1">Lo que te falta pagar</p>
+          <DebtLines debt={context.debt} empty="No debes nada." />
+          {context.live_classes.length > 0 && (
+            <p className="text-xs text-slate-600 mt-2.5">
+              Próximas clases en vivo: {context.live_classes.slice(0, 2).map((item) => `${DAYS[item.day - 1].toLowerCase()} ${item.start} (${item.course_title})`).join('; ')}.
+            </p>
+          )}
+          <p className="text-xs text-slate-600 mt-1.5">{context.certificates.filter((certificate) => certificate.status === 'ISSUED').length} certificados.</p>
+          <Actions actions={card.actions} onNavigate={onNavigate} />
+        </Shell>
+      );
+    }
+
     case 'text':
       return (
         <div

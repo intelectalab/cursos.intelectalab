@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Bot, Loader2, Send, Sparkles, X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { parseIntent, quickPrompts } from '../assistantIntents';
-import { answer, type Card } from '../answers';
+import { answer, pickStudent, type Card } from '../answers';
 import { assistantApi } from '../api';
 import { AnswerCard } from './AssistantCards';
 
@@ -81,6 +81,20 @@ export const AssistantLauncher: React.FC = () => {
     [busy, hasPermission, userKey, prompts],
   );
 
+  // Se eligió una persona de la lista de coincidencias: su ficha va como otra respuesta
+  const showStudent = useCallback(
+    async (id: string, name: string) => {
+      if (busy) return;
+      const messageId = nextId++;
+      setBusy(true);
+      setMessages((current) => [...current, { id: messageId, question: `Ficha de ${name}`, cards: null }]);
+      const cards = await pickStudent(id, { can: hasPermission, userKey, prompts });
+      setMessages((current) => current.map((message) => (message.id === messageId ? { ...message, cards } : message)));
+      setBusy(false);
+    },
+    [busy, hasPermission, userKey, prompts],
+  );
+
   if (!hasPermission('assistant.use')) return null;
 
   const close = () => {
@@ -150,7 +164,7 @@ export const AssistantLauncher: React.FC = () => {
                     <Loader2 className="w-3.5 h-3.5 animate-spin" /> Buscando…
                   </p>
                 ) : (
-                  message.cards.map((card, index) => <AnswerCard key={index} card={card} onAsk={(question) => void ask(question)} onNavigate={() => setOpen(window.innerWidth >= 768)} />)
+                  message.cards.map((card, index) => <AnswerCard key={index} card={card} onAsk={(question) => void ask(question)} onStudent={(id, name) => void showStudent(id, name)} onNavigate={() => setOpen(window.innerWidth >= 768)} />)
                 )}
               </div>
             ))}

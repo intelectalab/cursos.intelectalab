@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanTerm, detectPeriod, normalize, parseIntent, stripFillers } from './assistantIntents';
+import { cleanTerm, detectPeriod, detectWeekday, normalize, parseIntent, stripFillers } from './assistantIntents';
 import { findGuides } from './howto';
 import { searchCatalog, type CatalogItem } from './search';
 
@@ -42,6 +42,20 @@ describe('periodos en la hora de la academia', () => {
   it('usa la fecha de la academia aunque en UTC ya sea otro día', () => {
     // 23:30 del 22 en Lima ya es 23 en UTC
     expect(detectPeriod('hoy', LIMA, new Date('2026-10-23T04:30:00Z')).from).toBe('2026-10-22');
+  });
+});
+
+describe('día de la semana', () => {
+  it('reconoce el nombre del día, hoy y mañana (jueves 22 de octubre)', () => {
+    expect(detectWeekday('quien esta disponible el lunes', LIMA, NOW)).toBe(1);
+    expect(detectWeekday('horarios del miércoles', LIMA, NOW)).toBe(3);
+    expect(detectWeekday('quien da clase hoy', LIMA, NOW)).toBe(4);
+    expect(detectWeekday('y mañana', LIMA, NOW)).toBe(5);
+    expect(detectWeekday('quien esta disponible', LIMA, NOW)).toBeNull();
+  });
+
+  it('la pregunta de horarios lleva el día', () => {
+    expect(parse('¿Quién está disponible el lunes?')).toMatchObject({ intent: 'schedule', weekday: 1 });
   });
 });
 

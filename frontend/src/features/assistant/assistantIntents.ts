@@ -28,6 +28,8 @@ export interface ParsedIntent {
   intent: Intent;
   term?: string;
   period?: Period;
+  // Día de la semana que menciona (1 = lunes … 7 = domingo), en las preguntas de horarios
+  weekday?: number;
   // Texto ya normalizado, para buscar guías y depurar
   text: string;
 }
@@ -140,6 +142,20 @@ export function detectPeriod(text: string, timeZone?: string, now: Date = new Da
   return { key, label: PERIOD_LABELS[key], from: range[key][0], to: range[key][1] };
 }
 
+const WEEKDAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
+/** El día de la semana que menciona la frase (1 = lunes … 7 = domingo); «hoy» y «mañana» cuentan desde la fecha de la academia. */
+export function detectWeekday(text: string, timeZone?: string, now: Date = new Date()): number | null {
+  const normalized = normalize(text);
+  const named = WEEKDAYS.findIndex((day) => normalized.split(' ').includes(day));
+  if (named >= 0) return named + 1;
+
+  const today = (new Date(`${todayIn(timeZone, now)}T12:00:00Z`).getUTCDay() + 6) % 7;
+  if (/\bmanana\b/.test(normalized)) return ((today + 1) % 7) + 1;
+  if (/\bhoy\b/.test(normalized)) return today + 1;
+  return null;
+}
+
 // Palabras que sobran alrededor de lo que se busca
 const TERM_NOISE =
   /\b(el|la|los|las|un|una|unos|unas|de|del|al|curso|cursos|paquete|paquetes|hay|tienen|tienes|tenemos|quedan|queda|existe|disponible|disponibles|en venta|precio|cuesta|cuanto|cuantos|a|que|cual|cuales|ofrecen|ofrece|venden|dictan|algun|alguno|alguna)\b/g;
@@ -201,7 +217,7 @@ export function parseIntent(input: string, timeZone?: string, now: Date = new Da
   // Horarios
   if (/\b(horario|horarios|disponible el|disponibles el|quien esta disponible|clase en vivo|clases en vivo|mi clase|mis clases|cuando (es|son) (la|las|mi|mis) clase)/.test(text)) {
     const match = text.match(/(?:horario|horarios) de ([a-z ]+)$/);
-    return { intent: 'schedule', term: term(match), text };
+    return { intent: 'schedule', term: term(match), weekday: detectWeekday(text, timeZone, now) ?? undefined, text };
   }
 
   // Ficha de una persona
