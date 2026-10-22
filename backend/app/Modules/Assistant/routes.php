@@ -16,4 +16,12 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:assistan
     });
     Route::get('/schedule', [AssistantController::class, 'schedule'])->middleware('permission:schedules.read');
     Route::get('/me', [AssistantController::class, 'mine'])->middleware('permission:enrollments.self.read');
+
+    // Memoria del buscador: la única escritura del asistente
+    Route::get('/search-aliases', [AssistantController::class, 'aliases']);
+    Route::post('/search-feedback', [AssistantController::class, 'feedback'])->middleware('throttle:30,1');
+    Route::get('/companions', [AssistantController::class, 'companions']);
 });
+
+// Ficha pública del curso: «Quienes llevaron este curso también tomaron…», sin iniciar sesión
+Route::middleware(['tenant', 'throttle:120,1'])->get('/catalog/courses/{course}/companions', [AssistantController::class, 'publicCompanions'])->whereUuid('course');

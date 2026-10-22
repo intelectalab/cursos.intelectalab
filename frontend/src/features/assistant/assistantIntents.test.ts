@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cleanTerm, detectPeriod, detectWeekday, normalize, parseIntent, stripFillers } from './assistantIntents';
 import { findGuides } from './howto';
-import { searchCatalog, type CatalogItem } from './search';
+import { aliasKey, searchCatalog, shouldLearn, type CatalogItem } from './search';
 
 // Jueves 22 de octubre de 2026, 10:00 en Lima
 const NOW = new Date('2026-10-22T15:00:00Z');
@@ -162,3 +162,18 @@ describe('búsqueda con puntaje', () => {
     expect(searchCatalog('', items).map((result) => result.item.title)).toEqual(['Excel para finanzas', 'Marketing digital', 'Power BI desde cero']);
   });
 });
+
+describe('aprendizaje de sinónimos', () => {
+  it('aprende solo si lo buscado no está en el nombre', () => {
+    expect(shouldLearn('lapicero', 'BOLÍGRAFO PILOT')).toBe(true);
+    expect(shouldLearn('Hojas de cálculo', 'Excel para finanzas')).toBe(true);
+    expect(shouldLearn('excel', 'Excel para finanzas')).toBe(false);
+    expect(shouldLearn('a', 'Excel para finanzas')).toBe(false);
+  });
+
+  it('usa la misma clave que el servidor, sin tildes ni signos', () => {
+    expect(aliasKey('¿Hojas de cálculo?')).toBe('hojas de calculo');
+    expect(aliasKey('power-bi')).toBe('power bi');
+  });
+});
+

@@ -30,6 +30,20 @@ export const SCORE = {
   partialWord: 8,
 } as const;
 
+/** La clave con que el servidor guarda un sinónimo: además, sin ningún signo. */
+export function aliasKey(term: string): string {
+  return normalize(term)
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Se aprende un sinónimo cuando lo buscado no está en el nombre de lo elegido. */
+export function shouldLearn(term: string, title: string): boolean {
+  const key = aliasKey(term);
+  return key.length >= 2 && !aliasKey(title).includes(key);
+}
+
 /**
  * Ordena el catálogo según el término. Sin término, devuelve todo en orden alfabético.
  * Busca en el título, la categoría y el resumen.
@@ -42,7 +56,7 @@ export function searchCatalog(term: string, items: CatalogItem[], aliases: Alias
   }
 
   const words = query.split(' ').filter((word) => word.length > 1);
-  const learned = new Set(aliases[query] ?? []);
+  const learned = new Set(aliases[aliasKey(term)] ?? []);
 
   return items
     .map((item) => {

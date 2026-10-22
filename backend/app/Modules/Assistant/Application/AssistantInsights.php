@@ -5,7 +5,6 @@ namespace App\Modules\Assistant\Application;
 use App\Modules\Billing\Application\SubscriptionService;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
-use App\Modules\Enrollments\Domain\Models\EnrollmentProgress;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Reports\Application\OverviewReport;
 use App\Modules\Reports\Application\PendingSummary;
@@ -22,9 +21,6 @@ use Illuminate\Support\Facades\DB;
  */
 class AssistantInsights
 {
-    /** Días sin avance para considerar inactivo a un alumno con acceso */
-    public const INACTIVE_DAYS = 14;
-
     /** Cuántos ítems trae cada lista */
     public const TOP = 5;
 
@@ -51,7 +47,7 @@ class AssistantInsights
                 $can('courses.assigned.read') => $this->enrollments($period, $user),
                 default => null,
             },
-            'pending' => $this->pendingFor($user, $can),
+            'pending' => $this->pending->for($user),
             'plan' => $can('tenant_settings.read') ? $this->plan($user) : null,
         ];
     }
@@ -98,37 +94,6 @@ class AssistantInsights
                 ->map(fn ($row) => ['course_id' => $row->course_id, 'title' => $row->title, 'total' => (int) $row->total])
                 ->all(),
         ];
-    }
-
-    /**
-     * Las cifras de la campana más dos propias del asistente: matrículas por vencer y alumnos sin avance.
-     *
-     * @return array<string, int|null>
-     */
-    private function pendingFor(User $user, callable $can): array
-    {
-        $sees = $can('enrollments.read');
-
-        return $this->pending->for($user) + [
-            'enrollments_expiring' => $sees ? Enrollment::query()->inState(Enrollment::FILTER_EXPIRING)->count() : null,
-            'inactive_students' => $sees ? $this->inactiveStudents() : null,
-        ];
-    }
-
-    /**
-     * Alumnos con acceso a un curso que no terminaron y no avanzaron nada en los últimos días.
-     */
-    private function inactiveStudents(): int
-    {
-        $since = now()->subDays(self::INACTIVE_DAYS);
-
-        return (int) Enrollment::query()
-            ->accessible()
-            ->whereNull('completed_at')
-            ->where('enrolled_at', '<=', $since)
-            ->whereNotIn('id', EnrollmentProgress::query()->where('completed_at', '>=', $since)->select('enrollment_id'))
-            ->distinct()
-            ->count('student_id');
     }
 
     /**

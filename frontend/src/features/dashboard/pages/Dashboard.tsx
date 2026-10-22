@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  UserX,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
@@ -29,7 +30,7 @@ function greeting(): string {
 type Summary = Awaited<ReturnType<typeof salesApi.alertSummary>>;
 
 // Quien atiende alguno de estos temas ve sus pendientes en Inicio (los mismos permisos que pide /alerts/summary)
-const PENDING_PERMISSIONS = ['payments.confirm', 'orders.read', 'tickets.read', 'cms.publish', 'submissions.review', 'submissions.assigned.review', 'claims.read', 'schedules.manage', 'schedules.self'];
+const PENDING_PERMISSIONS = ['payments.confirm', 'orders.read', 'tickets.read', 'cms.publish', 'submissions.review', 'submissions.assigned.review', 'claims.read', 'schedules.manage', 'schedules.self', 'enrollments.read'];
 
 // Cada pendiente con su texto en singular|plural y a dónde se atiende
 const PENDING: { key: keyof Summary; icon: LucideIcon; text: string; to: string }[] = [
@@ -40,6 +41,8 @@ const PENDING: { key: keyof Summary; icon: LucideIcon; text: string; to: string 
   { key: 'claims_unanswered', icon: ScrollText, text: 'reclamo o queja sin responder|reclamos o quejas sin responder', to: '/claims' },
   { key: 'overdue_installments', icon: CalendarClock, text: 'cuota vencida por cobrar|cuotas vencidas por cobrar', to: '/billing' },
   { key: 'payment_reviews', icon: ShieldAlert, text: 'cobro en revisión|cobros en revisión', to: '/billing' },
+  { key: 'enrollments_expiring', icon: CalendarClock, text: 'matrícula vence en los próximos 7 días|matrículas vencen en los próximos 7 días', to: '/enrollments' },
+  { key: 'inactive_students', icon: UserX, text: 'alumno con acceso no avanza hace 14 días|alumnos con acceso no avanzan hace 14 días', to: '/students' },
   { key: 'pages_in_review', icon: FileCheck2, text: 'página espera tu revisión|páginas esperan tu revisión', to: '/pages' },
 ];
 

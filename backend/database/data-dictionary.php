@@ -390,6 +390,14 @@ return [
         'last_message_by' => 'Quién escribió el último mensaje: el usuario o el personal',
     ],
 
+    // ── Asistente ──
+    'search_aliases' => [
+        'term' => 'Lo que se buscó, normalizado (minúsculas, sin tildes ni signos)',
+        'target_type' => 'Qué se eligió: COURSE (curso) o PACKAGE (paquete); nunca personas',
+        'target_id' => 'El curso o paquete elegido',
+        'hits' => 'Cuántas veces se eligió ese resultado con ese término',
+    ],
+
     // ── Anuncios y reseñas ──
     'course_announcements' => [
         'title' => 'Título del anuncio',

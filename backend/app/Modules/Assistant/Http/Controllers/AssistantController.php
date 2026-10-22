@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Modules\Assistant\Application\AssistantCatalog;
 use App\Modules\Assistant\Application\AssistantContext;
 use App\Modules\Assistant\Application\AssistantInsights;
+use App\Modules\Assistant\Application\CompanionCourses;
+use App\Modules\Assistant\Application\SearchMemory;
+use App\Modules\Assistant\Domain\Models\SearchAlias;
 use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Reports\Application\StudentDirectory;
 use App\Modules\Tenancy\Application\TenantSettingsService;
@@ -13,6 +16,7 @@ use App\Shared\Dashboard\PanelPeriod;
 use App\Shared\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Asistente: solo lectura. Las preguntas se interpretan en el navegador;
@@ -70,5 +74,44 @@ class AssistantController extends Controller
     public function mine(Request $request, AssistantContext $context): JsonResponse
     {
         return ApiResponse::success($context->mine($request->user()));
+    }
+
+    public function aliases(SearchMemory $memory): JsonResponse
+    {
+        return ApiResponse::success($memory->aliases());
+    }
+
+    /**
+     * Alguien eligió un resultado con un término que no está en su nombre: se aprende.
+     */
+    public function feedback(Request $request, SearchMemory $memory): JsonResponse
+    {
+        $data = $request->validate([
+            'term' => ['required', 'string', 'max:100'],
+            'target_type' => ['required', Rule::in(SearchAlias::TYPES)],
+            'target_id' => ['required', 'uuid'],
+        ]);
+
+        return ApiResponse::success(['learned' => $memory->learn($data['term'], $data['target_type'], $data['target_id'])]);
+    }
+
+    /**
+     * Cursos que compraron quienes compraron los cursos dados (para el carrito o el asistente).
+     */
+    public function companions(Request $request, CompanionCourses $companions): JsonResponse
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'min:1', 'max:20'], 'ids.*' => ['uuid']]);
+
+        return ApiResponse::success($companions->for(array_values($data['ids'])));
+    }
+
+    /**
+     * Lo mismo para la ficha pública de un curso, sin iniciar sesión: solo de cursos a la venta.
+     */
+    public function publicCompanions(string $course, CompanionCourses $companions): JsonResponse
+    {
+        $forSale = Course::query()->whereKey($course)->where('status', Course::STATUS_PUBLISHED)->whereNotNull('price')->exists();
+
+        return ApiResponse::success($forSale ? $companions->for([$course]) : []);
     }
 }

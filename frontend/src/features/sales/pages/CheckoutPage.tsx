@@ -7,6 +7,7 @@ import { enrollmentsApi, type AvailableCourseDetail } from '../../enrollments/ap
 import { formatMoney, salesApi, type CouponCheck } from '../api';
 import { CouponBox } from '../components/CouponBox';
 import { CourseCover, CourseFacts } from '../components/CourseCatalog';
+import { CourseCompanions } from '../components/CourseCompanions';
 
 // Checkout (FP-02): resumen de la compra y confirmación. El precio que vale es el del servidor.
 export const CheckoutPage: React.FC = () => {
@@ -165,6 +166,7 @@ export const CheckoutPage: React.FC = () => {
           </div>
         </Card>
       )}
+      {course && <CourseCompanions courseId={course.id} currency={course.currency} className="mt-5" />}
     </div>
   );
 };

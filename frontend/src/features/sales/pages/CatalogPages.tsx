@@ -11,6 +11,7 @@ import type { AvailableCourse, AvailableCourseDetail } from '../../enrollments/a
 import { COURSE_CARD_CLASS, salesApi, type CatalogMeta, type CatalogPackage } from '../api';
 import { PackageCard } from './PackagePages';
 import { CourseCardBody, CourseCover, CourseFacts, CourseOverview, CoursePrice } from '../components/CourseCatalog';
+import { CourseCompanions } from '../components/CourseCompanions';
 import { PublicShell } from '../components/PublicShell';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
@@ -297,6 +298,7 @@ export const PublicCoursePage: React.FC = () => {
       )}
       {state === 'ready' && course && (
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
+          <div className="space-y-5 min-w-0">
           <Card className="overflow-hidden">
             <CourseCover url={course.cover_url} className="w-full max-h-72" />
             <div className="p-5 sm:p-6 space-y-5">
@@ -310,6 +312,8 @@ export const PublicCoursePage: React.FC = () => {
               <CourseOverview detail={course} />
             </div>
           </Card>
+          <CourseCompanions courseId={course.id} currency={course.currency} />
+          </div>
 
           <Card className="p-5 sm:p-6 lg:sticky lg:top-6">
             <p className="text-xs font-semibold text-slate-500">{free ? 'Acceso' : 'Precio'}</p>

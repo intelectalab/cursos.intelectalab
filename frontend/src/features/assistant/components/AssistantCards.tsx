@@ -4,7 +4,8 @@ import { AlertCircle, ArrowRight, BookOpen, CalendarClock, CheckCircle2, Graduat
 import { Badge } from '../../../shared/ui';
 import { formatMoney, priceLabel } from '../../sales/api';
 import type { Action, Card } from '../answers';
-import type { Debt, EnrollmentLine } from '../api';
+import { assistantApi, type Debt, type EnrollmentLine } from '../api';
+import { shouldLearn } from '../search';
 
 const Actions: React.FC<{ actions?: Action[]; onNavigate: () => void }> = ({ actions, onNavigate }) =>
   actions && actions.length > 0 ? (
@@ -430,7 +431,15 @@ export const AnswerCard: React.FC<{ card: Card; onAsk: (question: string) => voi
                 const price = priceLabel(item.price, catalog.currency);
                 return (
                   <li key={item.type + item.id} className="py-2 first:pt-0 last:pb-0">
-                    <Link to={href} onClick={onNavigate} className="group flex items-start gap-2">
+                    <Link
+                      to={href}
+                      onClick={() => {
+                        // Lo buscado no está en el nombre: el buscador aprende el sinónimo
+                        if (card.term && shouldLearn(card.term, item.title)) assistantApi.learn(card.term, item.type, item.id);
+                        onNavigate();
+                      }}
+                      className="group flex items-start gap-2"
+                    >
                       {item.type === 'PACKAGE' ? <Package className="w-4 h-4 mt-0.5 text-violet-600 shrink-0" /> : <BookOpen className="w-4 h-4 mt-0.5 text-brand-600 shrink-0" />}
                       <span className="flex-1 min-w-0">
                         <span className="block text-[13px] font-semibold text-slate-900 group-hover:text-brand-700">{item.title}</span>

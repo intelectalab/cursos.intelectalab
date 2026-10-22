@@ -6,6 +6,8 @@ use App\Modules\Academic\Domain\Models\TaskSubmission;
 use App\Modules\Claims\Domain\Models\Claim;
 use App\Modules\Cms\Domain\Models\Page;
 use App\Modules\Courses\Domain\Models\Course;
+use App\Modules\Enrollments\Domain\Models\Enrollment;
+use App\Modules\Enrollments\Domain\Models\EnrollmentProgress;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
@@ -66,6 +68,28 @@ class PendingSummary
             'claims_unanswered' => $can('claims.read')
                 ? Claim::query()->where('status', '!=', Claim::STATUS_ANSWERED)->count()
                 : null,
+            // Matrículas que vencen en los próximos días
+            'enrollments_expiring' => $can('enrollments.read')
+                ? Enrollment::query()->inState(Enrollment::FILTER_EXPIRING)->count()
+                : null,
+            // Alumnos con acceso que no terminaron y no avanzan hace días
+            'inactive_students' => $can('enrollments.read') ? $this->inactiveStudents() : null,
         ];
+    }
+
+    /** Días sin avance para considerar inactivo a un alumno con acceso */
+    public const INACTIVE_DAYS = 14;
+
+    private function inactiveStudents(): int
+    {
+        $since = now()->subDays(self::INACTIVE_DAYS);
+
+        return (int) Enrollment::query()
+            ->accessible()
+            ->whereNull('completed_at')
+            ->where('enrolled_at', '<=', $since)
+            ->whereNotIn('id', EnrollmentProgress::query()->where('completed_at', '>=', $since)->select('enrollment_id'))
+            ->distinct()
+            ->count('student_id');
     }
 }

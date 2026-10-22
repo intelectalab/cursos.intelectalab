@@ -102,6 +102,17 @@ export interface MineContext {
   grade_scale: number;
 }
 
+export interface Companion {
+  id: string;
+  title: string;
+  price: string;
+  // Personas que llevaron ambos cursos
+  people: number;
+}
+
+// Sinónimos aprendidos por el buscador: se piden una vez y se renuevan al aprender uno
+let aliasCache: { key: string; promise: Promise<Record<string, string[]>> } | null = null;
+
 // El catálogo se pide una vez por persona y queda en memoria mientras dure la sesión
 let cached: { key: string; promise: Promise<Catalog> } | null = null;
 
@@ -135,7 +146,31 @@ export const assistantApi = {
   async mine() {
     return (await api.get('/assistant/me')).data.data as MineContext;
   },
+  aliases(key: string): Promise<Record<string, string[]>> {
+    if (aliasCache?.key !== key) {
+      const promise = api
+        .get('/assistant/search-aliases')
+        .then((response) => (Array.isArray(response.data.data) ? {} : (response.data.data as Record<string, string[]>)))
+        // Sin sinónimos la búsqueda funciona igual
+        .catch(() => ({}));
+      aliasCache = { key, promise };
+    }
+    return aliasCache.promise;
+  },
+  // Registro silencioso: si falla, no interrumpe a la persona
+  learn(term: string, type: 'COURSE' | 'PACKAGE', id: string) {
+    api
+      .post('/assistant/search-feedback', { term, target_type: type, target_id: id })
+      .then(() => {
+        aliasCache = null;
+      })
+      .catch(() => undefined);
+  },
+  async companions(ids: string[]) {
+    return (await api.get('/assistant/companions', { params: { ids } })).data.data as Companion[];
+  },
   forgetCatalog() {
     cached = null;
+    aliasCache = null;
   },
 };

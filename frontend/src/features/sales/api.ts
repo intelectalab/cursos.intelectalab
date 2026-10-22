@@ -369,6 +369,8 @@ export const salesApi = {
       claims_unanswered: number | null;
       schedules_observed: number | null;
       schedule_to_confirm: number | null;
+      enrollments_expiring: number | null;
+      inactive_students: number | null;
     };
   },
   async cancelOrder(order: string) {

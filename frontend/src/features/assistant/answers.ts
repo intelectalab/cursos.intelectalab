@@ -144,9 +144,9 @@ export async function answer(parsed: ParsedIntent, ctx: Context): Promise<Card[]
 
       case 'course':
       case 'search': {
-        const catalog = await assistantApi.catalog(ctx.userKey);
+        const [catalog, aliases] = await Promise.all([assistantApi.catalog(ctx.userKey), assistantApi.aliases(ctx.userKey)]);
         const term = parsed.term ?? '';
-        const results = searchCatalog(term, catalog.items);
+        const results = searchCatalog(term, catalog.items, aliases);
         const best = results[0];
 
         // Ficha del curso: para el personal, cuando la búsqueda da con un curso
