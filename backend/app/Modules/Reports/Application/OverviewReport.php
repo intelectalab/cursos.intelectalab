@@ -60,7 +60,7 @@ class OverviewReport
             'previous' => $this->totals($previousStart, $previousEnd, $currency),
             'today' => $this->today($currency, now($timezone)->toDateString()),
             'series' => $this->series($localStart, $localEnd, $start, $end, $timezone, $currency),
-            'top_courses' => $this->topCourses($start, $end, $currency),
+            'top_courses' => self::topCourses($start, $end, $currency),
             'completion' => $this->completion(),
         ];
     }
@@ -180,7 +180,7 @@ class OverviewReport
      *
      * @return list<array{course_id: string, title: string, units: int, revenue: string}>
      */
-    private function topCourses(CarbonImmutable $start, CarbonImmutable $end, string $currency): array
+    public static function topCourses(CarbonImmutable $start, CarbonImmutable $end, string $currency, int $limit = 5): array
     {
         return OrderItem::query()
             ->whereIn('order_id', self::soldOrders($currency, $start, $end)->select('id'))
@@ -188,7 +188,7 @@ class OverviewReport
             ->groupBy('course_id')
             ->orderByDesc('revenue')
             ->orderByDesc('units')
-            ->limit(5)
+            ->limit($limit)
             ->get()
             ->map(fn (OrderItem $item) => [
                 'course_id' => $item->course_id,

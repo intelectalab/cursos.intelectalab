@@ -175,6 +175,12 @@ class PermissionCatalog
                     'cms.publish' => 'Publicar y retirar páginas',
                 ],
             ],
+            'assistant' => [
+                'name' => 'Asistente',
+                'permissions' => [
+                    'assistant.use' => 'Usar el asistente: preguntas en español sobre los datos que ya puede ver',
+                ],
+            ],
             'ai' => [
                 'name' => 'Chat IA',
                 'permissions' => [

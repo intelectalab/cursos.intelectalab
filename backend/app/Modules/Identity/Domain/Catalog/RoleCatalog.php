@@ -45,6 +45,8 @@ class RoleCatalog
                     'activities.self', 'activities.attempt', 'certificates.self',
                     'orders.create', 'checkout.validate', 'payments.create', 'wallet.use',
                     'tickets.self', 'tickets.create', 'ai.chat',
+                    // El asistente responde solo sobre lo que cada rol ya puede ver
+                    'assistant.use',
                 ],
             ],
             self::TEACHER => [
@@ -58,6 +60,7 @@ class RoleCatalog
                     'question_banks.read', 'question_banks.manage',
                     // Confirma u observa el horario que le arma la academia
                     'schedules.self',
+                    'assistant.use',
                 ],
             ],
             self::SUPPORT => [
@@ -69,6 +72,7 @@ class RoleCatalog
                     'students.read',
                     // Ve los reclamos para dar contexto a quien consulta; responderlos es del Administrador
                     'claims.read',
+                    'assistant.use',
                 ],
             ],
             self::SALES => [
@@ -76,17 +80,17 @@ class RoleCatalog
                 'description' => 'Gestión comercial y CRM',
                 // Además del Maestro §8.1: ve promociones y paquetes para poder ofrecerlos
                 // y la ficha de cada alumno, para saber qué compró y qué cursa
-                'permissions' => ['crm.*', 'quotations.*', 'orders.read', 'orders.create', 'promotions.read', 'packages.read', 'students.read'],
+                'permissions' => ['crm.*', 'quotations.*', 'orders.read', 'orders.create', 'promotions.read', 'packages.read', 'students.read', 'assistant.use'],
             ],
             self::B2B => [
                 'name' => 'B2B autorizado',
                 'description' => 'Operaciones corporativas: cuentas, licencias y cotizaciones',
-                'permissions' => ['corporate_accounts.*', 'licenses.*', 'quotations.*'],
+                'permissions' => ['corporate_accounts.*', 'licenses.*', 'quotations.*', 'assistant.use'],
             ],
             self::COMPANY => [
                 'name' => 'Responsable de empresa',
                 'description' => 'Portal de una empresa cliente: licencias, trabajadores, avance y cotizaciones',
-                'permissions' => ['company.portal', 'tickets.self', 'tickets.create'],
+                'permissions' => ['company.portal', 'tickets.self', 'tickets.create', 'assistant.use'],
             ],
         ];
     }

@@ -4,6 +4,7 @@ import { ErrorBoundary } from '../../shared/ui/ErrorBoundary';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { DebtAlerts } from '../../features/sales/components/DebtAlerts';
+import { AssistantLauncher } from '../../features/assistant/components/AssistantLauncher';
 import { PlanBanner } from '../../features/settings/components/PlanBanner';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -70,6 +71,7 @@ export const AppLayout: React.FC = () => {
         </main>
         {/* Quien cobra ve aquí, sobre cualquier pantalla, las cuotas que vencieron */}
         {!session?.support_mode && <DebtAlerts />}
+        {!session?.support_mode && <AssistantLauncher />}
       </div>
     </div>
   );
