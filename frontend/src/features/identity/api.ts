@@ -20,6 +20,8 @@ export interface UserRow {
   roles: string[];
   role_ids: string[];
   last_login_at: string | null;
+  // Tiene activa la verificación en dos pasos
+  two_factor_enabled?: boolean;
 }
 
 export interface Role {
@@ -125,6 +127,11 @@ export const identityApi = {
   // Cierra las sesiones abiertas de la persona; devuelve cuántas eran
   async revokeUserSessions(id: string) {
     return (await api.delete(`/users/${id}/sessions`)).data.data.revoked as number;
+  },
+
+  // Le quita la verificación en dos pasos a quien perdió su teléfono (y cierra sus sesiones)
+  async resetTwoFactor(id: string) {
+    await api.delete(`/users/${id}/two-factor`);
   },
 
   async setUserRoles(id: string, roles: string[]) {

@@ -10,6 +10,8 @@ import { SurveyPanel, TaskPanel } from '../../academic/components/StudentPanels'
 import { ACTIVITY_ICON } from '../../academic/icons';
 import { studentApi, type ActivityState, type QuizState, type SurveyState, type TaskState } from '../../academic/studentApi';
 import { formatSize, RESOURCE_LABEL, type ResourceType } from '../../courses/api';
+import { CourseLiveClasses } from '../../schedules/components/CourseLiveClasses';
+import { ClassroomAnnouncements, ClassroomReview } from '../../courses/components/ClassroomCommunity';
 import {
   enrollmentsApi,
   type ClassroomActivity,
@@ -344,6 +346,9 @@ export const ClassroomPage: React.FC<{ preview?: boolean }> = ({ preview = false
         )}
       </div>
 
+      {!preview && <ClassroomAnnouncements courseId={courseId} />}
+      {!preview && <CourseLiveClasses courseId={courseId} />}
+
       {!preview && classroom.sections.some((section) => section.locked) && (
         <div className="mb-5">
           <Alert tone="info">Este curso se recorre en orden: cada sección se abre cuando completas la anterior.</Alert>
@@ -464,6 +469,8 @@ export const ClassroomPage: React.FC<{ preview?: boolean }> = ({ preview = false
           </Card>
         </div>
       )}
+
+      {!preview && <ClassroomReview courseId={courseId} />}
     </div>
   );
 };

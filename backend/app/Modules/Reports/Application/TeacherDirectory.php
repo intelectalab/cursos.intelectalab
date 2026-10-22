@@ -4,6 +4,7 @@ namespace App\Modules\Reports\Application;
 
 use App\Modules\Academic\Domain\Models\TaskSubmission;
 use App\Modules\Courses\Domain\Models\Course;
+use App\Modules\Courses\Domain\Models\CourseReview;
 use App\Modules\Courses\Domain\Models\CourseTeacher;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
@@ -132,6 +133,10 @@ class TeacherDirectory
                 'oldest_pending_at' => isset($pending[$course->id]) ? now()->parse($pending[$course->id]->oldest)->toIso8601String() : null,
             ])->values(),
             'students_total' => (int) $students->only($courses->where('status', '!=', Course::STATUS_ARCHIVED)->pluck('id'))->sum(),
+            // Valoración de sus cursos: promedio de las reseñas visibles de todos ellos
+            'rating' => ($rating = CourseReview::query()->whereIn('course_id', $ids)->where('status', CourseReview::STATUS_VISIBLE)->selectRaw('avg(rating) as average, count(*) as total')->first()) && $rating->total > 0
+                ? ['average' => round((float) $rating->average, 1), 'count' => (int) $rating->total]
+                : null,
             // Lo que calificó esta persona, en cualquier curso
             'graded_recently' => TaskSubmission::query()
                 ->where('graded_by', $teacher->id)

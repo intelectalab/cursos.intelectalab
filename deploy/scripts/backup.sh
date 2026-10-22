@@ -7,6 +7,8 @@
 #   BACKUP_DIR       dónde se guardan las copias            (por defecto /var/backups/erp)
 #   RETENTION_DAYS   cuántos días se conservan              (por defecto 30)
 #   REMOTE           destino de rclone para la copia externa, p. ej. "respaldo:erp" (vacío = no se envía)
+#   WEEKLY_DAY       día de la semana del respaldo descargable, 1 = lunes … 7 = domingo (por defecto 7)
+#   WEEKLY_KEEP      cuántos respaldos semanales se conservan               (por defecto 8)
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/erp}"
@@ -14,6 +16,10 @@ APP_DIR="${APP_DIR:-/var/www/erp}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/erp}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
 REMOTE="${REMOTE:-}"
+WEEKLY_DAY="${WEEKLY_DAY:-7}"
+WEEKLY_KEEP="${WEEKLY_KEEP:-8}"
+# Donde la consola de la plataforma los lista para descargarlos (config tenancy.backups_path)
+WEEKLY_DIR="$APP_DIR/backend/storage/app/backups"
 
 ENV_FILE="$APP_DIR/backend/.env"
 read_env() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'; }
@@ -52,6 +58,20 @@ du -sh "$TARGET" | sed "s/^/[$(date '+%F %T')] Tamaño: /"
 if [ -n "$REMOTE" ]; then
     echo "[$(date '+%F %T')] Enviando la copia a $REMOTE"
     rclone copy "$TARGET" "$REMOTE/$STAMP"
+fi
+
+# Una vez por semana: un solo archivo con la base y los archivos, para descargarlo desde la consola.
+# No lleva la copia del .env: la clave de la aplicación se guarda aparte.
+if [ "$(date +%u)" = "$WEEKLY_DAY" ]; then
+    WEEKLY_FILE="$WEEKLY_DIR/erp-semana-$(date +%F).tar.gz"
+    echo "[$(date '+%F %T')] Respaldo semanal para descargar: $WEEKLY_FILE"
+    mkdir -p "$WEEKLY_DIR"
+    tar --create --gzip --file="$WEEKLY_FILE" --directory="$TARGET" base.dump archivos.tar.gz
+    chown -R www-data:www-data "$WEEKLY_DIR"
+    chmod 700 "$WEEKLY_DIR"
+    chmod 600 "$WEEKLY_FILE"
+    # Solo los últimos WEEKLY_KEEP
+    ls -1t "$WEEKLY_DIR"/erp-semana-*.tar.gz 2>/dev/null | tail -n +"$((WEEKLY_KEEP + 1))" | xargs -r rm -f
 fi
 
 # Limpieza de las copias antiguas

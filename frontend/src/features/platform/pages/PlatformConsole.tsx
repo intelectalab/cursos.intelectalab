@@ -11,6 +11,7 @@ import {
 import { Alert, Avatar, Button, Field, INPUT_CLASS } from '../../../shared/ui';
 import { AuthShell, BrandMark } from '../../../shared/ui/AuthShell';
 import { PlatformEmailsPanel } from '../../emails/components/PlatformEmailsPanel';
+import { BackupsPanel } from '../components/BackupsPanel';
 import { DashboardPanel } from '../components/DashboardPanel';
 import { PaymentsPanel } from '../components/PaymentsPanel';
 import { PlansPanel } from '../components/PlansPanel';
@@ -78,6 +79,7 @@ export const PlatformConsole: React.FC = () => {
   const onPayments = pathname === '/platform/payments';
   const onPanel = pathname === '/platform/panel';
   const onEmails = pathname === '/platform/emails';
+  const onBackups = pathname === '/platform/backups';
   const [session, setSession] = useState<PlatformSession | null>(loadPlatformSession);
   // Órdenes de plan que esperan a la plataforma: el contador de la pestaña Pagos
   const [waiting, setWaiting] = useState<{ pending: number; informed: number; review: number } | null>(null);
@@ -155,7 +157,7 @@ export const PlatformConsole: React.FC = () => {
         <nav aria-label="Secciones de la consola" className="inline-flex gap-1 p-1 mb-6 rounded-xl bg-slate-100 border border-slate-200/70">
           {[
             { to: '/platform/panel', label: 'Panel', active: onPanel, count: 0, urgent: false },
-            { to: '/platform', label: 'Academias', active: !onPlans && !onPayments && !onPanel && !onEmails, count: 0, urgent: false },
+            { to: '/platform', label: 'Academias', active: !onPlans && !onPayments && !onPanel && !onEmails && !onBackups, count: 0, urgent: false },
             { to: '/platform/plans', label: 'Planes', active: onPlans, count: 0, urgent: false },
             {
               to: '/platform/payments',
@@ -166,6 +168,7 @@ export const PlatformConsole: React.FC = () => {
               urgent: (waiting?.informed ?? 0) + (waiting?.review ?? 0) > 0,
             },
             { to: '/platform/emails', label: 'Correos', active: onEmails, count: 0, urgent: false },
+            { to: '/platform/backups', label: 'Respaldos', active: onBackups, count: 0, urgent: false },
           ].map((item) => (
             <NavLink
               key={item.to}
@@ -191,7 +194,7 @@ export const PlatformConsole: React.FC = () => {
             </NavLink>
           ))}
         </nav>
-        {onPanel ? <DashboardPanel /> : onEmails ? <PlatformEmailsPanel /> : onPayments ? <PaymentsPanel /> : onPlans ? <PlansPanel /> : tenantId ? <TenantProfile key={tenantId} tenantId={tenantId} /> : <TenantsPanel />}
+        {onPanel ? <DashboardPanel /> : onEmails ? <PlatformEmailsPanel /> : onBackups ? <BackupsPanel /> : onPayments ? <PaymentsPanel /> : onPlans ? <PlansPanel /> : tenantId ? <TenantProfile key={tenantId} tenantId={tenantId} /> : <TenantsPanel />}
       </main>
     </div>
   );

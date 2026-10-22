@@ -3,6 +3,8 @@ import {
   LayoutDashboard,
   LineChart,
   BookOpen,
+  CalendarDays,
+  CalendarCheck2,
   GraduationCap,
   Presentation,
   ClipboardList,
@@ -38,6 +40,8 @@ const MyCoursesPage = lazyPage(() => import('../features/enrollments/pages/MyCou
 const AvailableCoursesPage = lazyPage(() => import('../features/enrollments/pages/AvailableCoursesPage'), 'AvailableCoursesPage');
 const EnrollmentsPage = lazyPage(() => import('../features/enrollments/pages/EnrollmentsPage'), 'EnrollmentsPage');
 const TeachersPage = lazyPage(() => import('../features/teachers/pages/TeachersPage'), 'TeachersPage');
+const SchedulesPage = lazyPage(() => import('../features/schedules/pages/SchedulesPage'), 'SchedulesPage');
+const MySchedulePage = lazyPage(() => import('../features/schedules/pages/MySchedulePage'), 'MySchedulePage');
 const StudentsPage = lazyPage(() => import('../features/students/pages/StudentsPage'), 'StudentsPage');
 const MyOrdersPage = lazyPage(() => import('../features/sales/pages/MyOrdersPages'), 'MyOrdersPage');
 const OrdersPage = lazyPage(() => import('../features/sales/pages/OrdersPage'), 'OrdersPage');
@@ -108,6 +112,19 @@ export const APP_MODULES: ModuleItem[] = [
     group: 'general',
     permission: 'reports.read',
     component: AcademyPanel,
+  },
+  {
+    id: 'my-schedule',
+    name: 'Mi horario',
+    description: 'La semana que te armó la academia, para confirmarla',
+    href: '/my-schedule',
+    icon: CalendarCheck2,
+    tone: 'violet',
+    group: 'general',
+    permission: 'schedules.self',
+    // Solo el docente: el acceso total del administrador no lo muestra
+    explicit: true,
+    component: MySchedulePage,
   },
   {
     id: 'my-courses',
@@ -213,6 +230,17 @@ export const APP_MODULES: ModuleItem[] = [
     group: 'operation',
     permission: 'teachers.read',
     component: TeachersPage,
+  },
+  {
+    id: 'schedules',
+    name: 'Horarios',
+    description: 'Disponibilidad, clases en vivo y revisión de trabajos de cada docente',
+    href: '/schedules',
+    icon: CalendarDays,
+    tone: 'violet',
+    group: 'operation',
+    permission: 'schedules.read',
+    component: SchedulesPage,
   },
   {
     id: 'enrollments',

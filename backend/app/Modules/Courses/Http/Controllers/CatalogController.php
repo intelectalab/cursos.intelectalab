@@ -3,7 +3,9 @@
 namespace App\Modules\Courses\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Courses\Application\CourseCommunity;
 use App\Modules\Courses\Domain\Models\Course;
+use App\Modules\Courses\Domain\Models\CourseReview;
 use App\Modules\Courses\Http\CatalogPresenter;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiException;
@@ -42,8 +44,10 @@ class CatalogController extends Controller
         ]);
 
         $currency = $this->settings->currency();
-        $all = $this->query()->get()
-            ->map(fn (Course $course) => CatalogPresenter::card($course, $currency))
+        $courses = $this->query()->get();
+        $ratings = CourseCommunity::ratings($courses->pluck('id'));
+        $all = $courses
+            ->map(fn (Course $course) => CatalogPresenter::card($course, $currency) + ['rating' => $ratings->get($course->id)])
             ->sortBy(fn (array $card) => self::plain($card['title']))
             ->values();
 
@@ -66,7 +70,24 @@ class CatalogController extends Controller
             throw new ApiException(ErrorCode::NotFound, 'El curso no existe.', 404);
         }
 
-        return ApiResponse::success(CatalogPresenter::detail($record, $this->settings->currency()));
+        // Las reseñas visibles más recientes, con el nombre e inicial de quien la escribió
+        $reviews = CourseReview::query()
+            ->where('course_id', $record->id)
+            ->where('status', CourseReview::STATUS_VISIBLE)
+            ->with('student:id,first_name,last_name')
+            ->latest('updated_at')
+            ->limit(6)
+            ->get();
+
+        return ApiResponse::success(CatalogPresenter::detail($record, $this->settings->currency()) + [
+            'rating' => CourseCommunity::ratings([$record->id])->get($record->id),
+            'reviews' => $reviews->map(fn (CourseReview $review) => [
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'author' => CourseCommunity::publicName($review->student),
+                'updated_at' => $review->updated_at?->toIso8601String(),
+            ])->values(),
+        ]);
     }
 
     /**

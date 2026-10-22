@@ -189,6 +189,8 @@ export interface AvailableCourse {
   price: string | null;
   currency: string;
   issues_certificate: boolean;
+  // Promedio de las reseñas visibles (solo en el catálogo público); null = aún no hay
+  rating?: { average: number; count: number } | null;
 }
 
 export interface AvailableCourseDetail extends AvailableCourse {
@@ -196,6 +198,8 @@ export interface AvailableCourseDetail extends AvailableCourse {
   access_days: number | null;
   teachers: string[];
   sections: { title: string; items: { kind: 'RESOURCE' | 'ACTIVITY'; type: ResourceType | ActivityType; title: string }[] }[];
+  // Reseñas visibles más recientes (solo en el catálogo público)
+  reviews?: { rating: number; comment: string | null; author: string; updated_at: string }[];
 }
 
 // Fecha de vigencia (AAAA-MM-DD) sin corrimiento por zona horaria

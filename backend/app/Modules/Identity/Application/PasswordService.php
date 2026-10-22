@@ -7,13 +7,13 @@ use App\Modules\Identity\Domain\Models\PasswordResetToken;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Identity\Mail\PasswordResetMail;
 use App\Modules\Tenancy\Application\EmailTemplates;
+use App\Modules\Tenancy\Application\TenantMailer;
 use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
@@ -26,6 +26,7 @@ class PasswordService
         private readonly AuditLogger $audit,
         private readonly EmailTemplates $templates,
         private readonly TenantNotifier $notifier,
+        private readonly TenantMailer $mailer,
     ) {}
 
     /**
@@ -62,7 +63,7 @@ class PasswordService
 
         // Es indispensable: la academia puede cambiar el texto, pero no apagarlo
         $content = $this->templates->render('recuperar_contrasena', ['nombre' => $user->first_name, 'academia' => $tenant->name, 'minutos' => $minutes]);
-        Mail::to($user->email)->send(new PasswordResetMail(...$this->notifier->parts($tenant, $user->first_name, $content, $url), url: $url));
+        $this->mailer->deliverNow($tenant, $user->email, new PasswordResetMail(...$this->notifier->parts($tenant, $user->first_name, $content, $url), url: $url));
     }
 
     public function reset(string $email, string $token, string $password): void

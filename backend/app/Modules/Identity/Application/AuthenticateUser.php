@@ -26,10 +26,14 @@ class AuthenticateUser
         private readonly TenantContext $context,
         private readonly TenantSettingsService $settings,
         private readonly AuditLogger $audit,
+        private readonly TwoFactorService $twoFactor,
     ) {}
 
     /**
-     * @return array{0: User, 1: string} usuario y token de acceso
+     * Con la verificación en dos pasos activa no entrega el token: entrega un
+     * paso intermedio que se completa con el código (completeTwoFactor).
+     *
+     * @return array{0: User, 1: ?string, 2: ?string} usuario, token de acceso y paso intermedio
      */
     public function handle(string $email, string $password, ?string $ip): array
     {
@@ -93,12 +97,52 @@ class AuthenticateUser
         }
 
         RateLimiter::clear($throttleKey);
+
+        if ($this->twoFactor->enabled($user)) {
+            // El bloqueo de la cuenta sigue contando: un código equivocado también es un intento fallido
+            return [$user, null, $this->twoFactor->challenge($user)];
+        }
+
         RateLimiter::clear($lockKey);
 
+        return [$user, $this->open($user), null];
+    }
+
+    /**
+     * Segundo paso: el código de la aplicación o uno de respaldo.
+     */
+    public function completeTwoFactor(string $challenge, string $code, ?string $ip): array
+    {
+        $user = $this->twoFactor->userFromChallenge($challenge, $this->context->tenantId());
+        $lockKey = self::lockKey($this->context->tenantId(), $user->email);
+        $lockAttempts = (int) config('identity.login_lock_attempts');
+
+        if (RateLimiter::tooManyAttempts($lockKey, $lockAttempts)) {
+            throw new ApiException(ErrorCode::AccountLocked, 'La cuenta está bloqueada por demasiados intentos fallidos. Intente nuevamente más tarde.', 429, ['retry_after' => RateLimiter::availableIn($lockKey)]);
+        }
+
+        if (! $user->isActive()) {
+            throw new ApiException(ErrorCode::AccountInactive, 'La cuenta de usuario se encuentra suspendida o inactiva.', 403);
+        }
+
+        if (! $this->twoFactor->verify($user, $code)) {
+            RateLimiter::hit($lockKey, (int) config('identity.login_lock_minutes') * 60);
+            $this->audit->record('auth.two_factor_failed', $user, after: ['ip' => $ip], actorUserId: $user->id);
+
+            throw new ApiException(ErrorCode::TwoFactorInvalid, 'El código no es correcto o ya se usó. Escribe el que muestra ahora tu aplicación, o uno de tus códigos de respaldo.', 401);
+        }
+
+        RateLimiter::clear($lockKey);
+
+        return [$user, $this->open($user)];
+    }
+
+    private function open(User $user): string
+    {
         $user->forceFill(['last_login_at' => now()])->save();
         $this->audit->record('auth.login', $user, actorUserId: $user->id);
 
-        return [$user, TokenIssuer::issue($user, $this->settings->sessionMinutes())];
+        return TokenIssuer::issue($user, $this->settings->sessionMinutes());
     }
 
     /**

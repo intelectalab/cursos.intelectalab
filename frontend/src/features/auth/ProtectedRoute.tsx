@@ -3,11 +3,12 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { ForcePasswordChange } from './ForcePasswordChange';
+import { ForceTwoFactorSetup } from './ForceTwoFactorSetup';
 import { EmptyState } from '../../shared/ui';
 import { withNext } from '../../shared/auth/next';
 
 export const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, session } = useAuth();
   const { pathname } = useLocation();
 
   if (!isAuthenticated) {
@@ -18,6 +19,11 @@ export const ProtectedRoute: React.FC = () => {
   // Con contraseña temporal no se entra a ninguna pantalla hasta cambiarla
   if (user?.must_change_password) {
     return <ForcePasswordChange />;
+  }
+
+  // Tampoco sin la verificación en dos pasos, si la academia la exige a su personal
+  if (session?.must_setup_two_factor) {
+    return <ForceTwoFactorSetup />;
   }
 
   return <Outlet />;

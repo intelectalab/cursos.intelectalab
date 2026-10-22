@@ -31,6 +31,8 @@ const MyOrderPage = lazyPage(() => import('../features/sales/pages/MyOrdersPages
 const VerifyPage = lazyPage(() => import('../features/certificates/pages/VerifyPage'), 'VerifyPage');
 const CertificateEditorPage = lazyPage(() => import('../features/certificates/pages/CertificateEditorPage'), 'CertificateEditorPage');
 const TeacherProfilePage = lazyPage(() => import('../features/teachers/pages/TeacherProfilePage'), 'TeacherProfilePage');
+const AttendancePage = lazyPage(() => import('../features/schedules/pages/AttendancePage'), 'AttendancePage');
+const ScheduleEditorPage = lazyPage(() => import('../features/schedules/pages/ScheduleEditorPage'), 'ScheduleEditorPage');
 const PlanPage = lazyPage(() => import('../features/settings/pages/PlanPage'), 'PlanPage');
 const StudentProfilePage = lazyPage(() => import('../features/students/pages/StudentProfilePage'), 'StudentProfilePage');
 const CorporateAccountPage = lazyPage(() => import('../features/company/pages/CorporateAccountPage'), 'CorporateAccountPage');
@@ -54,6 +56,7 @@ function CentralRoutes() {
       <Route path="/platform/payments" element={<PlatformConsole />} />
       <Route path="/platform/panel" element={<PlatformConsole />} />
       <Route path="/platform/emails" element={<PlatformConsole />} />
+      <Route path="/platform/backups" element={<PlatformConsole />} />
       <Route path="/" element={<PlatformLanding />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
@@ -152,6 +155,22 @@ function TenantRoutes() {
               element={
                 <PermissionGate permission="teachers.read">
                   <TeacherProfilePage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/courses/:courseId/attendance"
+              element={
+                <PermissionGate permission={['submissions.review', 'submissions.assigned.review']}>
+                  <AttendancePage />
+                </PermissionGate>
+              }
+            />
+            <Route
+              path="/schedules/:teacherId"
+              element={
+                <PermissionGate permission="schedules.read">
+                  <ScheduleEditorPage />
                 </PermissionGate>
               }
             />

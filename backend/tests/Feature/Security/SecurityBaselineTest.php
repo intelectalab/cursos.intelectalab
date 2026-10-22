@@ -26,6 +26,8 @@ class SecurityBaselineTest extends TestCase
     /** Rutas que se usan sin sesión. Agregar una aquí es una decisión, no un descuido. */
     private const PUBLIC_ROUTES = [
         'POST api/v1/auth/login',
+        // Segundo paso del inicio de sesión: lo protege el paso intermedio cifrado, no una sesión
+        'POST api/v1/auth/two-factor',
         'POST api/v1/auth/register',
         'POST api/v1/auth/forgot-password',
         'POST api/v1/auth/reset-password',
@@ -56,6 +58,12 @@ class SecurityBaselineTest extends TestCase
         'GET api/v1/auth/sessions',
         'DELETE api/v1/auth/sessions',
         'DELETE api/v1/auth/sessions/{session}',
+        // Verificación en dos pasos de la cuenta propia
+        'GET api/v1/auth/two-factor',
+        'POST api/v1/auth/two-factor/start',
+        'POST api/v1/auth/two-factor/confirm',
+        'DELETE api/v1/auth/two-factor',
+        'POST api/v1/auth/two-factor/recovery-codes',
     ];
 
     public function test_every_route_requires_a_session_unless_it_is_declared_public(): void

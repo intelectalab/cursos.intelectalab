@@ -367,6 +367,8 @@ export const salesApi = {
       submissions_to_grade: number | null;
       overdue_installments: number | null;
       claims_unanswered: number | null;
+      schedules_observed: number | null;
+      schedule_to_confirm: number | null;
     };
   },
   async cancelOrder(order: string) {

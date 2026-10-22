@@ -11,6 +11,7 @@ use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\PaymentAttempt;
 use App\Modules\Sales\Http\OrderPresenter;
+use App\Modules\Schedules\Domain\Models\TeacherSchedule;
 use App\Modules\Support\Domain\Models\Ticket;
 use App\Shared\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -53,6 +54,14 @@ class AlertController extends Controller
             'overdue_installments' => $can('payments.confirm')
                 ? OrderInstallment::query()->where('status', OrderInstallment::STATUS_PENDING)->where('due_date', '<', OrderPresenter::today())
                     ->whereIn('order_id', Order::query()->where('status', Order::STATUS_PARTIAL)->select('id'))->count()
+                : null,
+            // Horarios en los que el docente pidió cambios, para quien los arma
+            'schedules_observed' => $can('schedules.manage')
+                ? TeacherSchedule::query()->where('status', TeacherSchedule::STATUS_OBSERVED)->count()
+                : null,
+            // El horario propio del docente espera su confirmación
+            'schedule_to_confirm' => $can('schedules.self')
+                ? TeacherSchedule::query()->where('teacher_id', $user->id)->where('status', TeacherSchedule::STATUS_PENDING)->count()
                 : null,
             // Hojas del Libro de Reclamaciones sin respuesta
             'claims_unanswered' => $can('claims.read')

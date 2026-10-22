@@ -24,6 +24,7 @@ class EmailTemplateEditor
         private readonly EmailTemplates $templates,
         private readonly TenantNotifier $notifier,
         private readonly AuditLogger $audit,
+        private readonly TenantMailer $mailer,
     ) {}
 
     /**
@@ -176,9 +177,10 @@ class EmailTemplateEditor
      *
      * @return array{sent_to: string, delivered: bool}
      */
-    public function sendTest(Mailable $mail, string $to): array
+    public function sendTest(Mailable $mail, string $to, ?Tenant $tenant = null): array
     {
-        Mail::to($to)->send($mail);
+        // La prueba de una academia sale con su correo de envío, como saldrá el aviso de verdad
+        $tenant ? $this->mailer->deliverNow($tenant, $to, $mail) : Mail::to($to)->send($mail);
 
         return ['sent_to' => $to, 'delivered' => ! in_array(config('mail.default'), ['log', 'array'], true)];
     }

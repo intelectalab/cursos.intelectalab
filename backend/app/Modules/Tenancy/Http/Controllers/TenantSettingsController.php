@@ -11,6 +11,7 @@ use App\Shared\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class TenantSettingsController extends Controller
 {
@@ -71,12 +72,18 @@ class TenantSettingsController extends Controller
                 'min:'.TenantSettingsService::CLAIM_RESPONSE_MIN,
                 'max:'.TenantSettingsService::CLAIM_RESPONSE_MAX,
             ],
+            'require_two_factor' => ['sometimes', 'boolean'],
             'session_minutes' => [
                 'required', 'integer',
                 'min:'.config('identity.session_lifetime_min'),
                 'max:'.config('identity.session_lifetime_max'),
             ],
         ], ['secondary_currency.different' => 'La moneda secundaria debe ser distinta de la principal.']);
+
+        // Quien la exige debe tenerla: si no, se quedaría fuera de su propia academia
+        if (($data['require_two_factor'] ?? false) && $request->user()->two_factor_confirmed_at === null) {
+            throw ValidationException::withMessages(['require_two_factor' => 'Activa primero tu propia verificación en dos pasos en «Mi cuenta».']);
+        }
 
         return ApiResponse::success(
             $this->settings->update($request->attributes->get('tenant'), $data) + ['logo_url' => $this->logo->url()]

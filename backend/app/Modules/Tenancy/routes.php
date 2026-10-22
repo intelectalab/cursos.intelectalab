@@ -3,6 +3,7 @@
 use App\Modules\Tenancy\Http\Controllers\EmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\GradeScaleController;
 use App\Modules\Tenancy\Http\Controllers\HolidayController;
+use App\Modules\Tenancy\Http\Controllers\MailSettingsController;
 use App\Modules\Tenancy\Http\Controllers\PlatformEmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\TenantController;
 use App\Modules\Tenancy\Http\Controllers\TenantSettingsController;
@@ -13,6 +14,13 @@ Route::get('/tenant', [TenantController::class, 'current']);
 // Alta de organizaciones: solo desde el dominio central
 Route::post('/tenants', [TenantController::class, 'register'])
     ->middleware(['central', 'throttle:10,1']);
+
+// Correo de envío de la academia: su propio servidor de correo o el de la plataforma con su nombre
+Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:email_templates.manage'])->prefix('/settings/mail')->group(function () {
+    Route::get('/', [MailSettingsController::class, 'show']);
+    Route::put('/', [MailSettingsController::class, 'update']);
+    Route::post('/test', [MailSettingsController::class, 'test'])->middleware('throttle:5,1');
+});
 
 // Correos automáticos: la academia cambia sus textos, apaga los que no le sirven y los prueba
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:email_templates.manage'])->prefix('/settings/emails')->group(function () {

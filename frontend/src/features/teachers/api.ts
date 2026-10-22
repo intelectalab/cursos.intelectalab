@@ -34,6 +34,8 @@ export interface TeacherProfile {
   students_total: number;
   // Entregas que calificó esta persona en los últimos días (ver recentDays)
   graded_recently: number;
+  // Promedio de las reseñas visibles de sus cursos; null = aún no hay
+  rating: { average: number; count: number } | null;
 }
 
 export const teachersApi = {

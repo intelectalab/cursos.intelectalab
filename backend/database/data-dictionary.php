@@ -320,6 +320,9 @@ return [
         'last_login_at' => 'Último inicio de sesión',
         'doc_type' => 'Tipo de documento de identidad',
         'doc_number' => 'Número de documento de identidad',
+        'two_factor_secret' => 'Clave de la verificación en dos pasos (la que lee la aplicación del teléfono), cifrada',
+        'two_factor_confirmed_at' => 'Cuándo activó la verificación en dos pasos; vacío = no la tiene',
+        'two_factor_recovery_codes' => 'Huellas de los códigos de respaldo que aún no se usaron, cifradas',
     ],
     'platform_admins' => [
         'password' => 'Contraseña, guardada como huella irreversible',
@@ -387,7 +390,47 @@ return [
         'last_message_by' => 'Quién escribió el último mensaje: el usuario o el personal',
     ],
 
+    // ── Anuncios y reseñas ──
+    'course_announcements' => [
+        'title' => 'Título del anuncio',
+        'body' => 'Texto del anuncio',
+        'emailed_at' => 'Cuándo se avisó por correo a los alumnos; vacío = solo se ve en el aula',
+    ],
+    'course_reviews' => [
+        'rating' => 'Calificación de 1 a 5 estrellas',
+        'comment' => 'Comentario del alumno (opcional)',
+        'status' => 'VISIBLE u HIDDEN (la ocultó la academia)',
+        'hidden_reason' => 'Por qué la academia ocultó la reseña',
+        'hidden_by' => 'Quién la ocultó',
+        'hidden_at' => 'Cuándo se ocultó',
+    ],
+
+    // ── Horarios ──
+    'live_class_attendances' => [
+        'session_date' => 'Día de la clase en vivo',
+        'session_start' => 'Hora de inicio de la clase en vivo (según el horario confirmado)',
+        'status' => 'Asistencia: PRESENT (presente), LATE (tarde), ABSENT (ausente) o EXCUSED (falta justificada, no cuenta para el porcentaje)',
+        'recorded_by' => 'Quién tomó la asistencia',
+    ],
+    'teacher_schedules' => [
+        'blocks' => 'Bloques de la semana vigente: día (1 = lunes … 7 = domingo), hora de inicio y fin, tipo (AVAILABLE, LIVE_CLASS o GRADING), curso, enlace de la clase y nota',
+        'observation' => 'Lo que el docente pidió cambiar al observar el horario',
+        'sent_at' => 'Cuándo se envió el horario al docente para que lo confirme',
+        'responded_at' => 'Cuándo lo confirmó u observó el docente',
+        'confirmed_blocks' => 'Bloques de la última versión que confirmó el docente; es lo que ven los alumnos mientras un cambio espera',
+    ],
+
     // ── Academias ──
+    'tenant_mail_settings' => [
+        'mode' => 'Con qué correo salen los avisos: PLATFORM (el de la plataforma, con el nombre de la academia) u OWN (su propio servidor de correo)',
+        'from_name' => 'Nombre del remitente; vacío = el nombre de la academia',
+        'reply_to' => 'Correo al que llegan las respuestas de los avisos',
+        'from_address' => 'Correo remitente cuando sale por el servidor propio',
+        'smtp' => 'Servidor, puerto, seguridad, usuario y contraseña del servidor de correo propio, cifrados',
+        'last_sent_at' => 'Último aviso que salió por el servidor propio',
+        'last_error' => 'Por qué falló el servidor propio la última vez (ese aviso salió por la plataforma)',
+        'last_error_at' => 'Cuándo falló el servidor propio',
+    ],
     'holidays' => [
         'date' => 'Día feriado: no cuenta en los plazos en días hábiles',
     ],

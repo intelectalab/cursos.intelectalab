@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Platform\Http\Controllers\PlatformAuthController;
+use App\Modules\Platform\Http\Controllers\PlatformBackupController;
 use App\Modules\Platform\Http\Controllers\PlatformDashboardController;
 use App\Modules\Platform\Http\Controllers\PlatformTenantController;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,10 @@ Route::prefix('platform')->middleware('central')->group(function () {
         // Panel: una sección por pestaña y su descarga en Excel
         Route::get('/dashboard/export', [PlatformDashboardController::class, 'export']);
         Route::get('/dashboard/{section}', [PlatformDashboardController::class, 'show'])->where('section', '[a-z]+');
+
+        // Respaldos semanales para descargar
+        Route::get('/backups', [PlatformBackupController::class, 'index']);
+        Route::get('/backups/{name}', [PlatformBackupController::class, 'download'])->where('name', 'erp-semana-[0-9-]+\.tar\.gz')->middleware('throttle:10,1');
 
         Route::get('/tenants', [PlatformTenantController::class, 'index']);
         Route::post('/tenants', [PlatformTenantController::class, 'store']);

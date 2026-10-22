@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Courses\Http\Controllers\CatalogController;
+use App\Modules\Courses\Http\Controllers\CourseCommunityController;
 use App\Modules\Courses\Http\Controllers\CourseContentController;
 use App\Modules\Courses\Http\Controllers\CourseController;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,24 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::get('/courses/{course}/versions/{version}', [CourseController::class, 'version'])->whereUuid(['course', 'version']);
         Route::get('/courses/{course}/resources/{resource}/download', [CourseContentController::class, 'download'])
             ->whereUuid(['course', 'resource']);
+    });
+
+    // Anuncios y reseñas de un curso: quien ve el curso los consulta; publicar y moderar piden su permiso
+    Route::middleware('permission:courses.read,courses.assigned.read')->prefix('/courses/{course}')->whereUuid(['course', 'announcement', 'review'])->group(function () {
+        Route::get('/announcements', [CourseCommunityController::class, 'announcements']);
+        Route::post('/announcements', [CourseCommunityController::class, 'publish'])->middleware('throttle:20,1');
+        Route::put('/announcements/{announcement}', [CourseCommunityController::class, 'updateAnnouncement']);
+        Route::delete('/announcements/{announcement}', [CourseCommunityController::class, 'deleteAnnouncement']);
+        Route::get('/reviews', [CourseCommunityController::class, 'reviews']);
+        Route::post('/reviews/{review}/hide', [CourseCommunityController::class, 'hide'])->middleware('permission:reviews.moderate');
+        Route::post('/reviews/{review}/show', [CourseCommunityController::class, 'show'])->middleware('permission:reviews.moderate');
+    });
+
+    // Alumno: los anuncios de su curso y su reseña
+    Route::middleware('permission:enrollments.self.read')->prefix('/me/courses/{course}')->whereUuid('course')->group(function () {
+        Route::get('/announcements', [CourseCommunityController::class, 'myAnnouncements']);
+        Route::get('/review', [CourseCommunityController::class, 'myReview']);
+        Route::put('/review', [CourseCommunityController::class, 'saveMyReview'])->middleware('throttle:10,1');
     });
 
     Route::post('/courses', [CourseController::class, 'store'])->middleware('permission:courses.create');

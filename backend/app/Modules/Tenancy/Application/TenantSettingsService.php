@@ -35,6 +35,8 @@ class TenantSettingsService
         'order_expiration_hours' => null,
         // Días hábiles para responder una hoja del Libro de Reclamaciones; null = valor por defecto
         'claim_response_days' => null,
+        // Exigir la verificación en dos pasos a todo el personal (no a alumnos ni a responsables de empresa)
+        'require_two_factor' => false,
     ];
 
     /**
@@ -101,6 +103,19 @@ class TenantSettingsService
         return $this->stored()['timezone'] ?? self::DEFAULTS['timezone'];
     }
 
+    /**
+     * Correo de contacto de la organización: a él van las respuestas de sus avisos si no eligió otro.
+     */
+    public function contactEmail(): ?string
+    {
+        return $this->stored()['contact_email'] ?? null;
+    }
+
+    public function requiresTwoFactor(): bool
+    {
+        return (bool) ($this->stored()['require_two_factor'] ?? false);
+    }
+
     public function paymentInstructions(): ?string
     {
         return $this->stored()['payment_instructions'] ?? null;
@@ -141,6 +156,9 @@ class TenantSettingsService
      */
     public function update(Tenant $tenant, array $data): array
     {
+        // Quien guarda sin mandar la exigencia de los dos pasos no la cambia
+        $data += ['require_two_factor' => $this->requiresTwoFactor()];
+
         return DB::transaction(function () use ($tenant, $data) {
             $before = $this->get($tenant);
 

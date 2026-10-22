@@ -4,9 +4,11 @@ namespace Tests\Feature\Tenancy;
 
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Tenancy\Domain\Models\Tenant;
+use App\Modules\Tenancy\Jobs\SendTenantMail;
 use App\Modules\Tenancy\Mail\TenantNoticeMail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
@@ -104,13 +106,14 @@ class NotificationsTest extends TestCase
     public function test_notices_can_go_out_in_the_background_and_the_mail_setup_can_be_checked(): void
     {
         Mail::fake();
+        Queue::fake();
         config(['mail.queue' => true]);
 
         $luis = $this->createUser($this->tenant, RoleCatalog::STUDENT, ['email' => 'luis@acme.com']);
         $this->withToken($this->admin)->postJson($this->api("/courses/{$this->course}/enrollments"), ['student_ids' => [$luis->id]])->assertCreated();
 
-        // Con la cola activada el aviso no se envía dentro de la petición
-        Mail::assertQueued(TenantNoticeMail::class, fn (TenantNoticeMail $mail) => $mail->hasTo('luis@acme.com'));
+        // Con la cola activada el aviso no se envía dentro de la petición: va a la cola con la academia
+        Queue::assertPushed(SendTenantMail::class, fn (SendTenantMail $job) => $job->to === 'luis@acme.com' && $job->tenantId === $this->tenant->id);
         Mail::assertNotSent(TenantNoticeMail::class);
 
         // El comando de comprobación envía directo, y rechaza una dirección mal escrita

@@ -154,6 +154,22 @@ final class EmailCatalog
             'body' => "Te matricularon en el curso «{curso}».\n\nTu acceso está disponible hasta el {vigencia}.",
             'button' => 'Entrar al curso',
         ],
+        'anuncio_curso' => [
+            'scope' => self::SCOPE_ACADEMY,
+            'group' => 'Cursos',
+            'name' => 'Anuncio del curso',
+            'when' => 'Cuando el docente o la academia publica un anuncio en un curso y marca «Avisar también por correo».',
+            'to' => 'Los alumnos con acceso al curso',
+            'variables' => [
+                'curso' => ['Nombre del curso', 'Excel para finanzas'],
+                'titulo' => ['Título del anuncio', 'Cambio de horario de la clase en vivo'],
+                'mensaje' => ['Texto del anuncio', 'Esta semana la clase será el viernes a las 19:00.'],
+            ],
+            'essential' => ['mensaje'],
+            'subject' => '{titulo} · {curso}',
+            'body' => "Hay un anuncio nuevo en «{curso}»:\n\n{mensaje}",
+            'button' => 'Ir al curso',
+        ],
         'acceso_por_vencer' => [
             'scope' => self::SCOPE_ACADEMY,
             'group' => 'Cursos',
@@ -324,6 +340,35 @@ final class EmailCatalog
         ],
 
         // ── Atención ─────────────────────────────────────────────
+        'horario_por_confirmar' => [
+            'scope' => self::SCOPE_ACADEMY,
+            'group' => 'Docentes',
+            'name' => 'Horario por confirmar',
+            'when' => 'Cuando el personal arma o cambia el horario de un docente en «Horarios».',
+            'to' => 'El docente',
+            'variables' => [
+                'desde' => ['Fecha desde la que vale el horario', '03/11/2026'],
+                'enviado_por' => ['Quién armó el horario', 'Carla Rojas'],
+            ],
+            'subject' => 'Tienes un horario por confirmar',
+            'body' => "{enviado_por} preparó tu horario semanal, que vale desde el {desde}.\n\nRevísalo y confírmalo, o cuéntanos qué hay que cambiar.",
+            'button' => 'Ver mi horario',
+        ],
+        'horario_observado' => [
+            'scope' => self::SCOPE_ACADEMY,
+            'group' => 'Docentes',
+            'name' => 'Horario observado por el docente',
+            'when' => 'Cuando un docente pide cambios en el horario que le enviaron.',
+            'to' => 'Quien armó el horario',
+            'variables' => [
+                'docente' => ['Nombre del docente', 'Rosa Quispe'],
+                'observacion' => ['Lo que pide cambiar el docente', 'Los martes no puedo antes de las 10:00.'],
+            ],
+            'essential' => ['observacion'],
+            'subject' => '{docente} pidió cambios en su horario',
+            'body' => "{docente} revisó el horario que le enviaste y pide esto:\n\n«{observacion}»",
+            'button' => 'Ver el horario',
+        ],
         'respuesta_soporte' => [
             'scope' => self::SCOPE_ACADEMY,
             'group' => 'Atención',

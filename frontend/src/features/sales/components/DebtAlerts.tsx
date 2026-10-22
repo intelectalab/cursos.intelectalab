@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, BellRing, CheckCheck, ChevronRight, FileCheck2, LifeBuoy, ShieldAlert, X, type LucideIcon } from 'lucide-react';
+import { Bell, BellRing, CalendarClock, CheckCheck, ChevronRight, FileCheck2, LifeBuoy, ShieldAlert, X, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { formatMoney, orderCode, salesApi, type DueInstallment } from '../api';
 
@@ -41,7 +41,7 @@ export const DebtAlerts: React.FC = () => {
   const userId = user?.id ?? '';
   // Las cuotas vencidas las ve quien cobra; los demás pendientes, quien atiende cada tema
   const collects = userId !== '' && hasPermission('payments.confirm');
-  const enabled = userId !== '' && (collects || hasPermission(['orders.read', 'tickets.read', 'cms.publish']));
+  const enabled = userId !== '' && (collects || hasPermission(['orders.read', 'tickets.read', 'cms.publish', 'schedules.manage', 'schedules.self']));
   const [alerts, setAlerts] = useState<DueInstallment[]>([]);
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof salesApi.alertSummary>> | null>(null);
   const [seen, setSeen] = useState<string[]>(() => (userId ? readSeen(userId) : []));
@@ -97,6 +97,8 @@ export const DebtAlerts: React.FC = () => {
   const pending: { key: string; icon: LucideIcon; count: number; text: string; to: string }[] = [
     { key: 'reviews', icon: ShieldAlert, count: summary?.payment_reviews ?? 0, text: 'cobro en revisión|cobros en revisión', to: '/billing' },
     { key: 'tickets', icon: LifeBuoy, count: summary?.tickets_waiting ?? 0, text: 'consulta de soporte espera respuesta|consultas de soporte esperan respuesta', to: '/support' },
+    { key: 'my-schedule', icon: CalendarClock, count: summary?.schedule_to_confirm ?? 0, text: 'horario espera tu confirmación|horarios esperan tu confirmación', to: '/my-schedule' },
+    { key: 'schedules', icon: CalendarClock, count: summary?.schedules_observed ?? 0, text: 'horario de docente tiene observaciones|horarios de docentes tienen observaciones', to: '/schedules' },
     { key: 'pages', icon: FileCheck2, count: summary?.pages_in_review ?? 0, text: 'página espera tu revisión|páginas esperan tu revisión', to: '/pages' },
   ].filter((item) => item.count > 0);
   const pendingTotal = pending.reduce((sum, item) => sum + item.count, 0);

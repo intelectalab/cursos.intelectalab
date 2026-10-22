@@ -32,4 +32,4 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:teachers
 
 // Lo que espera al personal, para la campana de avisos: cada cifra solo llega a quien puede atenderla
 Route::get('/alerts/summary', [AlertController::class, 'summary'])
-    ->middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:payments.confirm,orders.read,tickets.read,cms.publish,submissions.review,submissions.assigned.review,claims.read']);
+    ->middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:payments.confirm,orders.read,tickets.read,cms.publish,submissions.review,submissions.assigned.review,claims.read,schedules.manage,schedules.self']);

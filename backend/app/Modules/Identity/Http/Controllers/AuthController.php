@@ -5,6 +5,7 @@ namespace App\Modules\Identity\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Identity\Application\AuthenticateUser;
 use App\Modules\Identity\Application\RegisterStudent;
+use App\Modules\Identity\Application\TwoFactorService;
 use App\Modules\Identity\Http\Requests\LoginRequest;
 use App\Modules\Identity\Http\SessionPresenter;
 use App\Shared\Http\ApiResponse;
@@ -17,11 +18,28 @@ class AuthController extends Controller
 {
     public function login(LoginRequest $request, AuthenticateUser $authenticate): JsonResponse
     {
-        [$user, $token] = $authenticate->handle(
+        [$user, $token, $challenge] = $authenticate->handle(
             $request->validated('email'),
             $request->validated('password'),
             $request->ip()
         );
+
+        // Con verificación en dos pasos falta el código: se devuelve el paso intermedio, no la sesión
+        if ($challenge !== null) {
+            return ApiResponse::success(['two_factor_required' => true, 'challenge' => $challenge, 'expires_in' => TwoFactorService::CHALLENGE_MINUTES * 60]);
+        }
+
+        return ApiResponse::success(SessionPresenter::make($user, $token));
+    }
+
+    public function twoFactor(Request $request, AuthenticateUser $authenticate): JsonResponse
+    {
+        $data = $request->validate([
+            'challenge' => ['required', 'string', 'max:2000'],
+            'code' => ['required', 'string', 'max:20'],
+        ], [], ['code' => 'código']);
+
+        [$user, $token] = $authenticate->completeTwoFactor($data['challenge'], $data['code'], $request->ip());
 
         return ApiResponse::success(SessionPresenter::make($user, $token));
     }

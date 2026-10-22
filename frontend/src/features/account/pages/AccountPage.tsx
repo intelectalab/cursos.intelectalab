@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { KeyRound, MonitorSmartphone, UserRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
+import { TwoFactorCard } from '../components/TwoFactorCard';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import {
   Alert,
@@ -143,7 +144,7 @@ const PasswordCard: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
 };
 
 export const AccountPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
@@ -216,6 +217,7 @@ export const AccountPage: React.FC = () => {
           </Card>
 
           <PasswordCard onChanged={reload} />
+          <TwoFactorCard onChanged={() => void refresh()} />
         </div>
 
       <Card>

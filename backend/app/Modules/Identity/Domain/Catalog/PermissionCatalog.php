@@ -61,6 +61,7 @@ class PermissionCatalog
                     'courses.assigned.read' => 'Consultar los cursos asignados',
                     'content.assigned.write' => 'Editar el contenido de los cursos asignados',
                     'scorm.manage' => 'Gestionar paquetes SCORM',
+                    'reviews.moderate' => 'Ocultar y volver a mostrar las reseñas de los cursos',
                 ],
             ],
             'academic' => [
@@ -74,6 +75,9 @@ class PermissionCatalog
                     'submissions.review' => 'Revisar entregas y ver el avance en todos los cursos',
                     'submissions.assigned.review' => 'Revisar entregas de los cursos asignados',
                     'teachers.read' => 'Consultar los docentes, sus cursos y su carga de calificación',
+                    'schedules.read' => 'Consultar los horarios de los docentes',
+                    'schedules.manage' => 'Armar y cambiar los horarios de los docentes',
+                    'schedules.self' => 'Consultar, confirmar u observar el horario propio',
                 ],
             ],
             'enrollments' => [

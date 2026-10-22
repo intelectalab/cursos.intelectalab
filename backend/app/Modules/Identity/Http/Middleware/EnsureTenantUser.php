@@ -2,6 +2,7 @@
 
 namespace App\Modules\Identity\Http\Middleware;
 
+use App\Modules\Identity\Application\TwoFactorService;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Auth\TokenIssuer;
@@ -18,7 +19,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureTenantUser
 {
-    public function __construct(private readonly TenantSettingsService $settings) {}
+    public function __construct(
+        private readonly TenantSettingsService $settings,
+        private readonly TwoFactorService $twoFactor,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -48,6 +52,15 @@ class EnsureTenantUser
             throw new ApiException(
                 ErrorCode::PasswordChangeRequired,
                 'Debes cambiar tu contraseña temporal antes de continuar.',
+                403
+            );
+        }
+
+        // La academia exige los dos pasos al personal: hasta activarlos solo puede hacer eso
+        if (! $request->is('api/v1/auth/me', 'api/v1/auth/logout', 'api/v1/auth/two-factor', 'api/v1/auth/two-factor/*') && $this->twoFactor->setupRequired($user)) {
+            throw new ApiException(
+                ErrorCode::TwoFactorSetupRequired,
+                'Tu academia pide activar la verificación en dos pasos antes de continuar.',
                 403
             );
         }

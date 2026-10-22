@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileSpreadsheet, KeyRound, LogOut, Pencil, Plus, Search, UserCheck, UserCog, UserX, Users, UsersRound } from 'lucide-react';
+import { FileSpreadsheet, KeyRound, LogOut, Pencil, Plus, Search, ShieldOff, UserCheck, UserCog, UserX, Users, UsersRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -95,6 +95,24 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
     }));
 
   const [sessionsNotice, setSessionsNotice] = useState<string | null>(null);
+  const [twoFactorOn, setTwoFactorOn] = useState(Boolean(user?.two_factor_enabled));
+
+  const resetTwoFactor = async () => {
+    if (!user) return;
+    setProcessing(true);
+    setError(null);
+    setSessionsNotice(null);
+
+    try {
+      await identityApi.resetTwoFactor(user.id);
+      setTwoFactorOn(false);
+      setSessionsNotice('Se quitó su verificación en dos pasos y se cerraron sus sesiones. Entrará solo con su contraseña y podrá volver a activarla.');
+    } catch (err) {
+      setError(apiErrorMessage(err, 'No se pudo quitar la verificación en dos pasos.'));
+    } finally {
+      setProcessing(false);
+    }
+  };
   const [resetting, setResetting] = useState(false);
 
   const revokeSessions = async () => {
@@ -281,6 +299,17 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
             </div>
             <Button size="sm" icon={<KeyRound className="w-4 h-4" />} onClick={() => setResetting(true)} disabled={processing}>
               Restablecer contraseña
+            </Button>
+          </div>
+        )}
+        {user && twoFactorOn && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3 border border-slate-200 rounded-xl">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-slate-700">Verificación en dos pasos: activa</p>
+              <p className="text-xs text-slate-500">Si perdió su teléfono y sus códigos de respaldo, quítasela para que pueda entrar.</p>
+            </div>
+            <Button size="sm" variant="danger" icon={<ShieldOff className="w-4 h-4" />} onClick={resetTwoFactor} disabled={processing}>
+              Quitar
             </Button>
           </div>
         )}

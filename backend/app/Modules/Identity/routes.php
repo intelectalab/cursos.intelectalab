@@ -4,12 +4,15 @@ use App\Modules\Identity\Http\Controllers\AccountController;
 use App\Modules\Identity\Http\Controllers\AuthController;
 use App\Modules\Identity\Http\Controllers\GroupController;
 use App\Modules\Identity\Http\Controllers\RoleController;
+use App\Modules\Identity\Http\Controllers\TwoFactorController;
 use App\Modules\Identity\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Todo el módulo opera dentro del subdominio de una organización
 Route::middleware('tenant')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login']);
+    // Segundo paso del inicio de sesión: el código de la aplicación
+    Route::post('/auth/two-factor', [AuthController::class, 'twoFactor'])->middleware('throttle:10,1');
     // Registro público de compradores: crea una cuenta de alumno
     Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
     Route::post('/auth/forgot-password', [AccountController::class, 'forgotPassword'])->middleware('throttle:5,1');
@@ -25,6 +28,15 @@ Route::middleware('tenant')->group(function () {
         Route::delete('/auth/sessions', [AccountController::class, 'revokeOtherSessions']);
         Route::delete('/auth/sessions/{session}', [AccountController::class, 'revokeSession'])->whereNumber('session');
 
+        // Verificación en dos pasos de la cuenta propia
+        Route::prefix('/auth/two-factor')->group(function () {
+            Route::get('/', [TwoFactorController::class, 'show']);
+            Route::post('/start', [TwoFactorController::class, 'start']);
+            Route::post('/confirm', [TwoFactorController::class, 'confirm'])->middleware('throttle:10,1');
+            Route::delete('/', [TwoFactorController::class, 'disable'])->middleware('throttle:10,1');
+            Route::post('/recovery-codes', [TwoFactorController::class, 'regenerate'])->middleware('throttle:10,1');
+        });
+
         Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.read');
         Route::post('/users', [UserController::class, 'store'])->middleware('permission:users.create');
         Route::post('/users/bulk-status', [UserController::class, 'bulkStatus'])->middleware('permission:users.update');
@@ -32,6 +44,7 @@ Route::middleware('tenant')->group(function () {
         Route::put('/users/{user}/roles', [UserController::class, 'updateRoles'])->middleware('permission:users.update');
         Route::delete('/users/{user}/sessions', [UserController::class, 'revokeSessions'])->middleware('permission:users.update');
         Route::put('/users/{user}/password', [UserController::class, 'resetPassword'])->middleware(['permission:users.update', 'throttle:20,1']);
+        Route::delete('/users/{user}/two-factor', [TwoFactorController::class, 'reset'])->whereUuid('user')->middleware('permission:users.update');
 
         // Grupos: listas de personas reutilizables. Los ve quien consulta usuarios o matricula; los arma quien edita usuarios
         Route::middleware('permission:users.read,enrollments.create')->group(function () {

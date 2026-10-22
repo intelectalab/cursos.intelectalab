@@ -56,6 +56,8 @@ class RoleCatalog
                     'courses.assigned.read', 'content.assigned.write', 'activities.assigned.manage',
                     'submissions.assigned.review', 'reports.assigned.read',
                     'question_banks.read', 'question_banks.manage',
+                    // Confirma u observa el horario que le arma la academia
+                    'schedules.self',
                 ],
             ],
             self::SUPPORT => [

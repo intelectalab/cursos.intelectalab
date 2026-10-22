@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, BookOpen, ClipboardCheck, ClipboardList, Mail, Phone, Users } from 'lucide-react';
+import { ArrowLeft, BookOpen, ClipboardCheck, ClipboardList, Mail, Phone, Star, Users } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Avatar, Badge, Card, CardHeader, EmptyState, ErrorState, LoadingState, StatCard, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
 import { STATUS_LABEL, STATUS_TONE } from '../../courses/api';
@@ -86,7 +86,7 @@ export const TeacherProfilePage: React.FC = () => {
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
         <StatCard label="Cursos a cargo" value={teacher.courses_count} hint="sin contar archivados" icon={BookOpen} tone="info" />
         <StatCard label="Alumnos" value={profile.students_total} hint="con matrícula activa en sus cursos" icon={Users} tone="brand" />
         <StatCard
@@ -97,6 +97,13 @@ export const TeacherProfilePage: React.FC = () => {
           tone="warning"
         />
         <StatCard label="Calificó" value={profile.graded_recently} hint={`entregas en los últimos ${recentDays} días`} icon={ClipboardCheck} tone="success" />
+        <StatCard
+          label="Valoración"
+          value={profile.rating ? `${profile.rating.average.toFixed(1)} / 5` : '—'}
+          hint={profile.rating ? `${profile.rating.count} ${profile.rating.count === 1 ? 'reseña' : 'reseñas'} de sus cursos` : 'sus cursos aún no tienen reseñas'}
+          icon={Star}
+          tone="warning"
+        />
       </div>
 
       <Card>

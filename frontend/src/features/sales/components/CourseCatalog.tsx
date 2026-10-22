@@ -5,6 +5,7 @@ import type { ActivityType } from '../../academic/api';
 import { LANGUAGE_LABEL, LEVEL_LABEL, type ResourceType } from '../../courses/api';
 import type { AvailableCourse, AvailableCourseDetail } from '../../enrollments/api';
 import { priceLabel } from '../api';
+import { Stars } from '../../courses/components/Stars';
 
 // Piezas de la ficha de un curso, compartidas por el catálogo público, "Cursos disponibles" y el checkout
 
@@ -24,6 +25,12 @@ export const CourseCover: React.FC<{ url: string | null; className?: string }> =
 
 export const CourseFacts: React.FC<{ course: AvailableCourse }> = ({ course }) => (
   <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-500">
+    {course.rating && (
+      <span className="inline-flex items-center gap-1.5">
+        <Stars value={course.rating.average} />
+        <span className="font-semibold text-slate-700 tnum">{course.rating.average.toFixed(1)}</span> ({course.rating.count})
+      </span>
+    )}
     <span className="inline-flex items-center gap-1.5">
       <FileStack className="w-3.5 h-3.5" /> {course.resources_count} {course.resources_count === 1 ? 'recurso' : 'recursos'}
     </span>
@@ -104,6 +111,23 @@ export const CourseOverview: React.FC<{ detail: AvailableCourseDetail }> = ({ de
         <dd className="text-slate-800">{detail.access_days ? `${detail.access_days} días desde la matrícula` : 'Sin vencimiento'}</dd>
       </div>
     </dl>
+
+    {detail.reviews && detail.reviews.length > 0 && (
+      <section>
+        <h3 className="text-[13px] font-semibold text-slate-900 mb-2">Opiniones de los alumnos</h3>
+        <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100">
+          {detail.reviews.map((review, index) => (
+            <li key={index} className="px-3.5 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Stars value={review.rating} />
+                <span className="text-[13px] font-semibold text-slate-800">{review.author}</span>
+              </div>
+              {review.comment && <p className="text-[13px] text-slate-600 mt-1 whitespace-pre-line">{review.comment}</p>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     <section>
       <h3 className="text-[13px] font-semibold text-slate-900 mb-2">Temario</h3>

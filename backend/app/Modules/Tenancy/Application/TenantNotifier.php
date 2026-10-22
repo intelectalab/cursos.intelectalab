@@ -8,7 +8,6 @@ use App\Modules\Tenancy\Mail\TenantNoticeMail;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
@@ -29,6 +28,7 @@ class TenantNotifier
         private readonly TenantContext $context,
         private readonly TenantLogoService $logo,
         private readonly EmailTemplates $templates,
+        private readonly TenantMailer $mailer,
     ) {}
 
     /**
@@ -66,7 +66,7 @@ class TenantNotifier
             return;
         }
 
-        $this->send($email, $this->mail($tenant, $name, $content, $path), $content['subject']);
+        $this->send($tenant, $email, $this->mail($tenant, $name, $content, $path), $content['subject']);
     }
 
     /**
@@ -110,12 +110,12 @@ class TenantNotifier
         return $this->tenant();
     }
 
-    private function send(string $email, TenantNoticeMail $mail, string $title): void
+    private function send(Tenant $tenant, string $email, TenantNoticeMail $mail, string $title): void
     {
-        DB::afterCommit(function () use ($email, $mail, $title) {
+        DB::afterCommit(function () use ($tenant, $email, $mail, $title) {
             try {
-                // Con muchos destinatarios conviene enviar en segundo plano (MAIL_QUEUE=true y un proceso de cola)
-                config('mail.queue') ? Mail::to($email)->queue($mail) : Mail::to($email)->send($mail);
+                // Sale con el correo de la academia; con MAIL_QUEUE=true, en segundo plano
+                $this->mailer->deliver($tenant, $email, $mail);
             } catch (Throwable $error) {
                 Log::warning("No se pudo enviar el aviso «{$title}»: ".$error->getMessage());
             }

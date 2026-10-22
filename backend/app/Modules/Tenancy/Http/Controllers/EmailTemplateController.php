@@ -50,7 +50,7 @@ class EmailTemplateController extends Controller
     {
         $mail = $this->editor->example($key, self::SCOPE, self::texts($request), $request->attributes->get('tenant'), test: true);
 
-        return ApiResponse::success($this->editor->sendTest($mail, $request->user()->email));
+        return ApiResponse::success($this->editor->sendTest($mail, $request->user()->email, $request->attributes->get('tenant')));
     }
 
     /**

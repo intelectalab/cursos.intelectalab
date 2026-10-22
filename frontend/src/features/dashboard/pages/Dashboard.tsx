@@ -29,10 +29,12 @@ function greeting(): string {
 type Summary = Awaited<ReturnType<typeof salesApi.alertSummary>>;
 
 // Quien atiende alguno de estos temas ve sus pendientes en Inicio (los mismos permisos que pide /alerts/summary)
-const PENDING_PERMISSIONS = ['payments.confirm', 'orders.read', 'tickets.read', 'cms.publish', 'submissions.review', 'submissions.assigned.review', 'claims.read'];
+const PENDING_PERMISSIONS = ['payments.confirm', 'orders.read', 'tickets.read', 'cms.publish', 'submissions.review', 'submissions.assigned.review', 'claims.read', 'schedules.manage', 'schedules.self'];
 
 // Cada pendiente con su texto en singular|plural y a dónde se atiende
 const PENDING: { key: keyof Summary; icon: LucideIcon; text: string; to: string }[] = [
+  { key: 'schedule_to_confirm', icon: CalendarClock, text: 'horario espera tu confirmación|horarios esperan tu confirmación', to: '/my-schedule' },
+  { key: 'schedules_observed', icon: CalendarClock, text: 'horario de docente tiene observaciones|horarios de docentes tienen observaciones', to: '/schedules' },
   { key: 'submissions_to_grade', icon: ClipboardCheck, text: 'tarea entregada espera nota|tareas entregadas esperan nota', to: '/courses' },
   { key: 'tickets_waiting', icon: LifeBuoy, text: 'consulta de soporte espera respuesta|consultas de soporte esperan respuesta', to: '/support' },
   { key: 'claims_unanswered', icon: ScrollText, text: 'reclamo o queja sin responder|reclamos o quejas sin responder', to: '/claims' },

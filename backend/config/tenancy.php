@@ -55,6 +55,18 @@ return [
 
     'trusted_proxies' => env('TRUSTED_PROXIES'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Respaldos semanales para descargar
+    |--------------------------------------------------------------------------
+    |
+    | Carpeta donde deploy/scripts/backup.sh deja el respaldo de cada semana
+    | para que el administrador de la plataforma lo descargue desde la consola.
+    |
+    */
+
+    'backups_path' => env('BACKUPS_DOWNLOAD_PATH', storage_path('app/backups')),
+
     'reserved_slugs' => ['www', 'api', 'app', 'admin', 'static', 'cdn', 'mail', 'status', 'soporte', 'support'],
 
 ];

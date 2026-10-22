@@ -32,6 +32,8 @@ enum ErrorCode: string
     case AccountLocked = 'ACCOUNT_LOCKED';
     case AccountInactive = 'ACCOUNT_INACTIVE';
     case PasswordChangeRequired = 'PASSWORD_CHANGE_REQUIRED';
+    case TwoFactorInvalid = 'TWO_FACTOR_INVALID';
+    case TwoFactorSetupRequired = 'TWO_FACTOR_SETUP_REQUIRED';
     case SupportReadOnly = 'SUPPORT_READ_ONLY';
     case InvalidResetToken = 'INVALID_RESET_TOKEN';
     case PermissionDenied = 'PERMISSION_DENIED';

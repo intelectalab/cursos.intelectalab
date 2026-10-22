@@ -2,6 +2,7 @@
 
 namespace App\Modules\Identity\Http;
 
+use App\Modules\Identity\Application\TwoFactorService;
 use App\Modules\Identity\Domain\Models\User;
 
 class SessionPresenter
@@ -23,6 +24,8 @@ class SessionPresenter
             'permissions' => $user->permissionCodes(),
             // Sesión abierta por el soporte de plataforma: solo lectura
             'support_mode' => ($access = $user->currentAccessToken()) !== null && ! $access->can('*'),
+            // La academia exige los dos pasos y esta persona aún no los activó: no puede usar nada más
+            'must_setup_two_factor' => app(TwoFactorService::class)->setupRequired($user),
         ];
 
         return $token !== null ? ['token' => $token] + $session : $session;
@@ -47,6 +50,7 @@ class SessionPresenter
             'last_login_at' => $user->last_login_at?->toIso8601String(),
             // Entró con una contraseña temporal: hasta cambiarla no puede usar nada más
             'must_change_password' => (bool) $user->must_change_password,
+            'two_factor_enabled' => $user->two_factor_confirmed_at !== null,
         ];
     }
 }

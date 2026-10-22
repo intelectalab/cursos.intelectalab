@@ -34,6 +34,9 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<'idle' | 'processing' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Con verificación en dos pasos, la contraseña da un paso intermedio que se completa con el código
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState('');
 
   if (isAuthenticated) {
     return <Navigate to={next} replace />;
@@ -46,6 +49,12 @@ export const Login: React.FC = () => {
 
     try {
       const response = await api.post('/auth/login', { email, password });
+      if (response.data.data.two_factor_required) {
+        setChallenge(response.data.data.challenge);
+        setCode('');
+        setStatus('idle');
+        return;
+      }
       login(response.data.data);
       navigate(next, { replace: true });
     } catch (err) {
@@ -53,6 +62,23 @@ export const Login: React.FC = () => {
       setErrorMessage(
         apiErrorMessage(err, 'Credenciales no válidas o error en el servidor.')
       );
+    }
+  };
+
+  const handleCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('processing');
+    setErrorMessage(null);
+
+    try {
+      const response = await api.post('/auth/two-factor', { challenge, code });
+      login(response.data.data);
+      navigate(next, { replace: true });
+    } catch (err) {
+      setStatus('error');
+      setErrorMessage(apiErrorMessage(err, 'No se pudo verificar el código.'));
+      // El paso intermedio venció: hay que volver a escribir la contraseña
+      if ((err as { response?: { data?: { code?: string } } }).response?.data?.code === 'UNAUTHENTICATED') setChallenge(null);
     }
   };
 
@@ -247,6 +273,54 @@ export const Login: React.FC = () => {
             </div>
           )}
 
+          {challenge !== null ? (
+            <form onSubmit={handleCode} className="space-y-4">
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[#EFF4FA] border border-slate-200/80">
+                <ShieldCheck className="w-5 h-5 text-[#0284C7] shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-600">
+                  <span className="block font-bold text-slate-800 mb-0.5">Verificación en dos pasos</span>
+                  Abre la aplicación de códigos de tu teléfono y escribe el código de 6 dígitos de {tenant?.name}. Si no tienes el teléfono, usa uno de tus códigos de respaldo.
+                </p>
+              </div>
+              <div>
+                <label htmlFor="login-code" className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Código
+                </label>
+                <input
+                  id="login-code"
+                  required
+                  autoFocus
+                  autoComplete="one-time-code"
+                  inputMode="text"
+                  maxLength={20}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  disabled={status === 'processing'}
+                  placeholder="123456"
+                  className="w-full px-3.5 py-2.5 bg-[#EFF4FA]/70 border border-slate-200/80 rounded-xl text-base tracking-[0.3em] text-slate-900 placeholder-slate-300 focus:bg-white focus:border-[#0284C7] focus:ring-4 focus:ring-[#0284C7]/15 focus:outline-none transition-all duration-200"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={status === 'processing' || code.trim().length < 6}
+                className="w-full py-3 px-4 bg-gradient-to-r from-[#084586] via-[#0284C7] to-[#0369A1] hover:brightness-110 text-white text-xs font-semibold rounded-xl shadow-lg shadow-[#0284C7]/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {status === 'processing' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                <span>Verificar y entrar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChallenge(null);
+                  setStatus('idle');
+                  setErrorMessage(null);
+                }}
+                className="w-full text-[11px] font-medium text-slate-600 hover:text-[#0369A1] cursor-pointer"
+              >
+                Volver a escribir la contraseña
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             
             {/* Campo Correo con efecto Focus Glow */}
@@ -341,6 +415,7 @@ export const Login: React.FC = () => {
               )}
             </button>
           </form>
+          )}
 
           {/* Compradores: cuenta nueva y catálogo público */}
           <div className="mt-6 pt-5 border-t border-slate-100 text-center">

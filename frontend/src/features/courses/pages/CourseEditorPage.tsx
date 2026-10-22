@@ -12,6 +12,7 @@ import {
   ImageUp,
   Info,
   Layers,
+  Megaphone,
   Rocket,
   Trash2,
   Users,
@@ -54,14 +55,16 @@ import { academicApi, type Activity } from '../../academic/api';
 import { SectionActivities } from '../../academic/components/SectionActivities';
 import { ParticipantsTab } from '../../enrollments/components/ParticipantsTab';
 import { TrackingTab } from '../../academic/components/TrackingTab';
+import { CommunityTab } from '../components/CommunityTab';
 
-type TabId = 'content' | 'info' | 'participants' | 'tracking' | 'versions';
+type TabId = 'content' | 'info' | 'participants' | 'tracking' | 'community' | 'versions';
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
   { id: 'content', label: 'Contenido', icon: Layers },
   { id: 'info', label: 'Información', icon: Info },
   { id: 'participants', label: 'Participantes', icon: Users },
   { id: 'tracking', label: 'Seguimiento', icon: ChartNoAxesColumn },
+  { id: 'community', label: 'Anuncios y reseñas', icon: Megaphone },
   { id: 'versions', label: 'Versiones', icon: History },
 ];
 
@@ -550,6 +553,7 @@ export const CourseEditorPage: React.FC = () => {
       {tab === 'info' && <InfoTab course={course} options={options} editable={canUpdate && !archived} onChanged={reload} />}
       {tab === 'participants' && <ParticipantsTab course={course} canManageTeachers={canUpdate} onChanged={reload} />}
       {tab === 'tracking' && <TrackingTab courseId={course.id} />}
+      {tab === 'community' && <CommunityTab courseId={course.id} />}
       {tab === 'versions' && <VersionsTab course={course} />}
 
       {dialog === 'publish' && <PublishModal course={course} onClose={() => setDialog(null)} onDone={closeAndReload} />}

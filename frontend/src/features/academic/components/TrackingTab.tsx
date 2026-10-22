@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BarChart3, ClipboardCheck, Download, Paperclip, Plus, RotateCcw, Users } from 'lucide-react';
+import { BarChart3, ClipboardCheck, Download, Paperclip, Plus, RotateCcw, UserCheck, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
   Alert,
@@ -554,9 +555,17 @@ export const TrackingTab: React.FC<{ courseId: string }> = ({ courseId }) => {
           text={`Notas de 0 a ${gradeScale}. En los cuestionarios cuenta el mejor intento; toca la nota para ver cada intento. La nota final promedia cuestionarios y tareas según su peso; lo que no tiene nota cuenta como cero.${passingPercent !== null ? ` El curso se aprueba con ${toScale(passingPercent, gradeScale)}.` : ''}`}
           action={
             students.length > 0 ? (
-              <Button size="sm" icon={<Download className="w-3.5 h-3.5" />} processing={exporting} onClick={exportGrades}>
-                Descargar notas
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/courses/${courseId}/attendance`}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <UserCheck className="w-3.5 h-3.5" /> Asistencia a clases en vivo
+                </Link>
+                <Button size="sm" icon={<Download className="w-3.5 h-3.5" />} processing={exporting} onClick={exportGrades}>
+                  Descargar notas
+                </Button>
+              </div>
             ) : undefined
           }
         />

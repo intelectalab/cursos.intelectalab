@@ -29,6 +29,7 @@ import {
   ErrorState,
   Field,
   IconChip,
+  CHECKBOX_CLASS,
   INPUT_CLASS,
   LoadingState,
   Modal,
@@ -55,6 +56,8 @@ interface Settings {
   order_expiration_hours: number;
   claim_response_days: number;
   grade_scale: number;
+  // Exigir la verificación en dos pasos a todo el personal
+  require_two_factor: boolean;
   logo_url: string | null;
 }
 
@@ -382,7 +385,7 @@ export const SettingsPage: React.FC = () => {
     setStatus('idle');
   };
 
-  const text = (key: keyof Settings) => ({
+  const text = (key: Exclude<keyof Settings, 'require_two_factor'>) => ({
     className: INPUT_CLASS,
     disabled: !editable,
     value: form[key] ?? '',
@@ -688,6 +691,24 @@ export const SettingsPage: React.FC = () => {
               />
             </Field>
           </div>
+          <label className="flex items-start gap-3 mt-4 cursor-pointer">
+            <input
+              type="checkbox"
+              className={`${CHECKBOX_CLASS} mt-0.5`}
+              disabled={!editable}
+              checked={form.require_two_factor}
+              onChange={(event) => {
+                setForm({ ...form, require_two_factor: event.target.checked });
+                setStatus('idle');
+              }}
+            />
+            <span>
+              <span className="block text-[13px] font-medium text-slate-800">Exigir la verificación en dos pasos a todo el personal</span>
+              <span className="block text-xs text-slate-500 mt-0.5">
+                Quien no sea alumno ni responsable de empresa deberá activarla al entrar: además de su contraseña, un código de la aplicación de su teléfono. Para exigirla, actívala primero en «Mi cuenta».
+              </span>
+            </span>
+          </label>
         </Section>
 
         {hasPermission('email_templates.manage') && (

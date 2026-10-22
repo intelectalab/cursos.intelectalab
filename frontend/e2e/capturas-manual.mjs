@@ -28,20 +28,21 @@ const ROLES = [
     name: 'alumno',
     base: ACADEMY,
     email: 'alumno@plataforma.com',
+    find: { '/my-courses': 'Excel para finanzas' },
     routes: ['/dashboard', '/my-courses', '/available-courses', '/my-orders', '/my-certificates', '/help', '/account'],
   },
   {
     name: 'docente',
     base: ACADEMY,
     email: process.env.CAPTURAS_DOCENTE ?? 'rosa.compradora@demo.test',
-    routes: ['/dashboard', '/courses', '/question-banks', '/account'],
+    routes: ['/dashboard', '/my-schedule', '/courses', '/question-banks', '/account'],
   },
   {
     name: 'admin',
     base: ACADEMY,
     email: 'admin@plataforma.com',
-    find: { '/courses': 'Excel para finanzas' },
-    routes: ['/dashboard', '/panel', '/courses', '/students', '/teachers', '/enrollments', '/question-banks', '/crm', '/billing', '/promotions', '/certificates', '/certificates/design', '/support', '/claims', '/reports', '/users', '/roles', '/settings', '/settings/plan', '/settings/emails', '/pages', '/audit', '/account'],
+    find: { '/courses': 'Excel para finanzas', '/schedules': 'Rosa Quispe' },
+    routes: ['/dashboard', '/panel', '/courses', '/students', '/teachers', '/schedules', '/enrollments', '/question-banks', '/crm', '/billing', '/promotions', '/certificates', '/certificates/design', '/support', '/claims', '/reports', '/users', '/roles', '/settings', '/settings/plan', '/settings/emails', '/pages', '/audit', '/account'],
     extras: [
       { route: '/courses', name: 'nuevo-curso', steps: [button('Nuevo curso')] },
       { route: '/students', name: 'nuevo-alumno', steps: [button('Nuevo alumno')] },
@@ -60,6 +61,7 @@ const ROLES = [
       { route: '/settings', name: 'feriados', steps: [scroll('Feriados')] },
       { route: '/settings/emails', name: 'editor', steps: [scroll('Datos que puedes usar')] },
       { route: '/dashboard', name: 'campana', steps: [click('button[aria-label*="viso"]')] },
+      { route: '/schedules', name: 'por-dia', steps: [click('[role=tab]:has-text("Por día")')] },
       { route: '/panel', name: 'ventas', steps: [click('[role=tab]:has-text("Ventas")')] },
       { route: '/panel', name: 'personas', steps: [click('[role=tab]:has-text("Personas")')] },
       { route: '/panel', name: 'atencion', steps: [click('[role=tab]:has-text("Atención")')] },
@@ -88,6 +90,7 @@ const DETAILS = [
   /^\/courses\/[0-9a-f-]{36}\/preview$/,
   /^\/students\/[0-9a-f-]{36}$/,
   /^\/teachers\/[0-9a-f-]{36}$/,
+  /^\/schedules\/[0-9a-f-]{36}$/,
   /^\/crm\/accounts\/[0-9a-f-]{36}$/,
   /^\/pages\/[0-9a-f-]{36}$/,
   /^\/my-courses\/[0-9a-f-]{36}$/,
@@ -183,12 +186,16 @@ async function capture(browser, role) {
     }
 
     // Se prefieren las fichas con datos de muestra a las que dejaron los recorridos automáticos («E2E …»)
-    const links = await page.evaluate(() =>
+    // Y, si la pantalla no tiene buscador, primero la que nombra el dato buscado
+    const links = await page.evaluate((needle) =>
       [...document.querySelectorAll('a[href^="/"]')]
-        .map((a) => ({ href: a.getAttribute('href').split('?')[0], test: /E2E|Prueba MV|Prueba MU/.test((a.closest('article, li, tr') ?? a).innerText) }))
-        .sort((a, b) => Number(a.test) - Number(b.test))
+        .map((a) => {
+          const text = (a.closest('article, li, tr') ?? a).innerText;
+          return { href: a.getAttribute('href').split('?')[0], test: /E2E|Prueba MV|Prueba MU/.test(text), wanted: needle !== null && text.includes(needle) };
+        })
+        .sort((a, b) => Number(b.wanted) - Number(a.wanted) || Number(a.test) - Number(b.test))
         .map((link) => link.href),
-    );
+    role.find?.[route] ?? null);
     for (const pattern of DETAILS) {
       if (seenPatterns.has(pattern.source)) continue;
       const match = links.find((href) => pattern.test(href));
