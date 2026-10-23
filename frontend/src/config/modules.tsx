@@ -26,6 +26,8 @@ import {
   UserCog,
   ScrollText,
   ShieldCheck,
+  Briefcase,
+  MessagesSquare,
   type LucideIcon,
 } from 'lucide-react';
 import type { Tone } from '../shared/ui';
@@ -60,13 +62,19 @@ const RolesPage = lazyPage(() => import('../features/identity/pages/RolesPage'),
 const SettingsPage = lazyPage(() => import('../features/settings/pages/SettingsPage'), 'SettingsPage');
 const AuditPage = lazyPage(() => import('../features/audit/pages/AuditPage'), 'AuditPage');
 
-export type ModuleGroup = 'general' | 'operation' | 'admin';
+// «general» va suelto arriba; los demás son grupos que se despliegan en el menú
+export type ModuleGroup = 'general' | 'academic' | 'commercial' | 'attention' | 'admin';
 
-export const MODULE_GROUPS: Record<ModuleGroup, string> = {
-  general: 'General',
-  operation: 'Operación',
-  admin: 'Administración',
+export const MODULE_GROUPS: Record<ModuleGroup, { label: string; icon: LucideIcon }> = {
+  general: { label: 'General', icon: LayoutDashboard },
+  academic: { label: 'Académico', icon: GraduationCap },
+  commercial: { label: 'Comercial', icon: Briefcase },
+  attention: { label: 'Atención', icon: MessagesSquare },
+  admin: { label: 'Administración', icon: Settings },
 };
+
+// Lo pendiente de cada tema (GET /alerts/summary); null = esa persona no lo atiende
+export type PendingCounts = Partial<Record<string, number | null>>;
 
 export interface ModuleItem {
   id: string;
@@ -77,6 +85,8 @@ export interface ModuleItem {
   tone: Tone;
   group: ModuleGroup;
   permission?: string | string[];
+  // Cuántas cosas esperan en este módulo, para el contador del menú
+  badge?: (pending: PendingCounts) => number;
   // Solo para quien tiene el permiso tal cual: el acceso total del administrador no lo muestra
   explicit?: boolean;
   component: React.ComponentType;
@@ -124,6 +134,7 @@ export const APP_MODULES: ModuleItem[] = [
     permission: 'schedules.self',
     // Solo el docente: el acceso total del administrador no lo muestra
     explicit: true,
+    badge: (pending) => pending.schedule_to_confirm ?? 0,
     component: MySchedulePage,
   },
   {
@@ -204,9 +215,10 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/courses',
     icon: BookOpen,
     tone: 'violet',
-    group: 'operation',
+    group: 'academic',
     // El docente entra con el permiso de cursos asignados
     permission: ['courses.read', 'courses.assigned.read'],
+    badge: (pending) => pending.submissions_to_grade ?? 0,
     component: CoursesPage,
   },
   {
@@ -216,7 +228,7 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/students',
     icon: GraduationCap,
     tone: 'brand',
-    group: 'operation',
+    group: 'academic',
     permission: 'students.read',
     component: StudentsPage,
   },
@@ -227,7 +239,7 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/teachers',
     icon: Presentation,
     tone: 'violet',
-    group: 'operation',
+    group: 'academic',
     permission: 'teachers.read',
     component: TeachersPage,
   },
@@ -238,8 +250,9 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/schedules',
     icon: CalendarDays,
     tone: 'violet',
-    group: 'operation',
+    group: 'academic',
     permission: 'schedules.read',
+    badge: (pending) => pending.schedules_observed ?? 0,
     component: SchedulesPage,
   },
   {
@@ -249,7 +262,7 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/enrollments',
     icon: ClipboardList,
     tone: 'info',
-    group: 'operation',
+    group: 'academic',
     // Soporte las consulta en solo lectura
     permission: ['enrollments.read', 'enrollments.support.read'],
     component: EnrollmentsPage,
@@ -261,7 +274,7 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/question-banks',
     icon: Library,
     tone: 'success',
-    group: 'operation',
+    group: 'academic',
     permission: 'question_banks.read',
     component: QuestionBanksPage,
   },
@@ -272,7 +285,7 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/crm',
     icon: Users,
     tone: 'info',
-    group: 'operation',
+    group: 'commercial',
     permission: ['crm.read', 'quotations.read', 'corporate_accounts.read'],
     component: CrmPage,
   },
@@ -283,9 +296,10 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/billing',
     icon: CreditCard,
     tone: 'success',
-    group: 'operation',
+    group: 'commercial',
     // Soporte las consulta en solo lectura
     permission: ['orders.read', 'orders.support.read'],
+    badge: (pending) => (pending.payment_reviews ?? 0) + (pending.overdue_installments ?? 0),
     component: OrdersPage,
   },
   {
@@ -295,7 +309,7 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/promotions',
     icon: Tags,
     tone: 'violet',
-    group: 'operation',
+    group: 'commercial',
     permission: ['promotions.read', 'packages.read'],
     component: PromotionsPage,
   },
@@ -306,7 +320,7 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/certificates',
     icon: Award,
     tone: 'warning',
-    group: 'operation',
+    group: 'academic',
     permission: ['certificates.read', 'certificates.issue'],
     component: CertificatesPage,
   },
@@ -317,8 +331,9 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/support',
     icon: Headset,
     tone: 'info',
-    group: 'operation',
+    group: 'attention',
     permission: 'tickets.read',
+    badge: (pending) => pending.tickets_waiting ?? 0,
     component: SupportPage,
   },
   {
@@ -328,8 +343,9 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/claims',
     icon: BookOpenCheck,
     tone: 'warning',
-    group: 'operation',
+    group: 'attention',
     permission: 'claims.read',
+    badge: (pending) => pending.claims_unanswered ?? 0,
     component: ClaimsPage,
   },
   {
@@ -339,7 +355,7 @@ export const APP_MODULES: ModuleItem[] = [
     href: '/reports',
     icon: BarChart3,
     tone: 'warning',
-    group: 'operation',
+    group: 'commercial',
     permission: 'reports.read',
     component: ReportsPage,
   },
@@ -385,6 +401,7 @@ export const APP_MODULES: ModuleItem[] = [
     tone: 'info',
     group: 'admin',
     permission: ['cms.read', 'cms.update', 'cms.publish'],
+    badge: (pending) => pending.pages_in_review ?? 0,
     component: PagesPage,
   },
   {
