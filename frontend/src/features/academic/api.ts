@@ -80,18 +80,20 @@ export interface QuestionInput {
 
 /* ───────────────────────────── Actividades ───────────────────────────── */
 
-export type ActivityType = 'QUIZ' | 'TASK' | 'SURVEY';
+export type ActivityType = 'QUIZ' | 'TASK' | 'SURVEY' | 'SCORM';
 
 export const ACTIVITY_LABEL: Record<ActivityType, string> = {
   QUIZ: 'Cuestionario',
   TASK: 'Tarea',
   SURVEY: 'Encuesta',
+  SCORM: 'Paquete SCORM',
 };
 
 export const ACTIVITY_HINT: Record<ActivityType, string> = {
   QUIZ: 'Preguntas que se califican solas.',
   TASK: 'El alumno entrega y el docente revisa.',
   SURVEY: 'Opinión del alumno, sin nota.',
+  SCORM: 'Contenido interactivo en .zip (SCORM 1.2 o 2004), con su avance y nota.',
 };
 
 export type SurveyQuestionType = 'SCALE' | 'CHOICE' | 'TEXT';
@@ -138,6 +140,28 @@ export interface Activity {
   // Plazo en días desde el inicio de la matrícula; null = sin plazo
   due_days?: number | null;
   accept_late?: boolean;
+  // SCORM: el paquete subido; null = falta subirlo
+  package?: ScormPackageInfo | null;
+}
+
+export interface ScormPackageInfo {
+  file_name: string;
+  version: '1.2' | '2004';
+  title: string | null;
+  size_bytes: number;
+  files_count: number;
+  // Nota mínima que define el paquete, en porcentaje
+  mastery_score: number | null;
+  uploaded_at: string | null;
+}
+
+// Lo necesario para abrir un paquete en el aula (o en la vista previa del personal)
+export interface ScormLaunchData {
+  launch_url: string;
+  version: '1.2' | '2004';
+  cmi: Record<string, string>;
+  // false = vista previa: no se guarda nada
+  tracking: boolean;
 }
 
 export interface ActivityInput {
@@ -185,6 +209,39 @@ export const academicApi = {
     api.put(`/courses/${course}/sections/${section}/activities/order`, { ids }),
   setQuizQuestions: (course: string, activity: string, items: { question_id: string; points: number }[]) =>
     api.put(`/courses/${course}/activities/${activity}/questions`, { items }),
+
+  // SCORM
+  async uploadScorm(course: string, activity: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return (await api.post(`/courses/${course}/activities/${activity}/scorm`, form)).data.data as Activity;
+  },
+  async scormPreview(course: string, activity: string) {
+    return (await api.get(`/courses/${course}/activities/${activity}/scorm/preview`)).data.data as ScormLaunchData;
+  },
+  async scormLaunch(course: string, activity: string) {
+    return (await api.get(`/me/courses/${course}/activities/${activity}/scorm`)).data.data as ScormLaunchData & { state: ScormState };
+  },
+  async scormCommit(course: string, activity: string, cmi: Record<string, string>) {
+    return (await api.post(`/me/courses/${course}/activities/${activity}/scorm`, { cmi })).data.data as ScormState;
+  },
+  resetScorm: (course: string, enrollment: string, activity: string) => api.delete(`/courses/${course}/enrollments/${enrollment}/activities/${activity}/scorm`),
+};
+
+export interface ScormState {
+  lesson_status: string;
+  score_percent: number | null;
+  completed: boolean;
+  last_seen_at: string | null;
+}
+
+export const SCORM_STATUS_LABEL: Record<string, string> = {
+  'not attempted': 'Sin empezar',
+  incomplete: 'En curso',
+  browsed: 'Revisado',
+  completed: 'Completado',
+  passed: 'Aprobado',
+  failed: 'Desaprobado',
 };
 
 // Las notas se guardan en porcentaje y se muestran en la escala de la academia (20 o 100)

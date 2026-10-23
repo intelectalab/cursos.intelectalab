@@ -3,6 +3,7 @@
 namespace App\Modules\Academic\Application;
 
 use App\Modules\Academic\Domain\Models\QuizAttempt;
+use App\Modules\Academic\Domain\Models\ScormAttempt;
 use App\Modules\Academic\Domain\Models\TaskSubmission;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Http\ClassroomPresenter;
@@ -17,7 +18,7 @@ use Illuminate\Support\Collection;
  */
 class GradebookService
 {
-    private const GRADED_TYPES = ['QUIZ', 'TASK'];
+    private const GRADED_TYPES = ['QUIZ', 'TASK', 'SCORM'];
 
     /**
      * Actividades con nota de la versión publicada, con su peso.
@@ -55,6 +56,13 @@ class GradebookService
             ->get(['enrollment_id', 'activity_id', 'status', 'grade_percent', 'is_late'])
             ->keyBy(fn (TaskSubmission $submission) => "{$submission->enrollment_id}:{$submission->activity_id}");
 
+        // En SCORM cuenta la nota que informa el paquete
+        $scorm = ScormAttempt::query()
+            ->where('course_id', $courseId)
+            ->whereIn('enrollment_id', $ids)
+            ->get(['enrollment_id', 'activity_id', 'lesson_status', 'score_percent'])
+            ->keyBy(fn (ScormAttempt $attempt) => "{$attempt->enrollment_id}:{$attempt->activity_id}");
+
         $graded = $this->gradedActivities($activities);
         $rows = [];
 
@@ -63,13 +71,18 @@ class GradebookService
 
             foreach ($graded as $activity) {
                 $key = "{$enrollment->id}:{$activity['id']}";
-                $grades[$activity['id']] = $activity['type'] === 'QUIZ'
-                    ? ['grade_percent' => $best->get($key)]
-                    : [
+                $grades[$activity['id']] = match ($activity['type']) {
+                    'QUIZ' => ['grade_percent' => $best->get($key)],
+                    'SCORM' => [
+                        'status' => $scorm->get($key)?->lesson_status,
+                        'grade_percent' => $scorm->get($key)?->score_percent,
+                    ],
+                    default => [
                         'status' => $submissions->get($key)?->status,
                         'grade_percent' => $submissions->get($key)?->grade_percent,
                         'is_late' => (bool) $submissions->get($key)?->is_late,
-                    ];
+                    ],
+                };
             }
 
             $rows[$enrollment->id] = ['grades' => $grades, 'final_percent' => $this->finalPercent($graded, $grades)];

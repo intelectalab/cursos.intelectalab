@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ExternalLink, FileText, Plus } from 'lucide-react';
+import { ExternalLink, FilePen, FileText, Globe, Plus, SearchCheck, Undo2 } from 'lucide-react';
+import { FilterCards, type FilterCard } from '../../../shared/ui/filters';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, Modal, PageHeader, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
@@ -86,6 +87,8 @@ export const PagesPage: React.FC = () => {
   const [pages, setPages] = useState<PageSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // Tarjeta elegida: '' = todas
+  const [view, setView] = useState('');
 
   const load = useCallback(() => {
     cmsApi
@@ -105,10 +108,30 @@ export const PagesPage: React.FC = () => {
     </Button>
   );
 
+  // Qué cuenta cada tarjeta
+  const VIEWS: Record<string, (page: PageSummary) => boolean> = {
+    PUBLISHED: (page) => page.status === 'PUBLISHED',
+    DRAFT: (page) => page.status === 'DRAFT',
+    PENDING: (page) => page.pending_changes,
+    IN_REVIEW: (page) => page.review_status === 'IN_REVIEW',
+    CHANGES_REQUESTED: (page) => page.review_status === 'CHANGES_REQUESTED',
+  };
+  const count = (key: string) => (pages === null ? null : pages.filter(VIEWS[key]).length);
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todas', value: pages?.length ?? null, icon: FileText, tone: 'brand', help: 'Todas las páginas de la academia.' },
+    { key: 'PUBLISHED', label: 'Publicadas', value: count('PUBLISHED'), icon: Globe, tone: 'success', help: 'Cualquiera puede leerlas en el sitio.' },
+    { key: 'DRAFT', label: 'Borradores', value: count('DRAFT'), icon: FilePen, tone: 'neutral', help: 'Nunca se publicaron: solo las ve el personal.' },
+    { key: 'PENDING', label: 'Cambios sin publicar', value: count('PENDING'), icon: FilePen, tone: 'warning', help: 'El borrador tiene cambios que el público todavía no ve.' },
+    { key: 'IN_REVIEW', label: 'En revisión', value: count('IN_REVIEW'), icon: SearchCheck, tone: 'info', help: 'Enviadas a revisión: esperan a quien publica.' },
+    { key: 'CHANGES_REQUESTED', label: 'Devueltas', value: count('CHANGES_REQUESTED'), icon: Undo2, tone: 'danger', help: 'Quien publica las devolvió con observaciones.' },
+  ];
+  const shown = (pages ?? []).filter((page) => view === '' || VIEWS[view](page));
+
   return (
     <div>
       <PageHeader title="Páginas" icon={FileText} subtitle="Páginas de texto de tu academia que cualquiera puede leer en tu sitio." action={newButton} />
 
+      {pages && pages.length > 0 && <FilterCards cards={cards} active={view} label="Páginas por estado" onSelect={setView} />}
       <Card>
         {error && <ErrorState message={error} onRetry={load} />}
         {!error && pages === null && <LoadingState />}
@@ -130,7 +153,7 @@ export const PagesPage: React.FC = () => {
               <Th />
             </THead>
             <TBody>
-              {pages.map((page) => (
+              {shown.map((page) => (
                 <Tr key={page.id}>
                   <Td>
                     <Link to={`/pages/${page.id}`} className="font-semibold text-slate-900 hover:text-brand-700">
@@ -169,6 +192,13 @@ export const PagesPage: React.FC = () => {
                   </Td>
                 </Tr>
               ))}
+              {shown.length === 0 && (
+                <Tr>
+                  <Td colSpan={5} className="text-center text-slate-500 py-6">
+                    No hay páginas en este estado.
+                  </Td>
+                </Tr>
+              )}
             </TBody>
           </Table>
         )}

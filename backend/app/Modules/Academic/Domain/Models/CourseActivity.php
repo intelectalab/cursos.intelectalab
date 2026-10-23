@@ -19,7 +19,10 @@ class CourseActivity extends Model
 
     public const TYPE_SURVEY = 'SURVEY';
 
-    public const TYPES = [self::TYPE_QUIZ, self::TYPE_TASK, self::TYPE_SURVEY];
+    // Paquete SCORM (RF-SCORM-001)
+    public const TYPE_SCORM = 'SCORM';
+
+    public const TYPES = [self::TYPE_QUIZ, self::TYPE_TASK, self::TYPE_SURVEY, self::TYPE_SCORM];
 
     protected $fillable = [
         'tenant_id',
@@ -58,5 +61,12 @@ class CourseActivity extends Model
     public function survey(): HasOne
     {
         return $this->hasOne(Survey::class, 'activity_id');
+    }
+
+    /** El último paquete SCORM subido (el que se publica) */
+    public function scormPackage(): HasOne
+    {
+        // Sin ofMany: PostgreSQL no calcula MAX de un uuid
+        return $this->hasOne(ScormPackage::class, 'activity_id')->orderByDesc('created_at')->orderByDesc('id');
     }
 }

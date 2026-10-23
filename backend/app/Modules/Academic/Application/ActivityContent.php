@@ -34,6 +34,7 @@ class ActivityContent implements CourseContentExtension
             ->map(fn (CourseActivity $activity) => match (true) {
                 $activity->type === CourseActivity::TYPE_QUIZ && $activity->quiz->items->isEmpty() => "El cuestionario \"{$activity->title}\" no tiene preguntas.",
                 $activity->type === CourseActivity::TYPE_SURVEY && $activity->survey->questions === [] => "La encuesta \"{$activity->title}\" no tiene preguntas.",
+                $activity->type === CourseActivity::TYPE_SCORM && $activity->scormPackage === null => "La actividad SCORM \"{$activity->title}\" no tiene su paquete .zip.",
                 default => null,
             })
             ->filter()
@@ -48,7 +49,7 @@ class ActivityContent implements CourseContentExtension
     {
         return CourseActivity::query()
             ->where('course_id', $course->id)
-            ->with(['quiz.items.question', 'task', 'survey'])
+            ->with(['quiz.items.question', 'task', 'survey', 'scormPackage'])
             ->orderBy('position')
             ->get();
     }
@@ -73,6 +74,8 @@ class ActivityContent implements CourseContentExtension
             ]],
             CourseActivity::TYPE_TASK => ['task' => $activity->task->only(['allow_text', 'allow_file', 'due_days', 'accept_late'])],
             CourseActivity::TYPE_SURVEY => ['survey' => ['questions' => $activity->survey->questions]],
+            // Queda fijo el paquete publicado: subir otro no cambia lo que ven los alumnos hasta publicar
+            CourseActivity::TYPE_SCORM => ['scorm' => $activity->scormPackage?->only(['id', 'version', 'entry', 'mastery_score'])],
         };
     }
 }

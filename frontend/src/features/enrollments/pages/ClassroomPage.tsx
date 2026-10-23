@@ -7,6 +7,8 @@ import { ACTIVITY_LABEL, toScale } from '../../academic/api';
 import { QuizPanel } from '../../academic/components/QuizPanel';
 import { StudentGrades } from '../../academic/components/StudentGrades';
 import { SurveyPanel, TaskPanel } from '../../academic/components/StudentPanels';
+import { ScormPanel, ScormPreviewButton } from '../../academic/components/ScormPlayer';
+import type { ScormState } from '../../academic/api';
 import { ACTIVITY_ICON } from '../../academic/icons';
 import { studentApi, type ActivityState, type QuizState, type SurveyState, type TaskState } from '../../academic/studentApi';
 import { formatSize, RESOURCE_LABEL, type ResourceType } from '../../courses/api';
@@ -33,6 +35,7 @@ const PREVIEW_HINT: Record<ClassroomActivity['type'], string> = {
   QUIZ: 'Aquí el alumno rinde el cuestionario. En la vista previa no se abren intentos.',
   TASK: 'Aquí el alumno escribe o adjunta su entrega. En la vista previa no se entrega nada.',
   SURVEY: 'Aquí el alumno responde la encuesta. En la vista previa no se registran respuestas.',
+  SCORM: 'Aquí el alumno abre el paquete y su avance se guarda. En la vista previa puedes probarlo sin guardar nada.',
 };
 
 const ResourceView: React.FC<{ resource: ClassroomResource; onDownload: () => Promise<void> }> = ({ resource, onDownload }) => {
@@ -141,7 +144,10 @@ const ActivityView: React.FC<{
       )}
 
       {preview ? (
-        <Alert tone="info">{PREVIEW_HINT[activity.type]}</Alert>
+        <div className="space-y-3">
+          <Alert tone="info">{PREVIEW_HINT[activity.type]}</Alert>
+          {activity.type === 'SCORM' && <ScormPreviewButton courseId={courseId} activityId={activity.id} title={activity.title} />}
+        </div>
       ) : !state ? (
         <LoadingState />
       ) : activity.type === 'QUIZ' ? (
@@ -156,6 +162,8 @@ const ActivityView: React.FC<{
           gradeScale={gradeScale}
           onChanged={onChanged}
         />
+      ) : activity.type === 'SCORM' ? (
+        <ScormPanel courseId={courseId} activityId={activity.id} title={activity.title} state={state as ScormState} gradeScale={gradeScale} onChanged={onChanged} />
       ) : (
         <SurveyPanel courseId={courseId} activityId={activity.id} state={state as SurveyState} onChanged={onChanged} />
       )}

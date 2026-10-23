@@ -185,7 +185,9 @@ class ClaimTest extends TestCase
         $this->travelTo('2026-10-13 09:00:00');
         $admin = $this->login('acme', 'admin@acme.com');
         $this->withToken($admin)->getJson($this->api('/claims?status=OVERDUE'))
-            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.overdue', true)->assertJsonPath('meta.counts.overdue', 1);
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.overdue', true)->assertJsonPath('meta.counts.overdue', 1)
+            // Las tarjetas: cuántas hay en cada estado
+            ->assertJsonPath('meta.states.OVERDUE', 1)->assertJsonPath('meta.states.RECEIVED', 1)->assertJsonPath('meta.states.ANSWERED', 0);
         $this->withToken($admin)->getJson($this->api('/claims?search=45678912'))->assertJsonCount(1, 'data');
         $this->withToken($admin)->getJson($this->api('/claims?type=QUEJA'))->assertJsonCount(0, 'data');
     }

@@ -42,6 +42,8 @@ class SecurityBaselineTest extends TestCase
         'GET api/v1/catalog/packages',
         'GET api/v1/catalog/packages/{package}',
         'GET api/v1/refund-policy',
+        // Archivos SCORM del marco del aula: el permiso va en el enlace firmado
+        'GET api/v1/scorm-content/{token}/{path}',
         'GET api/v1/certificates/verify/{code}',
         'GET api/v1/claims/form',
         'POST api/v1/claims',

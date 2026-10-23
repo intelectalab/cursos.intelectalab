@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   CardHeader,
+  ConfirmModal,
   EmptyState,
   ErrorState,
   Field,
@@ -23,7 +24,7 @@ import {
   Tr,
 } from '../../../shared/ui';
 import { formatSize } from '../../courses/api';
-import { toPercent, toScale } from '../api';
+import { academicApi, SCORM_STATUS_LABEL, toPercent, toScale } from '../api';
 import {
   reviewApi,
   type ReviewSubmission,
@@ -388,10 +389,26 @@ function gradeCell(
   student: TrackedStudent,
   gradeScale: number,
   onAttempts: (student: TrackedStudent, activity: TrackedActivity) => void,
+  onScorm: (student: TrackedStudent, activity: TrackedActivity) => void,
 ): React.ReactNode {
   const grade = student.grades[activity.id];
 
   if (activity.type === 'SURVEY') return grade?.done ? <Badge tone="success">Respondida</Badge> : <span className="text-slate-300">—</span>;
+
+  // SCORM: la nota que informa el paquete, o su estado; al tocarlo se puede reiniciar
+  if (activity.type === 'SCORM') {
+    const status = grade?.status ?? 'not attempted';
+    return (
+      <button
+        type="button"
+        onClick={() => onScorm(student, activity)}
+        aria-label={`Avance de ${student.name} en ${activity.title}`}
+        className="px-2 py-1 -mx-2 rounded-lg font-semibold tnum text-brand-700 hover:bg-brand-50 cursor-pointer"
+      >
+        {grade?.grade_percent != null ? toScale(grade.grade_percent, gradeScale) : (SCORM_STATUS_LABEL[status] ?? status)}
+      </button>
+    );
+  }
 
   // El cuestionario abre el detalle de los intentos del alumno, aunque todavía no lo haya rendido
   if (activity.type === 'QUIZ') {
@@ -433,6 +450,7 @@ export const TrackingTab: React.FC<{ courseId: string }> = ({ courseId }) => {
     | { kind: 'grade'; submission: ReviewSubmission }
     | { kind: 'survey'; activity: TrackedActivity }
     | { kind: 'attempts'; student: TrackedStudent; activity: TrackedActivity }
+    | { kind: 'scorm'; student: TrackedStudent; activity: TrackedActivity }
     | null
   >(null);
 
@@ -620,7 +638,13 @@ export const TrackingTab: React.FC<{ courseId: string }> = ({ courseId }) => {
                   </Td>
                   {activities.map((activity) => (
                     <Td key={activity.id} className="whitespace-nowrap">
-                      {gradeCell(activity, student, gradeScale, (who, what) => setDialog({ kind: 'attempts', student: who, activity: what }))}
+                      {gradeCell(
+                        activity,
+                        student,
+                        gradeScale,
+                        (who, what) => setDialog({ kind: 'attempts', student: who, activity: what }),
+                        (who, what) => setDialog({ kind: 'scorm', student: who, activity: what }),
+                      )}
                     </Td>
                   ))}
                   <Td className="whitespace-nowrap">
@@ -682,6 +706,19 @@ export const TrackingTab: React.FC<{ courseId: string }> = ({ courseId }) => {
           onClose={() => {
             setDialog(null);
             void load();
+          }}
+        />
+      )}
+      {dialog?.kind === 'scorm' && (
+        <ConfirmModal
+          title={`Reiniciar «${dialog.activity.title}»`}
+          text={`${dialog.student.name}: ${SCORM_STATUS_LABEL[dialog.student.grades[dialog.activity.id]?.status ?? 'not attempted'] ?? 'Sin empezar'}. Al reiniciarlo se borra lo que lleva en el paquete (avance y nota) y vuelve a empezar desde el inicio. No se puede deshacer.`}
+          confirmLabel="Reiniciar"
+          onClose={() => setDialog(null)}
+          onConfirm={async () => {
+            await academicApi.resetScorm(courseId, dialog.student.enrollment_id, dialog.activity.id);
+            await load();
+            setDialog(null);
           }}
         />
       )}

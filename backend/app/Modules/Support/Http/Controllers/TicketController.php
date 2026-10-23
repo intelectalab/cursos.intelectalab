@@ -10,6 +10,7 @@ use App\Modules\Support\Domain\Models\Ticket;
 use App\Modules\Support\Domain\Models\TicketAttachment;
 use App\Modules\Support\Http\TicketPresenter;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\StateCounts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class TicketController extends Controller
 {
+    /** Vistas de las tarjetas, además de cada estado */
+    private const VIEWS = ['PENDING', 'AWAITING', 'UNASSIGNED', 'MINE'];
+
     public function __construct(
         private readonly TicketService $tickets,
         private readonly FileStorage $storage,
@@ -31,19 +35,28 @@ class TicketController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
-            // PENDING = abiertos y en atención
-            'status' => ['nullable', Rule::in([...Ticket::STATUSES, 'PENDING'])],
+            // Vistas de las tarjetas: PENDING = abiertos y en atención; AWAITING = esperan respuesta;
+            // UNASSIGNED = por atender sin responsable; MINE = por atender a mi cargo
+            'status' => ['nullable', Rule::in([...Ticket::STATUSES, ...self::VIEWS])],
             'category' => ['nullable', Rule::in(Ticket::CATEGORIES)],
             // "me" = los míos; "none" = sin asignar; o el id de alguien del equipo
             'assignee' => ['nullable', 'string', 'max:36'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $tickets = Ticket::query()
-            ->with(['requester', 'assignee'])
-            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $status === 'PENDING'
-                ? $q->whereIn('status', [Ticket::STATUS_OPEN, Ticket::STATUS_IN_PROGRESS])
-                : $q->where('status', $status))
+        $byState = function (Builder $q, string $status) use ($request) {
+            $pending = fn () => $q->whereIn('status', [Ticket::STATUS_OPEN, Ticket::STATUS_IN_PROGRESS]);
+
+            match ($status) {
+                'PENDING' => $pending(),
+                'AWAITING' => $pending()->where('last_message_by', Ticket::BY_REQUESTER),
+                'UNASSIGNED' => $pending()->whereNull('assignee_id'),
+                'MINE' => $pending()->where('assignee_id', $request->user()->id),
+                default => $q->where('status', $status),
+            };
+        };
+
+        $base = Ticket::query()
             ->when($filters['category'] ?? null, fn (Builder $q, string $category) => $q->where('category', $category))
             ->when($filters['assignee'] ?? null, fn (Builder $q, string $assignee) => match ($assignee) {
                 'none' => $q->whereNull('assignee_id'),
@@ -60,7 +73,14 @@ class TicketController extends Controller
                     ->orWhereHas('requester', fn (Builder $requester) => $requester
                         ->whereRaw('lower(email) like ?', [$like])
                         ->orWhereRaw("lower(first_name || ' ' || last_name) like ?", [$like])));
-            })
+            });
+
+        // Cuántos hay en cada vista con la búsqueda actual: alimenta las tarjetas que filtran
+        $states = StateCounts::of($base, [...self::VIEWS, Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED], $byState);
+
+        $tickets = $base
+            ->with(['requester', 'assignee'])
+            ->when($filters['status'] ?? null, $byState)
             // Primero los que esperan respuesta del personal, del más antiguo al más reciente
             ->orderByRaw("case when status in ('OPEN', 'IN_PROGRESS') and last_message_by = 'REQUESTER' then 0 else 1 end")
             ->orderByRaw("case when status in ('OPEN', 'IN_PROGRESS') and last_message_by = 'REQUESTER' then last_message_at end asc")
@@ -78,6 +98,7 @@ class TicketController extends Controller
                 'total' => $tickets->total(),
                 'last_page' => $tickets->lastPage(),
                 // Cifras de la bandeja, sin importar los filtros
+                'states' => $states,
                 'counts' => [
                     'awaiting' => (clone $pending)->where('last_message_by', Ticket::BY_REQUESTER)->count(),
                     'unassigned' => (clone $pending)->whereNull('assignee_id')->count(),

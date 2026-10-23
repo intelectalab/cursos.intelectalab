@@ -7,6 +7,7 @@ use App\Modules\Claims\Application\ClaimService;
 use App\Modules\Claims\Domain\Models\Claim;
 use App\Modules\Claims\Http\ClaimPresenter;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\StateCounts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,12 +35,13 @@ class ClaimController extends Controller
         $pending = fn (Builder $q) => $q->where('status', '!=', Claim::STATUS_ANSWERED);
         $overdue = fn (Builder $q) => $pending($q)->whereDate('due_at', '<', now()->toDateString());
 
-        $claims = Claim::query()
-            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => match ($status) {
-                'PENDING' => $pending($q),
-                'OVERDUE' => $overdue($q),
-                default => $q->where('status', $status),
-            })
+        $byState = fn (Builder $q, string $status) => match ($status) {
+            'PENDING' => $pending($q),
+            'OVERDUE' => $overdue($q),
+            default => $q->where('status', $status),
+        };
+
+        $base = Claim::query()
             ->when($filters['type'] ?? null, fn (Builder $q, string $type) => $q->where('type', $type))
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
@@ -48,7 +50,13 @@ class ClaimController extends Controller
                     ->whereRaw('lower(code) like ?', [$like])
                     ->orWhereRaw('lower(doc_number) like ?', [$like])
                     ->orWhereRaw("lower(first_name || ' ' || last_name) like ?", [$like]));
-            })
+            });
+
+        // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
+        $states = StateCounts::of($base, ['PENDING', 'OVERDUE', ...Claim::STATUSES], $byState);
+
+        $claims = $base
+            ->when($filters['status'] ?? null, $byState)
             // Lo pendiente primero, por la fecha límite más próxima
             ->orderByRaw("case when status = 'ANSWERED' then 1 else 0 end")
             ->orderByRaw("case when status = 'ANSWERED' then null else due_at end asc")
@@ -63,6 +71,7 @@ class ClaimController extends Controller
                 'per_page' => $claims->perPage(),
                 'total' => $claims->total(),
                 'last_page' => $claims->lastPage(),
+                'states' => $states,
                 'counts' => [
                     'pending' => $pending(Claim::query())->count(),
                     'overdue' => $overdue(Claim::query())->count(),

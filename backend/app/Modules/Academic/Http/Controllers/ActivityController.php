@@ -23,7 +23,7 @@ use Illuminate\Validation\Rule;
  */
 class ActivityController extends Controller
 {
-    private const RELATIONS = ['quiz.items.question', 'task', 'survey'];
+    private const RELATIONS = ['quiz.items.question', 'task', 'survey', 'scormPackage'];
 
     public function __construct(
         private readonly ActivityService $activities,
@@ -151,6 +151,7 @@ class ActivityController extends Controller
                 'weight' => ['nullable', 'numeric', 'min:0', 'max:100'],
             ],
             CourseActivity::TYPE_SURVEY => SurveyConfig::rules(),
+            CourseActivity::TYPE_SCORM => ['weight' => ['nullable', 'numeric', 'min:0', 'max:100']],
         });
     }
 

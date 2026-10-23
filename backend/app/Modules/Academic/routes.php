@@ -4,6 +4,8 @@ use App\Modules\Academic\Http\Controllers\ActivityController;
 use App\Modules\Academic\Http\Controllers\QuestionBankController;
 use App\Modules\Academic\Http\Controllers\QuestionImportController;
 use App\Modules\Academic\Http\Controllers\ReviewController;
+use App\Modules\Academic\Http\Controllers\ScormContentController;
+use App\Modules\Academic\Http\Controllers\ScormController;
 use App\Modules\Academic\Http\Controllers\StudentActivityController;
 use App\Modules\Academic\Http\Controllers\StudentOverviewController;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +44,8 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
             Route::put('/activities/{activity}', [ActivityController::class, 'update']);
             Route::delete('/activities/{activity}', [ActivityController::class, 'destroy']);
             Route::put('/activities/{activity}/questions', [ActivityController::class, 'setQuestions']);
+            // Paquete SCORM de la actividad (.zip)
+            Route::post('/activities/{activity}/scorm', [ScormController::class, 'upload'])->middleware('throttle:20,1');
         });
 
     // Seguimiento: quien revisa todos los cursos o el profesor en los suyos
@@ -59,6 +63,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
             Route::get('/enrollments/{enrollment}/activities/{activity}/attempts', [ReviewController::class, 'attempts']);
             Route::post('/enrollments/{enrollment}/activities/{activity}/extra-attempts', [ReviewController::class, 'grantAttempts']);
             Route::get('/activities/{activity}/survey-results', [ReviewController::class, 'surveyResults']);
+            Route::delete('/enrollments/{enrollment}/activities/{activity}/scorm', [ScormController::class, 'reset']);
         });
 
     // Alumno: resumen de inicio
@@ -82,3 +87,20 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::post('/me/courses/{course}/activities/{activity}/survey', [StudentActivityController::class, 'answerSurvey']);
     });
 });
+
+// Vista previa del paquete SCORM para el personal (no guarda nada)
+Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:courses.read,courses.assigned.read'])
+    ->get('/courses/{course}/activities/{activity}/scorm/preview', [ScormController::class, 'preview'])
+    ->whereUuid(['course', 'activity']);
+
+// El alumno abre el paquete y este guarda su avance
+Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:activities.attempt'])->whereUuid(['course', 'activity'])->group(function () {
+    Route::get('/me/courses/{course}/activities/{activity}/scorm', [ScormController::class, 'launch']);
+    Route::post('/me/courses/{course}/activities/{activity}/scorm', [ScormController::class, 'commit'])->middleware('throttle:120,1');
+});
+
+// Archivos del paquete para el marco del aula: el permiso va en el enlace firmado
+Route::get('/scorm-content/{token}/{path}', ScormContentController::class)
+    ->where('token', '[A-Za-z0-9.-]+')
+    ->where('path', '.*')
+    ->middleware('throttle:2000,1');

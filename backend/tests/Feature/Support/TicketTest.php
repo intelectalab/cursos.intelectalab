@@ -95,7 +95,12 @@ class TicketTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.id', $ticket)
             ->assertJsonPath('meta.counts.awaiting', 1)
-            ->assertJsonPath('meta.counts.unassigned', 1);
+            ->assertJsonPath('meta.counts.unassigned', 1)
+            // Las tarjetas: cuántos hay en cada vista
+            ->assertJsonPath('meta.states.ALL', 1)
+            ->assertJsonPath('meta.states.AWAITING', 1)
+            ->assertJsonPath('meta.states.UNASSIGNED', 1)
+            ->assertJsonPath('meta.states.RESOLVED', 0);
 
         // La primera respuesta la pone en atención y se la asigna a quien responde
         $this->staffReply($ticket)

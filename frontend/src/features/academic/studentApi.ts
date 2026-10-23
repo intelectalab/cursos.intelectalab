@@ -1,3 +1,4 @@
+import type { ScormState } from './api';
 import { api } from '../../shared/api/client';
 import type { PageMeta } from '../identity/api';
 import type { ActivityType, QuestionConfig, QuestionType, SurveyQuestion } from './api';
@@ -50,7 +51,7 @@ export interface SurveyState {
   answered: boolean;
 }
 
-export type ActivityState = QuizState | TaskState | SurveyState;
+export type ActivityState = QuizState | TaskState | SurveyState | ScormState;
 
 // Notas del alumno en un curso: solo cuestionarios y tareas
 export interface StudentGrades {

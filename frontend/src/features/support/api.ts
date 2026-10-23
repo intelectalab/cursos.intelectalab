@@ -129,6 +129,8 @@ export const supportApi = {
       data: response.data.data as TicketSummary[],
       meta: response.data.meta as PageMeta,
       counts: response.data.meta.counts as InboxCounts,
+      // Cuántos hay en cada tarjeta con la búsqueda actual (ALL = todos)
+      states: (response.data.meta.states ?? {}) as Record<string, number>,
     };
   },
   async agents() {

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, ListPlus, Pencil, Plus, Trash2, TriangleAlert, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, ListPlus, Pencil, Plus, Trash2, TriangleAlert, Upload, type LucideIcon } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Button, ConfirmModal } from '../../../shared/ui';
 import { academicApi, ACTIVITY_LABEL, toScale, type Activity, type QuizItem, type SurveyQuestion } from '../api';
 import { ACTIVITY_ICON } from '../icons';
 import { ActivityModal, QuizQuestionsModal } from './ActivityModals';
+import { ScormPackageModal } from './ScormPackageModal';
+import { formatSize } from '../../courses/api';
 
 const IconButton: React.FC<{ label: string; icon: LucideIcon; onClick: () => void; disabled?: boolean; danger?: boolean }> = ({
   label,
@@ -52,6 +54,14 @@ function describe(activity: Activity, gradeScale: number): { text: string; probl
     return { text: `Entrega: ${accepts}${due}${weight}` };
   }
 
+  if (activity.type === 'SCORM') {
+    const pkg = activity.package;
+    const weight = activity.weight === 1 ? '' : activity.weight === 0 ? ' · no cuenta para la nota' : ` · peso ${activity.weight}`;
+    return pkg
+      ? { text: `SCORM ${pkg.version} · ${pkg.file_name} · ${formatSize(pkg.size_bytes)}${weight}` }
+      : { text: 'Sin paquete', problem: 'Falta subir el paquete .zip' };
+  }
+
   const required = (activity.questions as SurveyQuestion[]).filter((question) => question.required).length;
   return {
     text: `${count} ${count === 1 ? 'pregunta' : 'preguntas'}${count > 0 ? ` · ${required} obligatorias` : ''}`,
@@ -59,7 +69,11 @@ function describe(activity: Activity, gradeScale: number): { text: string; probl
   };
 }
 
-type Dialog = { kind: 'edit'; activity: Activity | null } | { kind: 'questions'; activity: Activity } | { kind: 'delete'; activity: Activity };
+type Dialog =
+  | { kind: 'edit'; activity: Activity | null }
+  | { kind: 'questions'; activity: Activity }
+  | { kind: 'scorm'; activity: Activity }
+  | { kind: 'delete'; activity: Activity };
 
 export const SectionActivities: React.FC<{
   courseId: string;
@@ -134,6 +148,7 @@ export const SectionActivities: React.FC<{
                   {activity.type === 'QUIZ' && (
                     <IconButton label="Elegir preguntas" icon={ListPlus} onClick={() => setDialog({ kind: 'questions', activity })} />
                   )}
+                  {activity.type === 'SCORM' && <IconButton label="Subir paquete" icon={Upload} onClick={() => setDialog({ kind: 'scorm', activity })} />}
                   <IconButton label="Subir actividad" icon={ArrowUp} disabled={busy || index === 0} onClick={() => move(index, -1)} />
                   <IconButton
                     label="Bajar actividad"
@@ -178,6 +193,16 @@ export const SectionActivities: React.FC<{
           canReadBanks={canReadBanks}
           onClose={() => setDialog(null)}
           onSubmit={(items) => save(() => academicApi.setQuizQuestions(courseId, dialog.activity.id, items))}
+        />
+      )}
+      {dialog?.kind === 'scorm' && (
+        <ScormPackageModal
+          courseId={courseId}
+          activity={dialog.activity}
+          onClose={() => setDialog(null)}
+          onUploaded={async () => {
+            await onChanged();
+          }}
         />
       )}
       {dialog?.kind === 'delete' && (

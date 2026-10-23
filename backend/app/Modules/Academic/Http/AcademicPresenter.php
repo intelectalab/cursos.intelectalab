@@ -78,6 +78,17 @@ class AcademicPresenter
             CourseActivity::TYPE_SURVEY => [
                 'questions' => $activity->survey->questions,
             ],
+            CourseActivity::TYPE_SCORM => [
+                'package' => $activity->scormPackage ? [
+                    'file_name' => $activity->scormPackage->file_name,
+                    'version' => $activity->scormPackage->version,
+                    'title' => $activity->scormPackage->title,
+                    'size_bytes' => $activity->scormPackage->size_bytes,
+                    'files_count' => $activity->scormPackage->files_count,
+                    'mastery_score' => $activity->scormPackage->mastery_score,
+                    'uploaded_at' => $activity->scormPackage->created_at?->toIso8601String(),
+                ] : null,
+            ],
         };
     }
 }

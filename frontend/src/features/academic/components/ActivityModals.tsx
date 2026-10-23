@@ -22,7 +22,7 @@ import {
 } from '../api';
 import { ACTIVITY_ICON } from '../icons';
 
-const ACTIVITY_TYPES: ActivityType[] = ['QUIZ', 'TASK', 'SURVEY'];
+const ACTIVITY_TYPES: ActivityType[] = ['QUIZ', 'TASK', 'SURVEY', 'SCORM'];
 const SURVEY_TYPES: SurveyQuestionType[] = ['SCALE', 'CHOICE', 'TEXT'];
 
 /* ───────────────────────────── Encuesta: sus preguntas ───────────────────────────── */
@@ -219,7 +219,7 @@ export const ActivityModal: React.FC<{
         {!activity && (
           <fieldset>
             <legend className="block text-[13px] font-medium text-slate-700 mb-1.5">Tipo de actividad</legend>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {ACTIVITY_TYPES.map((option) => {
                 const { icon: Icon, tone } = ACTIVITY_ICON[option];
                 const selected = option === type;
@@ -355,7 +355,11 @@ export const ActivityModal: React.FC<{
         {type !== 'SURVEY' && (
           <Field
             label="Peso en la nota final del curso"
-            hint="La nota del curso es el promedio de cuestionarios y tareas según su peso. Con 2 vale el doble; con 0 no cuenta."
+            hint={
+              type === 'SCORM'
+                ? 'Cuenta la nota que informa el paquete. Si el paquete no informa nota, pon 0 para que no baje el promedio.'
+                : 'La nota del curso es el promedio de cuestionarios y tareas según su peso. Con 2 vale el doble; con 0 no cuenta.'
+            }
           >
             <input
               className={`${INPUT_CLASS} max-w-32`}
@@ -371,6 +375,7 @@ export const ActivityModal: React.FC<{
         )}
 
         {type === 'SURVEY' && <SurveyQuestions value={questions} onChange={setQuestions} />}
+        {type === 'SCORM' && !activity && <Alert tone="info">Después de agregarla, sube el paquete .zip con el botón «Subir paquete» de la actividad.</Alert>}
       </form>
     </Modal>
   );

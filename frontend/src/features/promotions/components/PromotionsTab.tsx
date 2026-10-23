@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pencil, Plus, Tag } from 'lucide-react';
-import { SelectAll } from '../../../shared/ui/filters';
+import { Ban, CalendarClock, CircleCheck, Hourglass, Pencil, Plus, Tag, TimerOff } from 'lucide-react';
+import { FilterCards, SelectAll, type FilterCard } from '../../../shared/ui/filters';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CHECKBOX_CLASS, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, Modal, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
 import { formatDay } from '../../crm/api';
@@ -333,6 +333,8 @@ export const PromotionsTab: React.FC<{ canManage: boolean }> = ({ canManage }) =
   const [currency, setCurrency] = useState('PEN');
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  // Tarjeta elegida: '' = todas
+  const [stateFilter, setStateFilter] = useState('');
 
   const load = useCallback(() => {
     promotionsApi
@@ -356,8 +358,20 @@ export const PromotionsTab: React.FC<{ canManage: boolean }> = ({ canManage }) =
     </Button>
   );
 
+  const count = (state: string) => (promotions === null ? null : promotions.filter((item) => item.state === state).length);
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todas', value: promotions?.length ?? null, icon: Tag, tone: 'brand', help: 'Todas las promociones de la academia.' },
+    { key: 'ACTIVE', label: 'Activas', value: count('ACTIVE'), icon: CircleCheck, tone: 'success', help: 'Vigentes hoy: sus cupones se pueden usar al pagar.' },
+    { key: 'SCHEDULED', label: 'Por empezar', value: count('SCHEDULED'), icon: CalendarClock, tone: 'info', help: 'Su vigencia empieza más adelante; los cupones todavía no funcionan.' },
+    { key: 'EXHAUSTED', label: 'Agotadas', value: count('EXHAUSTED'), icon: Hourglass, tone: 'warning', help: 'Llegaron a su tope de usos.' },
+    { key: 'EXPIRED', label: 'Vencidas', value: count('EXPIRED'), icon: TimerOff, tone: 'neutral', help: 'Pasó su fecha de fin.' },
+    { key: 'INACTIVE', label: 'Desactivadas', value: count('INACTIVE'), icon: Ban, tone: 'danger', help: 'Apagadas a mano por el personal.' },
+  ];
+  const shown = (promotions ?? []).filter((item) => stateFilter === '' || item.state === stateFilter);
+
   return (
     <div>
+      {promotions && promotions.length > 0 && <FilterCards cards={cards} active={stateFilter} label="Promociones por estado" onSelect={setStateFilter} />}
       <Card>
         {promotions && promotions.length > 0 && <div className="flex justify-end px-5 py-4 border-b border-slate-200/80">{newButton}</div>}
         {error && <ErrorState message={error} onRetry={load} />}
@@ -381,7 +395,7 @@ export const PromotionsTab: React.FC<{ canManage: boolean }> = ({ canManage }) =
               <Th>Estado</Th>
             </THead>
             <TBody>
-              {promotions.map((promotion) => (
+              {shown.map((promotion) => (
                 <Tr key={promotion.id} className="cursor-pointer" onClick={() => setDialog({ kind: 'view', id: promotion.id })}>
                   <Td>
                     <button
@@ -414,6 +428,13 @@ export const PromotionsTab: React.FC<{ canManage: boolean }> = ({ canManage }) =
                   </Td>
                 </Tr>
               ))}
+              {shown.length === 0 && (
+                <Tr>
+                  <Td colSpan={6} className="text-center text-slate-500 py-6">
+                    No hay promociones en este estado.
+                  </Td>
+                </Tr>
+              )}
             </TBody>
           </Table>
         )}

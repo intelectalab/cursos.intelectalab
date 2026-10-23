@@ -211,6 +211,7 @@ class ClassroomPresenter
                 'accept_late' => $activity['task']['accept_late'] ?? true,
             ],
             'SURVEY' => ['questions_count' => count($activity['survey']['questions'] ?? [])],
+            'SCORM' => ['scorm_version' => $activity['scorm']['version'] ?? null],
             default => [],
         };
     }

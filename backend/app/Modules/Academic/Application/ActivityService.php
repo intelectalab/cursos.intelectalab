@@ -41,6 +41,8 @@ class ActivityService
                 CourseActivity::TYPE_QUIZ => $activity->quiz()->create($this->quizSettings($data)),
                 CourseActivity::TYPE_TASK => $activity->task()->create($this->taskSettings($data)),
                 CourseActivity::TYPE_SURVEY => $activity->survey()->create(['questions' => SurveyConfig::normalize($data['questions'] ?? [])]),
+                // El paquete .zip se sube después, a la actividad ya creada
+                CourseActivity::TYPE_SCORM => null,
             };
 
             return $activity;
@@ -66,6 +68,7 @@ class ActivityService
                 CourseActivity::TYPE_QUIZ => $activity->quiz->update($this->quizSettings($data)),
                 CourseActivity::TYPE_TASK => $activity->task->update($this->taskSettings($data)),
                 CourseActivity::TYPE_SURVEY => $activity->survey->update(['questions' => SurveyConfig::normalize($data['questions'] ?? [])]),
+                CourseActivity::TYPE_SCORM => null,
             };
 
             return $activity;

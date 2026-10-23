@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlarmClock, BookOpenCheck, ExternalLink, Inbox, Search } from 'lucide-react';
+import { AlarmClock, BookOpenCheck, CheckCircle2, ExternalLink, FileSearch, Inbox, MailOpen, Search } from 'lucide-react';
+import { FilterCards, type FilterCard } from '../../../shared/ui/filters';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -15,7 +16,6 @@ import {
   Modal,
   PageHeader,
   Pagination,
-  StatCard,
   Table,
   TBody,
   Td,
@@ -28,7 +28,6 @@ import { formatDay } from '../../crm/api';
 import { formatDateTime } from '../../sales/api';
 import { claimsApi, CLAIM_TYPE_LABEL, type Claim, type ClaimSummary } from '../api';
 import { ClaimSheet, ClaimStatusBadge } from '../components/ClaimSheet';
-import { SearchSelect } from '../../../shared/ui/SearchSelect';
 import { appPath } from '../../../shared/tenancy/hosts';
 
 const ClaimModal: React.FC<{ claimId: string; canManage: boolean; onClose: () => void; onChanged: () => void }> = ({ claimId, canManage, onClose, onChanged }) => {
@@ -163,7 +162,7 @@ export const ClaimsPage: React.FC = () => {
 
   const [rows, setRows] = useState<ClaimSummary[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
-  const [counts, setCounts] = useState<{ pending: number; overdue: number } | null>(null);
+  const [states, setStates] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('PENDING');
   const [page, setPage] = useState(1);
@@ -176,7 +175,7 @@ export const ClaimsPage: React.FC = () => {
       const result = await claimsApi.list({ search: search || undefined, status: status || undefined, page });
       setRows(result.data);
       setMeta(result.meta);
-      setCounts(result.counts);
+      setStates(result.states);
       setState('ready');
     } catch (err) {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
@@ -194,6 +193,14 @@ export const ClaimsPage: React.FC = () => {
     setPage(1);
   };
   const filtered = search !== '' || status !== 'PENDING';
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todas', value: states.ALL ?? null, icon: BookOpenCheck, tone: 'brand', help: 'Todas las hojas que coinciden con la búsqueda.' },
+    { key: 'PENDING', label: 'Sin responder', value: states.PENDING ?? null, icon: Inbox, tone: 'info', help: 'Recibidas o en revisión: todavía no tienen respuesta.' },
+    { key: 'OVERDUE', label: 'Fuera de plazo', value: states.OVERDUE ?? null, icon: AlarmClock, tone: 'danger', help: 'Sin respuesta y con la fecha límite vencida. Respóndelas primero.' },
+    { key: 'RECEIVED', label: 'Recibidas', value: states.RECEIVED ?? null, icon: MailOpen, tone: 'warning', help: 'Registradas por el consumidor; nadie empezó a revisarlas.' },
+    { key: 'IN_REVIEW', label: 'En revisión', value: states.IN_REVIEW ?? null, icon: FileSearch, tone: 'violet', help: 'Alguien del personal las está revisando.' },
+    { key: 'ANSWERED', label: 'Respondidas', value: states.ANSWERED ?? null, icon: CheckCircle2, tone: 'success', help: 'Ya tienen respuesta; el consumidor la ve con su código.' },
+  ];
 
   return (
     <div>
@@ -214,10 +221,7 @@ export const ClaimsPage: React.FC = () => {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 max-w-2xl">
-        <StatCard label="Sin responder" value={counts?.pending ?? '—'} icon={Inbox} tone="info" />
-        <StatCard label="Fuera de plazo" value={counts?.overdue ?? '—'} hint="Sin respuesta y con el plazo vencido" icon={AlarmClock} tone={counts?.overdue ? 'danger' : 'success'} />
-      </div>
+      <FilterCards cards={cards} active={status} label="Hojas por estado" onSelect={(key) => filter(() => setStatus(key))} />
 
       <Card>
         <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-200/80">
@@ -231,12 +235,6 @@ export const ClaimsPage: React.FC = () => {
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <SearchSelect className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
-            <option value="PENDING">Sin responder</option>
-            <option value="OVERDUE">Fuera de plazo</option>
-            <option value="ANSWERED">Respondidos</option>
-            <option value="">Todos</option>
-          </SearchSelect>
         </div>
 
         {state === 'loading' && <LoadingState />}

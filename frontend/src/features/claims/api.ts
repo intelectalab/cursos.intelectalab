@@ -108,6 +108,8 @@ export const claimsApi = {
       data: response.data.data as ClaimSummary[],
       meta: response.data.meta as PageMeta,
       counts: response.data.meta.counts as { pending: number; overdue: number },
+      // Cuántas hay en cada tarjeta con la búsqueda actual (ALL = todas)
+      states: (response.data.meta.states ?? {}) as Record<string, number>,
     };
   },
   async get(id: string) {

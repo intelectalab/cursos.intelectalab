@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Headset, Inbox, Search, UserCheck, UserX } from 'lucide-react';
+import { Archive, CheckCircle2, Headset, Inbox, LifeBuoy, MessageCircleWarning, Search, UserCheck, UserX } from 'lucide-react';
+import { FilterCards, type FilterCard } from '../../../shared/ui/filters';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -15,7 +16,6 @@ import {
   Modal,
   PageHeader,
   Pagination,
-  StatCard,
   Table,
   TBody,
   Td,
@@ -34,7 +34,6 @@ import {
   TICKET_STATUS_LABEL,
   TICKET_STATUSES,
   ticketCode,
-  type InboxCounts,
   type Ticket,
   type TicketCategory,
   type TicketPriority,
@@ -201,7 +200,7 @@ export const SupportPage: React.FC = () => {
 
   const [rows, setRows] = useState<TicketSummary[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
-  const [counts, setCounts] = useState<InboxCounts | null>(null);
+  const [states, setStates] = useState<Record<string, number>>({});
   const [agents, setAgents] = useState<Agent[]>([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('PENDING');
@@ -223,7 +222,7 @@ export const SupportPage: React.FC = () => {
       });
       setRows(result.data);
       setMeta(result.meta);
-      setCounts(result.counts);
+      setStates(result.states);
       setState('ready');
     } catch (err) {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
@@ -248,16 +247,21 @@ export const SupportPage: React.FC = () => {
     setPage(1);
   };
   const filtered = search !== '' || status !== 'PENDING' || assignee !== '' || category !== '';
+  const cards: FilterCard[] = [
+    { key: '', label: 'Todas', value: states.ALL ?? null, icon: LifeBuoy, tone: 'brand', help: 'Todas las consultas que coinciden con la búsqueda.' },
+    { key: 'PENDING', label: 'Por atender', value: states.PENDING ?? null, icon: Inbox, tone: 'info', help: 'Abiertas o en atención: todavía no se resuelven.' },
+    { key: 'AWAITING', label: 'Esperan respuesta', value: states.AWAITING ?? null, icon: MessageCircleWarning, tone: 'warning', help: 'Por atender y lo último lo escribió quien consulta: le toca responder al personal.' },
+    { key: 'UNASSIGNED', label: 'Sin asignar', value: states.UNASSIGNED ?? null, icon: UserX, tone: 'danger', help: 'Por atender y nadie del equipo la tomó todavía.' },
+    { key: 'MINE', label: 'A mi cargo', value: states.MINE ?? null, icon: UserCheck, tone: 'violet', help: 'Por atender y asignadas a ti.' },
+    { key: 'RESOLVED', label: 'Resueltas', value: states.RESOLVED ?? null, icon: CheckCircle2, tone: 'success', help: 'El personal las dio por resueltas. Si quien consulta escribe de nuevo, se reabren.' },
+    { key: 'CLOSED', label: 'Cerradas', value: states.CLOSED ?? null, icon: Archive, tone: 'neutral', help: 'Terminadas: ya no reciben mensajes.' },
+  ];
 
   return (
     <div>
       <PageHeader title="Soporte" icon={Headset} subtitle="Consultas de alumnos, compradores y empresas." />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard label="Esperan respuesta" value={counts?.awaiting ?? '—'} hint="Lo último lo escribió quien consulta" icon={Inbox} tone="warning" />
-        <StatCard label="Sin asignar" value={counts?.unassigned ?? '—'} hint="Nadie los tomó todavía" icon={UserX} tone="info" />
-        <StatCard label="A mi cargo" value={counts?.mine ?? '—'} hint="Abiertos o en atención" icon={UserCheck} tone="brand" />
-      </div>
+      <FilterCards cards={cards} active={status} label="Consultas por estado" onSelect={(key) => filter(() => setStatus(key))} />
 
       <Card>
         <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-200/80">
@@ -271,15 +275,6 @@ export const SupportPage: React.FC = () => {
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
-          <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por estado" value={status} onChange={(event) => filter(() => setStatus(event.target.value))}>
-            <option value="PENDING">Por atender</option>
-            {TICKET_STATUSES.map((item) => (
-              <option key={item} value={item}>
-                {TICKET_STATUS_LABEL[item]}
-              </option>
-            ))}
-            <option value="">Todos</option>
-          </SearchSelect>
           <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por responsable" value={assignee} onChange={(event) => filter(() => setAssignee(event.target.value))}>
             <option value="">Todo el equipo</option>
             <option value="me">A mi cargo</option>

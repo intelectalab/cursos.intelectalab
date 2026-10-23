@@ -5,6 +5,7 @@ namespace App\Modules\Academic\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Academic\Application\GradebookService;
 use App\Modules\Academic\Application\QuizAttemptService;
+use App\Modules\Academic\Application\ScormTracker;
 use App\Modules\Academic\Application\SurveyResponseService;
 use App\Modules\Academic\Application\TaskSubmissionService;
 use App\Modules\Academic\Domain\Models\QuizAttempt;
@@ -167,6 +168,7 @@ class StudentActivityController extends Controller
             'QUIZ' => $this->quizzes->state($enrollment, $activity),
             'TASK' => $this->tasks->state($enrollment, $activity),
             'SURVEY' => ['answered' => $this->surveys->hasAnswered($enrollment, $activity['id'])],
+            'SCORM' => app(ScormTracker::class)->state($enrollment, $activity),
             default => [],
         };
     }
