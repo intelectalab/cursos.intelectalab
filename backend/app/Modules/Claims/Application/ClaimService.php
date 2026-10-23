@@ -6,6 +6,7 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Claims\Domain\Models\Claim;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Application\BusinessCalendar;
+use App\Modules\Tenancy\Application\StaffNotifier;
 use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Modules\Tenancy\Domain\Models\Tenant;
@@ -23,6 +24,7 @@ class ClaimService
 {
     public function __construct(
         private readonly TenantNotifier $notifier,
+        private readonly StaffNotifier $staff,
         private readonly TenantSettingsService $settings,
         private readonly TenantContext $context,
         private readonly AuditLogger $audit,
@@ -87,6 +89,13 @@ class ClaimService
                 'codigo' => $claim->code,
                 'fecha_limite' => $claim->due_at->format('d/m/Y'),
             ], '/reclamaciones/seguimiento');
+
+            // Aviso al personal: el plazo de respuesta es legal
+            $this->staff->notify('claims.manage', 'personal_reclamo_nuevo', [
+                'tipo' => $claim->type === Claim::TYPE_CLAIM ? 'reclamo' : 'queja',
+                'codigo' => $claim->code,
+                'fecha_limite' => $claim->due_at->format('d/m/Y'),
+            ], '/claims');
 
             return $claim;
         });

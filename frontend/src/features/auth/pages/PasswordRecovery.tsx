@@ -84,6 +84,8 @@ export const ResetPassword: React.FC = () => {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const email = params.get('email') ?? '';
+  // Viene de la invitación de una cuenta nueva: todavía no tiene contraseña
+  const invitation = params.get('invitacion') === '1';
 
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -120,9 +122,9 @@ export const ResetPassword: React.FC = () => {
   }
 
   return (
-    <Shell title="Crear contraseña nueva" subtitle={`Cuenta: ${email}`}>
+    <Shell title={invitation ? 'Crea tu contraseña' : 'Crear contraseña nueva'} subtitle={invitation ? `Te damos la bienvenida. Con esta contraseña y tu correo (${email}) entrarás a tu cuenta.` : `Cuenta: ${email}`}>
       {status === 'done' ? (
-        <Success>Tu contraseña se cambió y se cerraron tus sesiones abiertas. Ya puedes iniciar sesión.</Success>
+        <Success>{invitation ? 'Tu contraseña quedó creada. Ya puedes iniciar sesión.' : 'Tu contraseña se cambió y se cerraron tus sesiones abiertas. Ya puedes iniciar sesión.'}</Success>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -133,7 +135,7 @@ export const ResetPassword: React.FC = () => {
               </Link>
             </Alert>
           )}
-          <Field label="Contraseña nueva" hint="Mínimo 8 caracteres.">
+          <Field label={invitation ? 'Contraseña' : 'Contraseña nueva'} hint="Mínimo 8 caracteres.">
             <input
               className={INPUT_CLASS}
               type="password"
@@ -157,7 +159,7 @@ export const ResetPassword: React.FC = () => {
             />
           </Field>
           <Button variant="primary" size="lg" type="submit" className="w-full" processing={status === 'processing'}>
-            Cambiar contraseña
+            {invitation ? 'Crear contraseña' : 'Cambiar contraseña'}
           </Button>
         </form>
       )}

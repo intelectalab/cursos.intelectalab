@@ -16,17 +16,20 @@ class UserService
         private readonly TenantNotifier $notifier,
         private readonly RoleService $roles,
         private readonly AuditLogger $audit,
+        private readonly InvitationService $invitations,
     ) {}
 
     /**
-     * @param  array{first_name: string, last_name: string, email: string, phone?: ?string, password: string, roles: list<string>}  $data
+     * Sin contraseña, la persona recibe una invitación para crear la suya.
+     *
+     * @param  array{first_name: string, last_name: string, email: string, phone?: ?string, password?: ?string, roles: list<string>}  $data
      */
     public function create(User $actor, array $data): User
     {
         return DB::transaction(function () use ($actor, $data) {
             $user = User::create([
                 'email' => strtolower($data['email']),
-                'password' => $data['password'],
+                'password' => $data['password'] ?? InvitationService::placeholderPassword(),
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'phone' => $data['phone'] ?? null,
@@ -38,7 +41,9 @@ class UserService
             $this->audit->record('users.created', $user, null, $this->snapshot($user));
             $this->roles->assignToUser($actor, $user, $data['roles']);
 
-            $this->notifier->notify($user, 'cuenta_nueva', ['correo' => $user->email], '/login');
+            filled($data['password'] ?? null)
+                ? $this->notifier->notify($user, 'cuenta_nueva', ['correo' => $user->email], '/login')
+                : $this->invitations->invite($user);
 
             return $user;
         });
@@ -154,7 +159,7 @@ class UserService
         }
 
         return DB::transaction(function () use ($user, $password) {
-            $user->update(['password' => $password, 'must_change_password' => true]);
+            $user->update(['password' => $password, 'must_change_password' => true, 'invited_at' => null]);
             $revoked = $user->tokens()->delete();
 
             // La contraseña no se guarda en la auditoría

@@ -29,6 +29,9 @@ return [
 
     'password_reset_minutes' => (int) env('AUTH_PASSWORD_RESET_MINUTES', 60),
 
+    // Días que vale el enlace de una invitación para crear la contraseña
+    'invitation_days' => (int) env('AUTH_INVITATION_DAYS', 7),
+
     /*
     |--------------------------------------------------------------------------
     | Bloqueo por intentos fallidos

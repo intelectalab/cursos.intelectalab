@@ -22,6 +22,8 @@ export interface UserRow {
   last_login_at: string | null;
   // Tiene activa la verificación en dos pasos
   two_factor_enabled?: boolean;
+  // Se le envió una invitación y todavía no crea su contraseña
+  invited_at?: string | null;
 }
 
 export interface Role {
@@ -103,7 +105,8 @@ export const identityApi = {
     return response.data as { data: UserRow[]; meta: PageMeta };
   },
 
-  async createUser(input: UserInput & { email: string; password: string; roles: string[] }) {
+  // Sin contraseña, la persona recibe una invitación por correo para crear la suya
+  async createUser(input: UserInput & { email: string; password?: string | null; roles: string[] }) {
     return (await api.post('/users', input)).data.data as UserRow;
   },
 
@@ -122,6 +125,11 @@ export const identityApi = {
   // Contraseña temporal: cierra sus sesiones y la obliga a elegir una propia al entrar
   async resetUserPassword(id: string, password: string) {
     return (await api.put(`/users/${id}/password`, { password })).data.data as { email: string; must_change_password: boolean; revoked: number };
+  },
+
+  // Reenvía la invitación para crear la contraseña (el enlace anterior deja de servir)
+  async resendInvitation(id: string) {
+    return (await api.post(`/users/${id}/invitation`)).data.data as { email: string; invited_at: string };
   },
 
   // Cierra las sesiones abiertas de la persona; devuelve cuántas eran

@@ -5,6 +5,7 @@ namespace App\Modules\B2b\Application;
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\B2b\Domain\Models\CorporateAccount;
 use App\Modules\B2b\Domain\Models\CorporateMember;
+use App\Modules\Identity\Application\InvitationService;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\Role;
 use App\Modules\Identity\Domain\Models\User;
@@ -22,6 +23,7 @@ class MemberService
     public function __construct(
         private readonly TenantNotifier $notifier,
         private readonly AuditLogger $audit,
+        private readonly InvitationService $invitations,
     ) {}
 
     /**
@@ -44,15 +46,10 @@ class MemberService
             if ($user) {
                 $this->assertLinkable($account, $user, $canLinkExisting);
             } else {
-                if (empty($data['password'])) {
-                    throw new ApiException(ErrorCode::ValidationError, 'Indica una contraseña inicial.', 422, [
-                        'password' => ['La contraseña inicial es obligatoria para una cuenta nueva.'],
-                    ]);
-                }
-
+                // Sin contraseña inicial, el trabajador recibe una invitación para crear la suya
                 $user = User::create([
                     'email' => $email,
-                    'password' => $data['password'],
+                    'password' => filled($data['password'] ?? null) ? $data['password'] : InvitationService::placeholderPassword(),
                     'first_name' => $data['first_name'],
                     'last_name' => $data['last_name'],
                     'status' => User::STATUS_ACTIVE,
@@ -60,7 +57,9 @@ class MemberService
 
                 $this->audit->record('users.created', $user, null, $user->only(['email', 'first_name', 'last_name', 'status']));
 
-                $this->notifier->notify($user, 'cuenta_empresa', ['correo' => $user->email], '/login');
+                filled($data['password'] ?? null)
+                    ? $this->notifier->notify($user, 'cuenta_empresa', ['correo' => $user->email], '/login')
+                    : $this->invitations->invite($user);
             }
 
             $role = Role::query()

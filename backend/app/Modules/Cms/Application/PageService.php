@@ -6,6 +6,7 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Cms\Domain\Models\Page;
 use App\Modules\Cms\Domain\PageContent;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Application\StaffNotifier;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\DB;
  */
 class PageService
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly StaffNotifier $staff,
+    ) {}
 
     /**
      * @param  array{title: string, slug: string, show_in_footer?: bool}  $data
@@ -143,6 +147,11 @@ class PageService
         ]);
 
         $this->audit->record('pages.review_requested', $page, null, ['slug' => $page->slug]);
+
+        $this->staff->notify('cms.publish', 'personal_pagina_por_revisar', [
+            'pagina' => $page->title,
+            'autor' => trim("{$actor->first_name} {$actor->last_name}"),
+        ], "/pages/{$page->id}", $actor->id);
 
         return $page;
     }

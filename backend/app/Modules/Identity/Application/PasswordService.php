@@ -86,7 +86,7 @@ class PasswordService
         DB::transaction(function () use ($reset, $password) {
             $user = $reset->user;
 
-            $user->update(['password' => $password, 'must_change_password' => false]);
+            $user->update(['password' => $password, 'must_change_password' => false, 'invited_at' => null]);
             $reset->update(['used_at' => now()]);
             // Quien recupera el acceso cierra todas las sesiones abiertas
             $user->tokens()->delete();

@@ -184,14 +184,14 @@ const MemberModal: React.FC<{
           <input className={INPUT_CLASS} type="email" required maxLength={150} {...bind('email')} />
         </Field>
         <Field
-          label="Contraseña inicial"
+          label="Contraseña inicial (opcional)"
           hint={
             staff
-              ? 'Mínimo 8 caracteres. Déjala vacía solo si el correo ya tiene una cuenta en la academia: se vinculará a esta empresa.'
-              : 'Mínimo 8 caracteres. Entrégasela a la persona; podrá cambiarla desde su cuenta.'
+              ? 'Opcional. Si la dejas vacía, le llega un correo para crear la suya; si el correo ya tiene una cuenta en la academia, se vincula a esta empresa.'
+              : 'Opcional. Si la dejas vacía, le llega un correo para crear la suya. Si la escribes, entrégasela a la persona.'
           }
         >
-          <input className={INPUT_CLASS} type="text" autoComplete="off" minLength={8} required={!staff} {...bind('password')} />
+          <input className={INPUT_CLASS} type="text" autoComplete="off" minLength={8} {...bind('password')} />
         </Field>
         {staff && (
           <label className="flex items-start gap-2.5 text-[13px] text-slate-700 cursor-pointer">

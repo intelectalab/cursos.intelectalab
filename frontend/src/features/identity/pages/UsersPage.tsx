@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileSpreadsheet, KeyRound, LogOut, Pencil, Plus, Search, ShieldOff, UserCheck, UserCog, UserX, Users, UsersRound } from 'lucide-react';
+import { FileSpreadsheet, KeyRound, LogOut, MailPlus, Pencil, Plus, Search, ShieldOff, UserCheck, UserCog, UserX, Users, UsersRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -30,6 +30,7 @@ import { ImportModal } from '../../../shared/ui/ImportModal';
 import { GroupsTab } from '../components/GroupsTab';
 import { ResetPasswordModal } from '../components/ResetPasswordModal';
 import { DOCUMENT_TYPES, identityApi, type DocumentType, type PageMeta, type Role, type UserRow } from '../api';
+import { AccessChoice, type AccessMode } from '../components/AccessChoice';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
 
 const STATUS_LABEL: Record<UserRow['status'], string> = { ACTIVE: 'Activo', INACTIVE: 'Inactivo' };
@@ -46,6 +47,7 @@ interface FormState {
   doc_type: DocumentType | '';
   doc_number: string;
   password: string;
+  access: AccessMode;
   status: UserRow['status'];
   roles: string[];
 }
@@ -58,6 +60,7 @@ const EMPTY_FORM: FormState = {
   doc_type: '',
   doc_number: '',
   password: '',
+  access: 'invite',
   status: 'ACTIVE',
   roles: [],
 };
@@ -115,6 +118,23 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
   };
   const [resetting, setResetting] = useState(false);
 
+  const [invitedAt, setInvitedAt] = useState<string | null>(null);
+  const resendInvitation = async () => {
+    if (!user) return;
+    setProcessing(true);
+    setError(null);
+    setSessionsNotice(null);
+    try {
+      const sent = await identityApi.resendInvitation(user.id);
+      setInvitedAt(sent.invited_at);
+      setSessionsNotice(`Invitación reenviada a ${sent.email}. El enlace anterior ya no sirve.`);
+    } catch (err) {
+      setError(apiErrorMessage(err, 'No se pudo reenviar la invitación.'));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const revokeSessions = async () => {
     if (!user) return;
     setProcessing(true);
@@ -159,7 +179,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
         const rolesChanged = [...form.roles].sort().join() !== [...user.role_ids].sort().join();
         if (rolesChanged) await identityApi.setUserRoles(user.id, form.roles);
       } else {
-        await identityApi.createUser({ ...base, email: form.email, password: form.password, roles: form.roles });
+        await identityApi.createUser({ ...base, email: form.email, password: form.access === 'password' ? form.password : null, roles: form.roles });
       }
       onSaved();
     } catch (err) {
@@ -243,20 +263,16 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
                 <option value="INACTIVE">Inactivo</option>
               </select>
             </Field>
-          ) : (
-            <Field label="Contraseña inicial" hint="Mínimo 8 caracteres.">
-              <input
-                className={INPUT_CLASS}
-                type="password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={form.password}
-                onChange={set('password')}
-              />
-            </Field>
-          )}
+          ) : null}
         </div>
+        {!user && (
+          <AccessChoice
+            mode={form.access}
+            password={form.password}
+            passwordHint="Mínimo 8 caracteres."
+            onChange={(change) => setForm((previous) => ({ ...previous, ...(change.mode ? { access: change.mode } : {}), ...(change.password !== undefined ? { password: change.password } : {}) }))}
+          />
+        )}
 
         <fieldset>
           <legend className="block text-[13px] font-medium text-slate-700 mb-1.5">Roles</legend>
@@ -280,6 +296,17 @@ const UserForm: React.FC<UserFormProps> = ({ user, roles, onClose, onSaved }) =>
           </div>
         </fieldset>
 
+        {user?.invited_at && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3 border border-amber-200 bg-amber-50/60 rounded-xl">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-slate-700">Invitación pendiente</p>
+              <p className="text-xs text-slate-500">Se la enviamos el {formatDate(invitedAt ?? user.invited_at)} y todavía no crea su contraseña. Reenvíala si venció o no le llegó.</p>
+            </div>
+            <Button size="sm" icon={<MailPlus className="w-4 h-4" />} onClick={resendInvitation} disabled={processing}>
+              Reenviar invitación
+            </Button>
+          </div>
+        )}
         {user && (
           <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3 border border-slate-200 rounded-xl">
             <div className="min-w-0">
@@ -561,9 +588,15 @@ export const UsersPage: React.FC = () => {
                     </div>
                   </Td>
                   <Td>
-                    <Badge tone={user.status === 'ACTIVE' ? 'success' : 'neutral'} dot>
-                      {STATUS_LABEL[user.status]}
-                    </Badge>
+                    {user.invited_at && user.status === 'ACTIVE' ? (
+                      <Badge tone="warning" dot>
+                        Invitación pendiente
+                      </Badge>
+                    ) : (
+                      <Badge tone={user.status === 'ACTIVE' ? 'success' : 'neutral'} dot>
+                        {STATUS_LABEL[user.status]}
+                      </Badge>
+                    )}
                   </Td>
                   <Td className="text-slate-500 whitespace-nowrap tnum">{formatDate(user.last_login_at)}</Td>
                   {canUpdate && (

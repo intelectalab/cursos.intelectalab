@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, Field, INPUT_CLASS, Modal } from '../../../shared/ui';
 import { DOCUMENT_TYPES, identityApi, type DocumentType } from '../api';
+import { AccessChoice, type AccessMode } from './AccessChoice';
 
 /**
  * Alta rápida de una persona con un rol base ya puesto (Alumno, Docente).
@@ -18,6 +19,7 @@ export const NewPersonModal: React.FC<{
   onCreated: () => void;
 }> = ({ roleCode, title, subtitle, submitLabel, passwordHint, onClose, onCreated }) => {
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', doc_type: 'DNI' as DocumentType, doc_number: '', password: '' });
+  const [access, setAccess] = useState<AccessMode>('invite');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +43,7 @@ export const NewPersonModal: React.FC<{
         phone: form.phone.trim() || null,
         doc_type: form.doc_number.trim() ? form.doc_type : null,
         doc_number: form.doc_number.trim() || null,
-        password: form.password,
+        password: access === 'password' ? form.password : null,
         roles: [role.id],
       });
       onCreated();
@@ -95,17 +97,15 @@ export const NewPersonModal: React.FC<{
         <Field label="Teléfono (opcional)">
           <input className={INPUT_CLASS} maxLength={30} value={form.phone} onChange={(event) => set('phone', event.target.value)} />
         </Field>
-        <Field label="Contraseña inicial" hint={passwordHint}>
-          <input
-            className={INPUT_CLASS}
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={form.password}
-            onChange={(event) => set('password', event.target.value)}
-          />
-        </Field>
+        <AccessChoice
+          mode={access}
+          password={form.password}
+          passwordHint={passwordHint}
+          onChange={(change) => {
+            if (change.mode) setAccess(change.mode);
+            if (change.password !== undefined) set('password', change.password);
+          }}
+        />
       </form>
     </Modal>
   );

@@ -316,6 +316,7 @@ return [
     ],
     'users' => [
         'password' => 'Contraseña, guardada como huella irreversible',
+        'invited_at' => 'Cuándo se le envió la invitación para crear su contraseña; vacío cuando ya la creó o no fue invitada',
         'first_name' => 'Nombres',
         'last_name' => 'Apellidos',
         'last_login_at' => 'Último inicio de sesión',

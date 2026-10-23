@@ -43,6 +43,7 @@ Route::middleware('tenant')->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->middleware('permission:users.update');
         Route::put('/users/{user}/roles', [UserController::class, 'updateRoles'])->middleware('permission:users.update');
         Route::delete('/users/{user}/sessions', [UserController::class, 'revokeSessions'])->middleware('permission:users.update');
+        Route::post('/users/{user}/invitation', [UserController::class, 'invite'])->middleware(['permission:users.update', 'throttle:20,1']);
         Route::put('/users/{user}/password', [UserController::class, 'resetPassword'])->middleware(['permission:users.update', 'throttle:20,1']);
         Route::delete('/users/{user}/two-factor', [TwoFactorController::class, 'reset'])->whereUuid('user')->middleware('permission:users.update');
 

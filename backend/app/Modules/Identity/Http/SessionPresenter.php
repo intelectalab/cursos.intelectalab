@@ -51,6 +51,8 @@ class SessionPresenter
             // Entró con una contraseña temporal: hasta cambiarla no puede usar nada más
             'must_change_password' => (bool) $user->must_change_password,
             'two_factor_enabled' => $user->two_factor_confirmed_at !== null,
+            // Se le envió una invitación y todavía no crea su contraseña
+            'invited_at' => $user->invited_at?->toIso8601String(),
         ];
     }
 }

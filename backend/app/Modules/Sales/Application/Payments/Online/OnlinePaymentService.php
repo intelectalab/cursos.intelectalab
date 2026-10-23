@@ -12,6 +12,7 @@ use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Sales\Domain\Models\PaymentAttempt;
+use App\Modules\Tenancy\Application\StaffNotifier;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
@@ -42,6 +43,7 @@ class OnlinePaymentService
         private readonly AuditLogger $audit,
         private readonly ExchangeRateService $rates,
         private readonly GatewayErrorLog $errors,
+        private readonly StaffNotifier $staff,
     ) {}
 
     /**
@@ -552,6 +554,7 @@ class OnlinePaymentService
                     $problem = 'La pasarela informa que este pago se devolvió desde su panel, pero la orden sigue pagada: reembólsala también aquí.';
                     $attempt->update(['status' => PaymentAttempt::STATUS_NEEDS_REVIEW, 'external_payment_id' => $payment->id, 'review_reason' => $problem]);
                     $this->audit->record('payments.online_needs_review', $attempt, null, ['order' => $order->number, 'gateway' => $code, 'payment' => $payment->id, 'reason' => $problem]);
+                    $this->staff->notify('payments.confirm', 'personal_cobro_en_revision', ['orden' => 'N.º '.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT), 'motivo' => $problem], '/billing');
                 }
 
                 return $order;
@@ -573,6 +576,7 @@ class OnlinePaymentService
                 if (! $this->underReview($attempt, $payment)) {
                     $attempt->update(['status' => PaymentAttempt::STATUS_NEEDS_REVIEW, 'external_payment_id' => $payment->id, 'review_reason' => $problem]);
                     $this->audit->record('payments.online_needs_review', $attempt, null, ['order' => $order->number, 'gateway' => $code, 'payment' => $payment->id, 'reason' => $problem]);
+                    $this->staff->notify('payments.confirm', 'personal_cobro_en_revision', ['orden' => 'N.º '.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT), 'motivo' => $problem], '/billing');
                 }
 
                 return $order;

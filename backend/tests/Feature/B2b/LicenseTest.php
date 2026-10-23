@@ -7,6 +7,7 @@ use App\Modules\B2b\Domain\Models\License;
 use App\Modules\Identity\Application\SyncAccessCatalog;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\Role;
+use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -333,7 +334,9 @@ class LicenseTest extends TestCase
 
         $add($manager, '/company/members', ['email' => 'tomas@andes.pe'])->assertStatus(422);
         $add($manager, '/company/members', ['email' => 'ana@acme.com'])->assertStatus(422);
-        $add($manager, '/company/members', ['email' => 'nuevo@andes.pe', 'password' => null])->assertStatus(422);
+        // Sin contraseña inicial, el trabajador nuevo recibe una invitación para crear la suya
+        $add($manager, '/company/members', ['email' => 'nuevo@andes.pe', 'password' => null])->assertCreated();
+        $this->assertNotNull(app(TenantContext::class)->runForTenant($this->tenant->id, fn () => User::query()->where('email', 'nuevo@andes.pe')->value('invited_at')));
 
         // El personal sí vincula una cuenta que ya existía, pero no la de otra empresa
         $members = $add($this->admin, "/corporate-accounts/{$company}/members", ['email' => 'ana@acme.com', 'password' => null])->assertCreated()->json('data.members');

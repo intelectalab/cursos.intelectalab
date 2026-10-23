@@ -9,6 +9,7 @@ use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Support\Domain\Models\Ticket;
 use App\Modules\Support\Domain\Models\TicketMessage;
+use App\Modules\Tenancy\Application\StaffNotifier;
 use App\Modules\Tenancy\Application\TenantNotifier;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
@@ -28,6 +29,7 @@ class TicketService
 
     public function __construct(
         private readonly TenantNotifier $notifier,
+        private readonly StaffNotifier $staff,
         private readonly FileStorage $storage,
         private readonly TenantContext $context,
         private readonly AuditLogger $audit,
@@ -81,6 +83,9 @@ class TicketService
                 'category' => $ticket->category,
             ]);
 
+            // Aviso a quienes atienden soporte
+            $this->staff->notify(self::AGENT_PERMISSIONS, 'personal_consulta_nueva', $this->noticeValues($ticket, $requester), '/support', $requester->id);
+
             return $ticket;
         });
     }
@@ -111,8 +116,28 @@ class TicketService
                 $this->audit->record('tickets.reopened', $ticket, ['status' => Ticket::STATUS_RESOLVED], ['status' => $ticket->status, 'number' => $ticket->number]);
             }
 
+            // A quien la tiene asignada; si nadie, a todo el personal de soporte
+            $ticket->loadMissing('assignee');
+            $ticket->assignee?->isActive()
+                ? $this->notifier->notify($ticket->assignee, 'personal_consulta_mensaje', $this->noticeValues($ticket, $author), '/support')
+                : $this->staff->notify(self::AGENT_PERMISSIONS, 'personal_consulta_mensaje', $this->noticeValues($ticket, $author), '/support', $author->id);
+
             return $ticket;
         });
+    }
+
+    /**
+     * Datos de una consulta para los avisos al personal.
+     *
+     * @return array<string, string>
+     */
+    private function noticeValues(Ticket $ticket, User $person): array
+    {
+        return [
+            'numero' => '#'.str_pad((string) $ticket->number, 4, '0', STR_PAD_LEFT),
+            'asunto' => $ticket->subject,
+            'persona' => trim("{$person->first_name} {$person->last_name}"),
+        ];
     }
 
     /**

@@ -3,11 +3,14 @@
 namespace App\Modules\Identity\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Identity\Application\InvitationService;
 use App\Modules\Identity\Application\RoleService;
 use App\Modules\Identity\Application\UserService;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Identity\Http\SessionPresenter;
+use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\ErrorCode;
 use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -90,7 +93,8 @@ class UserController extends Controller
             ],
             'phone' => ['nullable', 'string', 'max:30'],
             ...$this->documentRules($request, $context),
-            'password' => ['required', 'string', 'min:8'],
+            // Vacía = se le envía una invitación para crear la suya
+            'password' => ['nullable', 'string', 'min:8'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => [
                 'uuid', 'distinct',
@@ -159,6 +163,20 @@ class UserController extends Controller
             'must_change_password' => true,
             'revoked' => $users->resetPassword($request->user(), $user, $data['password']),
         ]);
+    }
+
+    /**
+     * Reenvía la invitación para crear la contraseña (venció o no le llegó).
+     */
+    public function invite(User $user, InvitationService $invitations): JsonResponse
+    {
+        if ($user->invited_at === null) {
+            throw new ApiException(ErrorCode::ValidationError, 'Esta persona ya creó su contraseña. Si no puede entrar, ponle una contraseña temporal.', 422);
+        }
+
+        $invitations->invite($user);
+
+        return ApiResponse::success(['email' => $user->email, 'invited_at' => $user->invited_at->toIso8601String()]);
     }
 
     /**
