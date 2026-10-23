@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Save, Send, Server } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
+import { useAuth } from '../../auth/AuthContext';
 import { Alert, Button, Card, CardHeader, ErrorState, Field, INPUT_CLASS, LoadingState } from '../../../shared/ui';
 import { mailSettingsApi, type MailMode, type MailSettings, type MailSettingsForm } from '../api';
 
@@ -46,6 +47,9 @@ export const MailSenderCard: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [busy, setBusy] = useState<'save' | 'test' | null>(null);
   const [result, setResult] = useState<{ tone: 'success' | 'danger' | 'info'; text: string } | null>(null);
+  const { user } = useAuth();
+  // A dónde va la prueba: por defecto, el correo con el que entraste
+  const [testTo, setTestTo] = useState(user?.email ?? '');
 
   const load = useCallback(async () => {
     setState('loading');
@@ -93,7 +97,7 @@ export const MailSenderCard: React.FC = () => {
     setBusy('test');
     setResult(null);
     try {
-      const sent = await mailSettingsApi.test(form);
+      const sent = await mailSettingsApi.test(form, testTo);
       setResult(
         sent.delivered
           ? { tone: 'success', text: `Enviamos un correo de prueba a ${sent.sent_to}. Revisa tu bandeja (y la de spam). Si llegó, guarda los cambios.` }
@@ -184,9 +188,14 @@ export const MailSenderCard: React.FC = () => {
         {!own && !settings.delivering && <Alert tone="info">Por ahora la plataforma deja los correos en su registro interno: empezarán a salir cuando IntelectaLab active su servicio de correo.</Alert>}
         {result && <Alert tone={result.tone}>{result.text}</Alert>}
 
-        <div className="flex flex-wrap justify-end gap-2.5">
+        <div className="flex flex-wrap items-end justify-end gap-2.5">
+          <div className="w-full sm:w-72">
+            <Field label="Enviar la prueba a">
+              <input type="email" className={INPUT_CLASS} placeholder="tucorreo@gmail.com" value={testTo} onChange={(event) => setTestTo(event.target.value)} />
+            </Field>
+          </div>
           <Button icon={<Send className="w-4 h-4" />} processing={busy === 'test'} disabled={busy !== null} onClick={test}>
-            Enviarme una prueba
+            Enviar prueba
           </Button>
           <Button variant="primary" icon={<Save className="w-4 h-4" />} processing={busy === 'save'} disabled={busy !== null} onClick={save}>
             Guardar

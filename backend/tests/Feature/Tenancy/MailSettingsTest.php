@@ -124,6 +124,19 @@ class MailSettingsTest extends TestCase
             ->assertJson(fn ($json) => $json->where('data.last_error', fn ($error) => filled($error))->etc());
     }
 
+    public function test_the_test_mail_goes_to_the_chosen_address(): void
+    {
+        Mail::fake();
+
+        // Las cuentas de prueba no tienen buzón: la prueba se manda a otro correo
+        $this->withToken($this->admin)->postJson($this->api('/settings/mail/test'), ['mode' => 'PLATFORM', 'test_to' => 'dueno@correo.com'])
+            ->assertOk()
+            ->assertJsonPath('data.sent_to', 'dueno@correo.com');
+        Mail::assertSent(TenantNoticeMail::class, fn (TenantNoticeMail $mail) => $mail->hasTo('dueno@correo.com'));
+
+        $this->withToken($this->admin)->postJson($this->api('/settings/mail/test'), ['mode' => 'PLATFORM', 'test_to' => 'no-es-correo'])->assertStatus(422);
+    }
+
     public function test_the_own_server_needs_its_data_and_only_admins_change_it(): void
     {
         $this->withToken($this->admin)->putJson($this->api('/settings/mail'), ['mode' => 'OWN'])

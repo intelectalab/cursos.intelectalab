@@ -114,7 +114,7 @@ export const mailSettingsApi = {
     return (await api.put('/settings/mail', mailPayload(form))).data.data as MailSettings;
   },
   // Prueba con lo escrito en el formulario, sin guardarlo
-  async test(form: MailSettingsForm) {
-    return (await api.post('/settings/mail/test', mailPayload(form))).data.data as { sent_to: string; delivered: boolean };
+  async test(form: MailSettingsForm, testTo: string) {
+    return (await api.post('/settings/mail/test', { ...mailPayload(form), test_to: testTo.trim() || null })).data.data as { sent_to: string; delivered: boolean };
   },
 };

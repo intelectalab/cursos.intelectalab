@@ -35,7 +35,8 @@ class MailSettingsController extends Controller
     public function test(Request $request): JsonResponse
     {
         $tenant = $request->attributes->get('tenant');
-        $to = $request->user()->email;
+        // Por defecto a quien prueba; se puede elegir otro buzón (las cuentas de prueba no reciben correo)
+        $to = $request->validate(['test_to' => ['nullable', 'email', 'max:190']], [], ['test_to' => 'correo para la prueba'])['test_to'] ?? $request->user()->email;
 
         $mail = $this->notifier->mail($tenant, $request->user()->first_name, [
             'subject' => 'Prueba de correo',
