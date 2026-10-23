@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   Archive,
   ArchiveRestore,
@@ -362,7 +362,9 @@ export const CourseEditorPage: React.FC = () => {
   const [options, setOptions] = useState<CourseOptions | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
-  const [tab, setTab] = useState<TabId>('content');
+  // ?tab=tracking abre directo en Seguimiento (desde el aviso de tareas por calificar)
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<TabId>(() => (params.get('tab') === 'tracking' ? 'tracking' : 'content'));
   const [dialog, setDialog] = useState<'publish' | 'archive' | 'restore' | null>(null);
   const [attempt, setAttempt] = useState(0);
 

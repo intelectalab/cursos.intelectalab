@@ -345,11 +345,18 @@ class ActivityDeliveryTest extends TestCase
             ->assertJsonPath('data.0.body', 'Versión corregida.')
             ->json('data.0.id');
 
+        // La lista de cursos dice en cuál hay tareas por calificar
+        $this->withToken($this->admin)->getJson($this->api('/courses'))
+            ->assertJsonPath('meta.to_grade.0.id', $this->course)
+            ->assertJsonPath('meta.to_grade.0.count', 1)
+            ->assertJsonPath('data.0.to_grade', 1);
+
         $this->withToken($this->admin)->get($this->api("/courses/{$this->course}/submissions/{$submission}/download"))->assertOk();
         $this->withToken($this->admin)->postJson($this->api("/courses/{$this->course}/submissions/{$submission}/grade"), ['grade_percent' => 120])->assertStatus(422);
         $this->withToken($this->admin)->postJson($this->api("/courses/{$this->course}/submissions/{$submission}/grade"), [
             'grade_percent' => 85, 'feedback' => 'Buen trabajo; revisa los totales.',
         ])->assertOk()->assertJsonPath('data.status', 'GRADED');
+        $this->withToken($this->admin)->getJson($this->api('/courses'))->assertJsonCount(0, 'meta.to_grade');
 
         $this->withToken($this->token)->getJson($this->me("/activities/{$this->task}"))
             ->assertOk()

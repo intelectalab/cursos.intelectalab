@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Archive, BookOpen, Clock, FileStack, GraduationCap, Layers, PencilRuler, Plus, Rocket, Search } from 'lucide-react';
+import { Archive, BookOpen, ClipboardCheck, Clock, FileStack, GraduationCap, Layers, PencilRuler, Plus, Rocket, Search } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -92,6 +92,11 @@ const CourseCard: React.FC<{ course: CourseSummary }> = ({ course }) => (
           {STATUS_LABEL[course.status]}
         </Badge>
         {course.pending_changes && <Badge tone="info">Cambios sin publicar</Badge>}
+        {(course.to_grade ?? 0) > 0 && (
+          <Badge tone="warning">
+            {course.to_grade} por calificar
+          </Badge>
+        )}
       </div>
     </div>
 
@@ -151,6 +156,7 @@ export const CoursesPage: React.FC = () => {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [creating, setCreating] = useState(false);
+  const [toGrade, setToGrade] = useState<{ id: string; title: string; count: number }[]>([]);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -163,6 +169,7 @@ export const CoursesPage: React.FC = () => {
       });
       setRows(result.data);
       setMeta(result.meta);
+      setToGrade(result.toGrade);
       setState('ready');
     } catch (err) {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
@@ -209,6 +216,29 @@ export const CoursesPage: React.FC = () => {
           )
         }
       />
+
+      {toGrade.length > 0 && (
+        <section aria-label="Tareas por calificar" className="mb-5 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3.5">
+          <p className="flex items-center gap-2 text-[13px] font-semibold text-amber-900">
+            <ClipboardCheck className="w-4 h-4" />
+            {toGrade.reduce((sum, item) => sum + item.count, 0) === 1 ? 'Hay 1 tarea por calificar' : `Hay ${toGrade.reduce((sum, item) => sum + item.count, 0)} tareas por calificar`}
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {toGrade.map((item) => (
+              <li key={item.id}>
+                <Link
+                  to={`/courses/${item.id}?tab=tracking`}
+                  className="inline-flex items-center gap-2 h-8 px-3 rounded-lg bg-white border border-amber-200 text-[13px] font-medium text-slate-800 hover:border-amber-400 hover:text-brand-700"
+                >
+                  {item.title}
+                  <span className="min-w-5 h-5 px-1.5 rounded-full bg-amber-400 text-[11px] font-bold leading-5 text-center text-amber-950 tnum">{item.count}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-amber-800">Toca un curso: se abre en «Seguimiento», con las entregas por revisar arriba.</p>
+        </section>
+      )}
 
       <FilterCards
         cards={cards}

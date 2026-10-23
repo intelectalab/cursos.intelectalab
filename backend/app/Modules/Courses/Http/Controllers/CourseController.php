@@ -3,6 +3,7 @@
 namespace App\Modules\Courses\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Academic\Domain\Models\TaskSubmission;
 use App\Modules\Courses\Application\CourseAccess;
 use App\Modules\Courses\Application\CourseService;
 use App\Modules\Courses\Domain\Models\Course;
@@ -44,13 +45,46 @@ class CourseController extends Controller
         // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
         $counts = StateCounts::of($base, Course::STATUSES, fn ($query, string $status) => $query->where('status', $status));
 
+        $toGrade = $this->toGrade($request->user());
+
         $courses = $base
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->orderByDesc('updated_at')
             ->orderBy('id')
             ->paginate($filters['per_page'] ?? 24);
 
-        return ApiResponse::paginated($courses, fn (Course $course) => CoursePresenter::summary($course), ['counts' => $counts]);
+        return ApiResponse::paginated(
+            $courses,
+            fn (Course $course) => CoursePresenter::summary($course) + ['to_grade' => $toGrade[$course->id]['count'] ?? 0],
+            // Los cursos con tareas por calificar, sin importar los filtros: así se sabe a cuál entrar
+            ['counts' => $counts, 'to_grade' => array_values($toGrade)],
+        );
+    }
+
+    /**
+     * Tareas entregadas y sin nota, por curso, de los cursos que la persona puede revisar.
+     *
+     * @return array<string, array{id: string, title: string, count: int}>
+     */
+    private function toGrade(User $user): array
+    {
+        if (! $user->hasPermission('submissions.review') && ! $user->hasPermission('submissions.assigned.review')) {
+            return [];
+        }
+
+        $counts = TaskSubmission::query()
+            ->where('status', TaskSubmission::STATUS_SUBMITTED)
+            ->whereIn('course_id', $this->access->scope(Course::query(), $user)->select('id'))
+            ->groupBy('course_id')
+            ->selectRaw('course_id, count(*) as total')
+            ->pluck('total', 'course_id');
+
+        return Course::query()
+            ->whereIn('id', $counts->keys())
+            ->orderBy('title')
+            ->get(['id', 'title'])
+            ->mapWithKeys(fn (Course $course) => [$course->id => ['id' => $course->id, 'title' => $course->title, 'count' => (int) $counts[$course->id]]])
+            ->all();
     }
 
     /**

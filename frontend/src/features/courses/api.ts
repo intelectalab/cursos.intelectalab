@@ -41,6 +41,8 @@ export interface Teacher {
 }
 
 export interface CourseSummary {
+  // Tareas entregadas y sin nota (solo para quien revisa)
+  to_grade?: number;
   id: string;
   title: string;
   summary: string | null;
@@ -175,7 +177,12 @@ function resourceBody(input: Partial<ResourceInput>): FormData {
 export const coursesApi = {
   async list(params: { search?: string; status?: string; category?: string; page?: number }) {
     const response = await api.get('/courses', { params });
-    return { data: response.data.data as CourseSummary[], meta: response.data.meta as PageMeta };
+    return {
+      data: response.data.data as CourseSummary[],
+      meta: response.data.meta as PageMeta,
+      // Cursos con tareas entregadas y sin nota (sin importar los filtros)
+      toGrade: (response.data.meta.to_grade ?? []) as { id: string; title: string; count: number }[],
+    };
   },
   async options() {
     return (await api.get('/courses/options')).data.data as CourseOptions;
