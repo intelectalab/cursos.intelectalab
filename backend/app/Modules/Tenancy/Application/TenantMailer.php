@@ -144,7 +144,8 @@ class TenantMailer
         if ($setting?->mode === TenantMailSetting::MODE_OWN && $this->complete($setting)) {
             try {
                 $this->sendWith($setting, $tenant, $to, clone $mail);
-                $setting->forceFill(['last_sent_at' => now()])->save();
+                // Un envío bueno deja atrás el error de un corte anterior
+                $setting->forceFill(['last_sent_at' => now(), 'last_error' => null, 'last_error_at' => null])->save();
 
                 return;
             } catch (Throwable $error) {

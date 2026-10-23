@@ -139,7 +139,8 @@ class PlatformMailer
         if (($stored['mode'] ?? null) === self::MODE_OWN && self::complete($stored)) {
             try {
                 $this->sendOwn($stored, $to, clone $mail, $fromName, $replyTo);
-                $this->store(['last_sent_at' => now()->toIso8601String()] + $stored);
+                // Un envío bueno deja atrás el error de un corte anterior
+                $this->store(['last_sent_at' => now()->toIso8601String(), 'last_error' => null, 'last_error_at' => null] + $stored);
 
                 return;
             } catch (Throwable $error) {
