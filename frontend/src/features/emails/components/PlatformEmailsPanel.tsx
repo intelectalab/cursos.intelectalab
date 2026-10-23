@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Building2, ShieldCheck } from 'lucide-react';
 import { EmailTemplatesEditor } from './EmailTemplatesEditor';
+import { MailSenderCard } from './MailSenderCard';
 
 const VIEWS = [
   { key: 'academy', label: 'Correos de las academias (texto base)', icon: Building2 },
@@ -11,7 +12,7 @@ const VIEWS = [
  * Consola → Correos: el texto base que usan las academias que no escribieron
  * el suyo, y los avisos propios de la plataforma (pagos de plan).
  */
-export const PlatformEmailsPanel: React.FC = () => {
+export const PlatformEmailsPanel: React.FC<{ adminEmail?: string }> = ({ adminEmail = '' }) => {
   const [view, setView] = useState<(typeof VIEWS)[number]['key']>('academy');
 
   return (
@@ -20,6 +21,7 @@ export const PlatformEmailsPanel: React.FC = () => {
         <h1 className="text-lg font-bold tracking-tight text-slate-900">Correos</h1>
         <p className="text-[13px] text-slate-500">Los avisos automáticos del sistema: cambia sus textos, apágalos o pruébalos.</p>
       </div>
+      <MailSenderCard target="platform" defaultTestTo={adminEmail} />
       <div role="tablist" aria-label="Qué correos" className="inline-flex flex-wrap gap-1 p-1 mb-5 rounded-xl bg-white border border-slate-200 shadow-xs">
         {VIEWS.map(({ key, label, icon: Icon }) => (
           <button

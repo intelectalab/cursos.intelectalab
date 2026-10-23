@@ -96,6 +96,8 @@ export interface MailSettings {
   last_error: string | null;
   last_error_at: string | null;
   defaults: { from_name: string; reply_to: string | null; platform_address: string };
+  // Solo en la consola: el correo configurado en el servidor
+  server?: { delivering: boolean; host: string | null; from_address: string };
   // false = la plataforma todavía deja los correos en su registro
   delivering: boolean;
 }
@@ -106,15 +108,18 @@ const mailPayload = (form: MailSettingsForm) => ({
   password: form.password || null,
 });
 
-export const mailSettingsApi = {
+// `/settings/mail` = el de la academia; `/platform/mail` = el de la plataforma (consola)
+export const mailSenderApi = (base: '/settings/mail' | '/platform/mail') => ({
   async get() {
-    return (await api.get('/settings/mail')).data.data as MailSettings;
+    return (await api.get(base)).data.data as MailSettings;
   },
   async save(form: MailSettingsForm) {
-    return (await api.put('/settings/mail', mailPayload(form))).data.data as MailSettings;
+    return (await api.put(base, mailPayload(form))).data.data as MailSettings;
   },
   // Prueba con lo escrito en el formulario, sin guardarlo
   async test(form: MailSettingsForm, testTo: string) {
-    return (await api.post('/settings/mail/test', { ...mailPayload(form), test_to: testTo.trim() || null })).data.data as { sent_to: string; delivered: boolean };
+    return (await api.post(`${base}/test`, { ...mailPayload(form), test_to: testTo.trim() || null })).data.data as { sent_to: string; delivered: boolean };
   },
-};
+});
+
+export const mailSettingsApi = mailSenderApi('/settings/mail');

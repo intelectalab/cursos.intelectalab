@@ -29,7 +29,7 @@ class MailSettingsController extends Controller
 
     public function update(Request $request): JsonResponse
     {
-        return ApiResponse::success($this->mailer->save($request->attributes->get('tenant'), $this->validated($request)));
+        return ApiResponse::success($this->mailer->save($request->attributes->get('tenant'), self::validated($request)));
     }
 
     public function test(Request $request): JsonResponse
@@ -44,15 +44,17 @@ class MailSettingsController extends Controller
             'button' => null,
         ], null);
 
-        $this->mailer->test($tenant, $this->validated($request), $mail, $to);
+        $this->mailer->test($tenant, self::validated($request), $mail, $to);
 
         return ApiResponse::success(['sent_to' => $to, 'delivered' => ! in_array(config('mail.default'), ['log', 'array'], true) || $request->input('mode') === TenantMailSetting::MODE_OWN]);
     }
 
     /**
+     * Datos del correo de envío; también los usa la consola para el de la plataforma.
+     *
      * @return array<string, mixed>
      */
-    private function validated(Request $request): array
+    public static function validated(Request $request): array
     {
         $own = $request->input('mode') === TenantMailSetting::MODE_OWN;
 

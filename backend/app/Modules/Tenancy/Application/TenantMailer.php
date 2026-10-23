@@ -3,6 +3,7 @@
 namespace App\Modules\Tenancy\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
+use App\Modules\Platform\Application\PlatformMailer;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Modules\Tenancy\Domain\Models\TenantMailSetting;
 use App\Modules\Tenancy\Jobs\SendTenantMail;
@@ -32,6 +33,7 @@ class TenantMailer
     public function __construct(
         private readonly TenantSettingsService $settings,
         private readonly AuditLogger $audit,
+        private readonly PlatformMailer $platform,
     ) {}
 
     /**
@@ -61,10 +63,10 @@ class TenantMailer
             'defaults' => [
                 'from_name' => $tenant->name,
                 'reply_to' => $this->settings->contactEmail(),
-                'platform_address' => config('mail.from.address'),
+                'platform_address' => $this->platform->fromAddress(),
             ],
-            // Mientras la plataforma no tenga proveedor, los correos quedan en el registro del servidor
-            'delivering' => ! in_array(config('mail.default'), ['log', 'array'], true),
+            // Mientras la plataforma no tenga correo de envío, sus correos no salen
+            'delivering' => $this->platform->delivers(),
         ];
     }
 
@@ -170,24 +172,20 @@ class TenantMailer
                 $mail->replyTo($replyTo, $name);
             }
 
-            Mail::build($this->transport($own->smtp ?? []))->to($to)->send($mail);
+            Mail::build(self::transport($own->smtp ?? []))->to($to)->send($mail);
 
             return;
         }
 
-        $mail->from(config('mail.from.address'), $name);
-        if ($replyTo) {
-            $mail->replyTo($replyTo, $name);
-        }
-
-        Mail::to($to)->send($mail);
+        // Por el correo de la plataforma, con el nombre de la academia
+        $this->platform->send($to, $mail, $name, $replyTo);
     }
 
     /**
      * @param  array<string, mixed>  $smtp
      * @return array<string, mixed>
      */
-    private function transport(array $smtp): array
+    public static function transport(array $smtp): array
     {
         return [
             'transport' => 'smtp',
@@ -253,7 +251,7 @@ class TenantMailer
     /**
      * El motivo del fallo en palabras simples, con el detalle técnico al final para el proveedor.
      */
-    private static function reason(Throwable $error): string
+    public static function reason(Throwable $error): string
     {
         $detail = mb_substr(trim(preg_replace('/\s+/', ' ', $error->getMessage())), 0, 300);
 

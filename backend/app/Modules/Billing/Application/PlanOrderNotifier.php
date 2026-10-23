@@ -6,10 +6,10 @@ use App\Modules\Billing\Domain\Models\PlanOrder;
 use App\Modules\Billing\Mail\PlanOrderMail;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Platform\Application\PlatformMailer;
 use App\Modules\Platform\Domain\Models\PlatformAdmin;
 use App\Modules\Tenancy\Application\EmailTemplates;
 use App\Shared\Tenancy\TenantContext;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
@@ -23,6 +23,7 @@ class PlanOrderNotifier
     public function __construct(
         private readonly TenantContext $context,
         private readonly EmailTemplates $templates,
+        private readonly PlatformMailer $mailer,
     ) {}
 
     public function orderRequested(PlanOrder $order): void
@@ -128,7 +129,7 @@ class PlanOrderNotifier
     {
         foreach (array_unique($emails) as $email) {
             try {
-                Mail::to($email)->send(new PlanOrderMail($content['subject'], $content['lines']));
+                $this->mailer->send($email, new PlanOrderMail($content['subject'], $content['lines']));
             } catch (Throwable $e) {
                 report($e);
             }

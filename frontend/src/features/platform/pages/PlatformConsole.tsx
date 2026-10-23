@@ -194,7 +194,7 @@ export const PlatformConsole: React.FC = () => {
             </NavLink>
           ))}
         </nav>
-        {onPanel ? <DashboardPanel /> : onEmails ? <PlatformEmailsPanel /> : onBackups ? <BackupsPanel /> : onPayments ? <PaymentsPanel /> : onPlans ? <PlansPanel /> : tenantId ? <TenantProfile key={tenantId} tenantId={tenantId} /> : <TenantsPanel />}
+        {onPanel ? <DashboardPanel /> : onEmails ? <PlatformEmailsPanel adminEmail={session.admin.email} /> : onBackups ? <BackupsPanel /> : onPayments ? <PaymentsPanel /> : onPlans ? <PlansPanel /> : tenantId ? <TenantProfile key={tenantId} tenantId={tenantId} /> : <TenantsPanel />}
       </main>
     </div>
   );

@@ -2,9 +2,9 @@
 
 namespace App\Modules\Tenancy\Console;
 
+use App\Modules\Platform\Application\PlatformMailer;
 use App\Modules\Tenancy\Mail\TenantNoticeMail;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
@@ -17,7 +17,7 @@ class SendTestMailCommand extends Command
 
     protected $description = 'Envía un correo de prueba para comprobar la configuración del correo';
 
-    public function handle(): int
+    public function handle(PlatformMailer $mailer): int
     {
         $email = (string) $this->argument('email');
 
@@ -27,12 +27,15 @@ class SendTestMailCommand extends Command
             return self::FAILURE;
         }
 
-        $this->line('Servidor: '.config('mail.default').' · '.config('mail.mailers.smtp.host').':'.config('mail.mailers.smtp.port'));
-        $this->line('Remitente: '.config('mail.from.address'));
+        $settings = $mailer->current();
+        $this->line($settings['mode'] === PlatformMailer::MODE_OWN
+            ? "Servidor: el de la consola ({$settings['host']}:{$settings['port']}); si falla, el del servidor"
+            : 'Servidor: el del servidor ('.config('mail.default').' · '.config('mail.mailers.smtp.host').':'.config('mail.mailers.smtp.port').')');
+        $this->line('Remitente: '.$mailer->fromAddress());
 
         try {
             // Directo, sin pasar por la cola: así el error del servidor de correo se ve aquí mismo
-            Mail::to($email)->send(new TenantNoticeMail(
+            $mailer->send($email, new TenantNoticeMail(
                 organization: (string) config('mail.from.name'),
                 logoUrl: null,
                 title: 'Prueba de correo',
@@ -45,7 +48,7 @@ class SendTestMailCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info(config('mail.default') === 'log' ? 'El correo está en modo registro: el mensaje quedó en storage/logs, no se envió a nadie.' : "Enviado a {$email}. Revisa también la carpeta de spam.");
+        $this->info(! $mailer->delivers() ? 'La plataforma no tiene correo de envío: el mensaje no se envió a nadie.' : "Enviado a {$email}. Revisa también la carpeta de spam.");
 
         return self::SUCCESS;
     }

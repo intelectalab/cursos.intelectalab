@@ -4,6 +4,7 @@ namespace App\Modules\Tenancy\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Billing\Mail\PlanOrderMail;
+use App\Modules\Platform\Application\PlatformMailer;
 use App\Modules\Tenancy\Domain\EmailCatalog;
 use App\Modules\Tenancy\Domain\Models\EmailTemplate;
 use App\Modules\Tenancy\Domain\Models\PlatformEmailTemplate;
@@ -12,7 +13,6 @@ use App\Modules\Tenancy\Mail\TenantNoticeMail;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ErrorCode;
 use Illuminate\Mail\Mailable;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Pantalla «Correos»: lo que ve y cambia una academia (sus correos) o la
@@ -25,6 +25,7 @@ class EmailTemplateEditor
         private readonly TenantNotifier $notifier,
         private readonly AuditLogger $audit,
         private readonly TenantMailer $mailer,
+        private readonly PlatformMailer $platformMailer,
     ) {}
 
     /**
@@ -180,9 +181,9 @@ class EmailTemplateEditor
     public function sendTest(Mailable $mail, string $to, ?Tenant $tenant = null): array
     {
         // La prueba de una academia sale con su correo de envío, como saldrá el aviso de verdad
-        $tenant ? $this->mailer->deliverNow($tenant, $to, $mail) : Mail::to($to)->send($mail);
+        $tenant ? $this->mailer->deliverNow($tenant, $to, $mail) : $this->platformMailer->send($to, $mail);
 
-        return ['sent_to' => $to, 'delivered' => ! in_array(config('mail.default'), ['log', 'array'], true)];
+        return ['sent_to' => $to, 'delivered' => $this->platformMailer->delivers()];
     }
 
     /**
