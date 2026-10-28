@@ -35,6 +35,17 @@ use Illuminate\Support\Facades\DB;
  */
 class OrderService
 {
+    /** Venta asistida: ya pagó */
+    public const SALE_PAID = 'PAID';
+
+    /** Venta asistida: pagará después, hasta la fecha que elige el personal */
+    public const SALE_LATER = 'LATER';
+
+    /** Venta asistida: en cuotas */
+    public const SALE_INSTALLMENTS = 'INSTALLMENTS';
+
+    public const SALE_MODES = [self::SALE_PAID, self::SALE_LATER, self::SALE_INSTALLMENTS];
+
     public function __construct(
         private readonly TenantNotifier $notifier,
         private readonly EnrollmentService $enrollments,
@@ -56,19 +67,57 @@ class OrderService
      */
     public function place(User $customer, Course $course, ?string $expectedTotal = null, ?string $couponCode = null): Order
     {
-        if (! $course->isForSale()) {
-            throw new ApiException(ErrorCode::CourseNotForSale, 'Este curso no está en venta.', 409);
-        }
+        $this->assertSellable($course, $customer);
 
-        if (! $customer->hasPermission(EnrollmentService::STUDENT_PERMISSION)) {
-            throw new ApiException(ErrorCode::Forbidden, 'Solo una cuenta de alumno puede comprar cursos.', 403);
-        }
+        return $this->checkout($customer, Promotion::PRODUCT_COURSE, $course->id, $course->title, $course->price, $expectedTotal, $couponCode, self::courseItems($course));
+    }
 
-        $title = $course->currentVersion->snapshot['title'] ?? $course->title;
+    /**
+     * Venta asistida: el personal registra la compra a nombre de un alumno,
+     * por el mismo camino que una compra en línea (precio, cupón, cupo,
+     * avisos). Lleva un cupón o un descuento manual con su motivo, y se cobra
+     * de una de tres formas:
+     *
+     * - PAID: ya pagó (efectivo, transferencia, Yape, POS…): queda matriculado.
+     * - LATER: pagará después, hasta la fecha que elige el personal; recibe las instrucciones.
+     * - INSTALLMENTS: en cuotas; si ya pagó la primera, entra al curso.
+     *
+     * @param  array{coupon_code?: ?string, discount?: ?array{amount: string, reason: string}, mode: string, expires_at?: ?CarbonInterface, payment?: ?array{method: string, reference?: ?string, notes?: ?string}, installments?: ?list<array{amount: string|float|int, due_date: string}>, expected_total?: ?string}  $sale
+     */
+    public function placeAssisted(User $seller, User $customer, Course|Package $product, array $sale): Order
+    {
+        return DB::transaction(function () use ($seller, $customer, $product, $sale) {
+            $assisted = [
+                'seller' => $seller,
+                'discount' => $sale['discount'] ?? null,
+                'expires_at' => $sale['mode'] === self::SALE_LATER ? ($sale['expires_at'] ?? null) : null,
+            ];
 
-        return $this->checkout($customer, Promotion::PRODUCT_COURSE, $course->id, $course->title, $course->price, $expectedTotal, $couponCode, [
-            ['course_id' => $course->id, 'title' => $title, 'unit_price' => $course->price, 'quantity' => 1, 'total_amount' => $course->price],
-        ]);
+            if ($product instanceof Course) {
+                $this->assertSellable($product, $customer);
+                $order = $this->checkout($customer, Promotion::PRODUCT_COURSE, $product->id, $product->title, $product->price, $sale['expected_total'] ?? null, $sale['coupon_code'] ?? null, self::courseItems($product), [], $assisted);
+            } else {
+                $order = $this->packageOrder($customer, $product, $sale['expected_total'] ?? null, $sale['coupon_code'] ?? null, $assisted);
+            }
+
+            // Gratis (por ejemplo, con el descuento del total): ya quedó matriculado
+            if ($order->status !== Order::STATUS_PENDING) {
+                return $order;
+            }
+
+            if ($sale['mode'] === self::SALE_INSTALLMENTS) {
+                $order = $this->setInstallments($order, $seller, $sale['installments'] ?? []);
+            }
+
+            if ($sale['mode'] !== self::SALE_LATER && ! empty($sale['payment'])) {
+                return $this->applyPayment($order, $seller, $sale['payment']);
+            }
+
+            // Queda esperando el pago: el alumno recibe la orden con el plazo y cómo pagar
+            $this->notifyReceived($order->refresh(), $customer, $order->package_title ?? $order->items()->value('title'));
+
+            return $order;
+        });
     }
 
     /**
@@ -79,15 +128,21 @@ class OrderService
      */
     public function placePackage(User $customer, Package $package, ?string $expectedTotal = null, ?string $couponCode = null): Order
     {
+        return $this->packageOrder($customer, $package, $expectedTotal, $couponCode);
+    }
+
+    /**
+     * @param  array{seller: User, discount: ?array{amount: string, reason: string}, expires_at: ?CarbonInterface}|null  $assisted
+     */
+    private function packageOrder(User $customer, Package $package, ?string $expectedTotal, ?string $couponCode, ?array $assisted = null): Order
+    {
         $package->loadMissing('courses.currentVersion');
 
         if (! $package->isForSale()) {
             throw new ApiException(ErrorCode::CourseNotForSale, 'Este paquete no está en venta.', 409);
         }
 
-        if (! $customer->hasPermission(EnrollmentService::STUDENT_PERMISSION)) {
-            throw new ApiException(ErrorCode::Forbidden, 'Solo una cuenta de alumno puede comprar cursos.', 403);
-        }
+        $this->assertStudent($customer);
 
         $courses = $package->courses->values();
         $listTotal = (float) $package->listPrice();
@@ -114,7 +169,33 @@ class OrderService
         return $this->checkout($customer, Promotion::PRODUCT_PACKAGE, $package->id, $package->title, $package->price, $expectedTotal, $couponCode, $items, [
             'package_id' => $package->id,
             'package_title' => $package->title,
-        ]);
+        ], $assisted);
+    }
+
+    /**
+     * @return list<array{course_id: string, title: string, unit_price: string, quantity: int, total_amount: string}>
+     */
+    private static function courseItems(Course $course): array
+    {
+        $title = $course->currentVersion->snapshot['title'] ?? $course->title;
+
+        return [['course_id' => $course->id, 'title' => $title, 'unit_price' => $course->price, 'quantity' => 1, 'total_amount' => $course->price]];
+    }
+
+    private function assertSellable(Course $course, User $customer): void
+    {
+        if (! $course->isForSale()) {
+            throw new ApiException(ErrorCode::CourseNotForSale, 'Este curso no está en venta.', 409);
+        }
+
+        $this->assertStudent($customer);
+    }
+
+    private function assertStudent(User $customer): void
+    {
+        if (! $customer->hasPermission(EnrollmentService::STUDENT_PERMISSION)) {
+            throw new ApiException(ErrorCode::Forbidden, 'Solo una cuenta de alumno puede comprar cursos.', 403);
+        }
     }
 
     /**
@@ -126,6 +207,7 @@ class OrderService
      * @param  string  $productType  Promotion::PRODUCT_COURSE o PRODUCT_PACKAGE
      * @param  list<array{course_id: string, title: string, unit_price: string, quantity: int, total_amount: string}>  $items
      * @param  array<string, mixed>  $attributes  columnas adicionales de la orden
+     * @param  array{seller: User, discount: ?array{amount: string, reason: string}, expires_at: ?CarbonInterface}|null  $assisted  venta registrada por el personal
      */
     private function checkout(
         User $customer,
@@ -137,19 +219,22 @@ class OrderService
         ?string $couponCode,
         array $items,
         array $attributes = [],
+        ?array $assisted = null,
     ): Order {
         $currency = Currency::byCode($this->settings->currency());
 
-        return DB::transaction(function () use ($customer, $productType, $productId, $productName, $subtotal, $expectedTotal, $couponCode, $items, $attributes, $currency) {
+        return DB::transaction(function () use ($customer, $productType, $productId, $productName, $subtotal, $expectedTotal, $couponCode, $items, $attributes, $assisted, $currency) {
             $this->lockOrderNumbers();
 
-            $this->assertCanBuy($customer, $productType, $productId, array_column($items, 'course_id'));
+            $this->assertCanBuy($customer, $productType, $productId, array_column($items, 'course_id'), $assisted !== null);
 
             // Sin cupo de alumnos no se vende: la orden pagada sí se respeta, por eso se revisa aquí
             if (! $this->quota->hasRoomFor([$customer->id])) {
                 throw new ApiException(
                     ErrorCode::StudentLimitReached,
-                    'Por ahora la academia no está recibiendo nuevos alumnos. Comunícate con ella para inscribirte.',
+                    $assisted !== null
+                        ? 'La academia llegó al tope de alumnos de su plan: no se pueden sumar alumnos nuevos.'
+                        : 'Por ahora la academia no está recibiendo nuevos alumnos. Comunícate con ella para inscribirte.',
                     409
                 );
             }
@@ -160,6 +245,18 @@ class OrderService
                 : null;
 
             $discount = $applied['discount'] ?? '0.00';
+
+            // Descuento manual del personal, en lugar de un cupón: no puede pasar del precio
+            $manual = $assisted['discount'] ?? null;
+            if ($manual !== null) {
+                if ($applied !== null) {
+                    throw new ApiException(ErrorCode::ValidationError, 'Usa un cupón o un descuento manual, no los dos.', 422, ['discount' => ['Los descuentos no se acumulan.']]);
+                }
+                if ((float) $manual['amount'] > (float) $subtotal) {
+                    throw new ApiException(ErrorCode::ValidationError, 'El descuento no puede ser mayor que el precio.', 422, ['discount.amount' => ['El precio es '.self::money($subtotal).'.']]);
+                }
+                $discount = self::money((string) $manual['amount']);
+            }
             $total = self::money((string) ((float) $subtotal - (float) $discount));
 
             if ($expectedTotal !== null && self::money($expectedTotal) !== $total) {
@@ -180,7 +277,9 @@ class OrderService
                 'total_amount' => $total,
                 'coupon_code' => $applied ? $applied['coupon']->code : null,
                 'status' => Order::STATUS_PENDING,
-                'expires_at' => now()->addHours($this->settings->orderExpirationHours()),
+                'expires_at' => $assisted['expires_at'] ?? now()->addHours($this->settings->orderExpirationHours()),
+                'sold_by' => $assisted['seller']->id ?? null,
+                'discount_reason' => $manual['reason'] ?? null,
             ]);
 
             $order->items()->createMany($items);
@@ -195,24 +294,35 @@ class OrderService
                 'product' => $productName,
                 'total' => $order->total_amount,
                 'currency' => $currency->code,
-            ] + ($applied ? ['coupon' => $applied['coupon']->code, 'discount' => $discount] : []));
-
-            $code = self::code($order);
+            ] + ($applied ? ['coupon' => $applied['coupon']->code, 'discount' => $discount] : [])
+              + ($manual ? ['discount' => $discount, 'discount_reason' => $manual['reason']] : [])
+              + ($assisted ? ['sold_by' => $assisted['seller']->email] : []));
 
             if ($total === self::money('0')) {
-                $this->settle($order, $customer);
+                $this->settle($order, $assisted['seller'] ?? $customer);
                 $this->notifier->notify($customer, 'inscripcion_gratuita', ['curso' => $productName], '/my-courses');
-            } else {
-                $this->notifier->notify($customer, 'orden_recibida', [
-                    'orden' => $code,
-                    'curso' => $productName,
-                    'importe' => TenantNotifier::money($currency->code, $total),
-                    'fecha_limite' => $order->expires_at->timezone($this->settings->timezone())->format('d/m/Y, H:i'),
-                ], "/my-orders/{$order->id}");
+            } elseif ($assisted === null) {
+                // En la venta asistida el aviso sale después, según cómo se cobra
+                $this->notifyReceived($order, $customer, $productName);
             }
 
             return $order;
         });
+    }
+
+    /**
+     * El comprador recibe su orden pendiente: importe, plazo y dónde verla.
+     */
+    private function notifyReceived(Order $order, User $customer, string $productName): void
+    {
+        $order->loadMissing('currency');
+
+        $this->notifier->notify($customer, 'orden_recibida', [
+            'orden' => self::code($order),
+            'curso' => $productName,
+            'importe' => TenantNotifier::money($order->currency->code, $order->total_amount),
+            'fecha_limite' => $order->expires_at->timezone($this->settings->timezone())->format('d/m/Y, H:i'),
+        ], "/my-orders/{$order->id}");
     }
 
     /**
@@ -596,9 +706,12 @@ class OrderService
      */
     /**
      * @param  list<string>  $courseIds  cursos que entrega la compra
+     * @param  bool  $assisted  la registra el personal: los mensajes hablan del alumno
      */
-    private function assertCanBuy(User $customer, string $productType, string $productId, array $courseIds): void
+    private function assertCanBuy(User $customer, string $productType, string $productId, array $courseIds, bool $assisted = false): void
     {
+        $who = $assisted ? 'El alumno ya tiene' : 'Ya tienes';
+
         // Serializa las compras simultáneas del mismo comprador
         User::query()->whereKey($customer->id)->lockForUpdate()->first();
 
@@ -612,7 +725,7 @@ class OrderService
         if ($enrolled >= count($courseIds)) {
             throw new ApiException(
                 ErrorCode::AlreadyEnrolled,
-                $productType === Promotion::PRODUCT_COURSE ? 'Ya tienes una matrícula en este curso.' : 'Ya tienes todos los cursos de este paquete.',
+                $productType === Promotion::PRODUCT_COURSE ? "{$who} una matrícula en este curso." : "{$who} todos los cursos de este paquete.",
                 409
             );
         }
@@ -624,7 +737,7 @@ class OrderService
         if ($pending) {
             throw new ApiException(
                 ErrorCode::OrderAlreadyPending,
-                'Ya tienes una orden pendiente de pago por esta compra.',
+                $assisted ? 'El alumno ya tiene una orden pendiente de pago por esta compra: confírmala o cancélala desde Ventas y pagos.' : 'Ya tienes una orden pendiente de pago por esta compra.',
                 409,
                 ['order_id' => $pending->id]
             );

@@ -53,6 +53,8 @@ class Order extends Model
         'licenses_released_at',
         'licenses_released_by',
         'licenses_release_reason',
+        'sold_by',
+        'discount_reason',
     ];
 
     protected function casts(): array
@@ -111,6 +113,14 @@ class Order extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    /**
+     * Quién del personal registró la venta asistida.
+     */
+    public function seller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sold_by');
     }
 
     /**

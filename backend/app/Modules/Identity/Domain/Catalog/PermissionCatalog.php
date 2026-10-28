@@ -107,6 +107,7 @@ class PermissionCatalog
                 'permissions' => [
                     'orders.read' => 'Consultar órdenes',
                     'orders.create' => 'Crear órdenes',
+                    'orders.assisted' => 'Registrar ventas a nombre de un alumno',
                     'orders.cancel' => 'Cancelar órdenes pendientes',
                     'orders.support.read' => 'Consultar órdenes para atención de soporte',
                     'checkout.validate' => 'Validar cupones en el checkout',

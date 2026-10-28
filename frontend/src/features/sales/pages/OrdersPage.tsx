@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { BadgeCheck, Ban, CalendarClock, CircleDollarSign, CreditCard, Hourglass, RefreshCw, Search, TimerOff, Undo2 } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { BadgeCheck, Ban, CalendarClock, CircleDollarSign, CreditCard, Hourglass, Plus, Printer, RefreshCw, Search, TimerOff, Undo2 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import {
@@ -47,6 +47,7 @@ import { PaymentReviewList } from '../components/PaymentReviews';
 import { ExportButton } from '../../../shared/ui/ExportButton';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
 import { RefundWindowAlert } from '../components/RefundWindowAlert';
+import { NewSaleModal } from '../components/NewSaleModal';
 
 // Detalle de una orden con sus acciones: confirmar el pago recibido o cancelarla
 const OrderModal: React.FC<{
@@ -188,6 +189,16 @@ const OrderModal: React.FC<{
     ) : (
       <>
         <Button onClick={onClose}>Cerrar</Button>
+        {order.customer && Number(order.collected.amount) > 0 && (
+          <Link
+            to={`/orders/${order.id}/receipt`}
+            target="_blank"
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50"
+          >
+            <Printer className="w-4 h-4" />
+            Constancia de venta
+          </Link>
+        )}
         {refundable && canRefund && (
           <Button variant="danger" icon={<Undo2 className="w-4 h-4" />} onClick={() => setMode('refund')}>
             Reembolsar
@@ -430,6 +441,9 @@ export const OrdersPage: React.FC = () => {
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  // Origen de la venta: ASSISTED (la registró el personal) u ONLINE (la compró el alumno)
+  const [sale, setSale] = useState('');
+  const [selling, setSelling] = useState(false);
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -464,7 +478,7 @@ export const OrdersPage: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const result = await salesApi.orders({ search: search || undefined, status: status || undefined, page });
+      const result = await salesApi.orders({ search: search || undefined, status: status || undefined, sale: sale || undefined, page });
       setRows(result.data);
       setMeta(result.meta);
       setState('ready');
@@ -472,7 +486,7 @@ export const OrdersPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, status, page]);
+  }, [search, status, sale, page]);
 
   // La búsqueda espera a que el usuario termine de escribir
   useEffect(() => {
@@ -480,7 +494,7 @@ export const OrdersPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [load]);
 
-  const filtered = search !== '' || status !== '';
+  const filtered = search !== '' || status !== '' || sale !== '';
   const filter = (apply: () => void) => {
     apply();
     setPage(1);
@@ -503,7 +517,16 @@ export const OrdersPage: React.FC = () => {
         title="Ventas y pagos"
         icon={CreditCard}
         subtitle="Órdenes de compra de tus alumnos y confirmación de los pagos recibidos."
-        action={<ExportButton path="/orders/export" params={{ search: search || undefined, status: status || undefined }} filename="ordenes.xlsx" />}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton path="/orders/export" params={{ search: search || undefined, status: status || undefined, sale: sale || undefined }} filename="ordenes.xlsx" />
+            {hasPermission('orders.assisted') && (
+              <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setSelling(true)}>
+                Nueva venta
+              </Button>
+            )}
+          </div>
+        }
       />
 
       <PaymentReviewList version={version} onOpen={(orderId) => void openById(orderId)} />
@@ -537,6 +560,11 @@ export const OrdersPage: React.FC = () => {
               </option>
             ))}
           </SearchSelect>
+          <SearchSelect className={`${INPUT_CLASS} !w-52`} aria-label="Filtrar por origen de la venta" value={sale} onChange={(event) => filter(() => setSale(event.target.value))}>
+            <option value="">Todas las ventas</option>
+            <option value="ASSISTED">Venta asistida</option>
+            <option value="ONLINE">Compra del alumno</option>
+          </SearchSelect>
           <HelpTip
             text={status ? (cards.find((card) => card.key === status)?.help ?? '') : 'Una orden nace pendiente; pasa a pagada al confirmarse el pago, o vence o se cancela si no se paga.'}
             label="Qué significa el estado elegido"
@@ -561,6 +589,7 @@ export const OrdersPage: React.FC = () => {
                     filter(() => {
                       setSearch('');
                       setStatus('');
+                      setSale('');
                     })
                   }
                 >
@@ -590,6 +619,7 @@ export const OrdersPage: React.FC = () => {
                   <Td>
                     <p className="font-semibold text-slate-900 whitespace-nowrap">{orderBuyer(order).name}</p>
                     <p className="text-xs text-slate-500">{orderBuyer(order).detail}</p>
+                    {order.sold_by && <p className="text-xs text-brand-700">Venta asistida · {order.sold_by}</p>}
                   </Td>
                   <Td className="min-w-[180px] text-slate-700">{order.items.map((item) => item.title).join(', ')}</Td>
                   <Td>
@@ -624,6 +654,18 @@ export const OrdersPage: React.FC = () => {
           canRefund={hasPermission('payments.refund')}
           onClose={() => setOpen(null)}
           onChanged={(order) => {
+            setOpen(order);
+            setVersion((current) => current + 1);
+            void load();
+          }}
+        />
+      )}
+
+      {selling && (
+        <NewSaleModal
+          onClose={() => setSelling(false)}
+          onDone={(order) => {
+            setSelling(false);
             setOpen(order);
             setVersion((current) => current + 1);
             void load();

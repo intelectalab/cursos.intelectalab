@@ -38,7 +38,9 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
     <dl className="space-y-1.5 text-[13px]">
       {Number(order.discount_amount) > 0 && (
         <div className="flex justify-between gap-4">
-          <dt className="text-slate-600">Descuento{order.coupon_code ? ` (cupón ${order.coupon_code})` : ''}</dt>
+          <dt className="text-slate-600">
+            Descuento{order.coupon_code ? ` (cupón ${order.coupon_code})` : order.discount_reason ? ` (${order.discount_reason})` : ''}
+          </dt>
           <dd className="text-slate-900 tnum">− {formatMoney(order.discount_amount, order.currency)}</dd>
         </div>
       )}
@@ -47,6 +49,8 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
         <dd className="font-bold text-slate-900 tnum">{formatMoney(order.total_amount, order.currency)}</dd>
       </div>
     </dl>
+
+    {order.sold_by && <p className="text-xs text-slate-500">Venta asistida: la registró {order.sold_by}.</p>}
 
     <InstallmentList order={order} />
 

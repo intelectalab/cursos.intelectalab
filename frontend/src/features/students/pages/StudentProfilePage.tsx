@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, BookOpen, Building2, KeyRound, LifeBuoy, Mail, MailX, Phone, Receipt, UsersRound, type LucideIcon } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Award, BookOpen, Building2, KeyRound, LifeBuoy, Mail, MailX, Phone, Plus, Receipt, UsersRound, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Avatar, Badge, Button, Card, CardHeader, EmptyState, ErrorState, LoadingState, StatCard, Table, TBody, Td, Th, THead, Tr, type Tone } from '../../../shared/ui';
@@ -8,6 +8,7 @@ import { toScale } from '../../academic/api';
 import { formatMoney } from '../../sales/api';
 import { OrderStatusBadge } from '../../sales/components/OrderParts';
 import { ResetPasswordModal } from '../../identity/components/ResetPasswordModal';
+import { NewSaleModal } from '../../sales/components/NewSaleModal';
 import { studentsApi, type StudentEnrollment, type StudentProfile, type StudentTicket } from '../api';
 
 function formatDate(value: string | null): string {
@@ -45,7 +46,9 @@ export const StudentProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [resetting, setResetting] = useState(false);
+  const [selling, setSelling] = useState(false);
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
@@ -107,13 +110,27 @@ export const StudentProfilePage: React.FC = () => {
               {student.last_login_at ? formatDate(student.last_login_at) : 'nunca'}
             </p>
           </div>
-          {hasPermission('users.update') && (
-            <Button size="sm" icon={<KeyRound className="w-4 h-4" />} onClick={() => setResetting(true)}>
-              Restablecer contraseña
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {hasPermission('orders.assisted') && student.status === 'ACTIVE' && (
+              <Button size="sm" variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setSelling(true)}>
+                Registrar venta
+              </Button>
+            )}
+            {hasPermission('users.update') && (
+              <Button size="sm" icon={<KeyRound className="w-4 h-4" />} onClick={() => setResetting(true)}>
+                Restablecer contraseña
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
+      {selling && (
+        <NewSaleModal
+          student={{ id: student.id, name: student.name, email: student.email, document: student.document ?? null }}
+          onClose={() => setSelling(false)}
+          onDone={(order) => navigate(`/billing?order=${order.id}`)}
+        />
+      )}
       {resetting && (
         <ResetPasswordModal
           user={{ id: student.id, name: student.name, email: student.email }}

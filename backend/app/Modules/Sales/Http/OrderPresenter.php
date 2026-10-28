@@ -37,6 +37,10 @@ class OrderPresenter
             'discount_amount' => $order->discount_amount,
             // Cupón aplicado, si lo hubo
             'coupon_code' => $order->coupon_code,
+            // Descuento manual del personal en una venta asistida
+            'discount_reason' => $order->discount_reason,
+            // Venta asistida: quién del personal la registró
+            'sold_by' => $order->relationLoaded('seller') && $order->seller ? trim("{$order->seller->first_name} {$order->seller->last_name}") : null,
             // La orden es de un paquete: sus ítems son los cursos que incluye
             'package' => $order->package_id ? ['id' => $order->package_id, 'title' => $order->package_title] : null,
             'total_amount' => $order->total_amount,

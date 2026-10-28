@@ -36,11 +36,14 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class OrderController extends Controller
 {
-    private const RELATIONS = ['customer', 'company', 'currency', 'items', 'payment.confirmer', 'payment.refunder', 'attempts', 'installments.payment.confirmer'];
+    public const RELATIONS = ['customer', 'seller', 'company', 'currency', 'items', 'payment.confirmer', 'payment.refunder', 'attempts', 'installments.payment.confirmer'];
 
     private const STATUS_LABELS = ['PENDING' => 'Pendiente de pago', 'PARTIAL' => 'En cuotas', 'PAID' => 'Pagada', 'CANCELLED' => 'Cancelada', 'EXPIRED' => 'Vencida', 'REFUNDED' => 'Reembolsada'];
 
     private const METHOD_LABELS = ['TRANSFER' => 'Transferencia', 'YAPE' => 'Yape', 'CASH' => 'Efectivo', 'OTHER' => 'Otro', 'CARD' => 'Tarjeta', 'WALLET' => 'Saldo en cuenta', 'PAYPAL' => 'PayPal'];
+
+    /** Filtro por origen de la venta */
+    private const SALE_FILTERS = ['ASSISTED', 'ONLINE'];
 
     private const GATEWAY_LABELS = ['MANUAL' => 'Confirmado por el personal', 'MERCADOPAGO' => 'Mercado Pago', 'PAYPAL' => 'PayPal'];
 
@@ -135,10 +138,11 @@ class OrderController extends Controller
         $filters = $request->validate([
             'status' => ['nullable', Rule::in(Order::STATUSES)],
             'search' => ['nullable', 'string', 'max:100'],
+            'sale' => ['nullable', Rule::in(self::SALE_FILTERS)],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $base = $this->search($filters['search'] ?? null);
+        $base = $this->search($filters['search'] ?? null, $filters['sale'] ?? null);
 
         // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
         $counts = StateCounts::of($base, Order::STATUSES, fn (Builder $q, string $status) => $q->inState($status));
@@ -159,17 +163,18 @@ class OrderController extends Controller
         $filters = $request->validate([
             'status' => ['nullable', Rule::in(Order::STATUSES)],
             'search' => ['nullable', 'string', 'max:100'],
+            'sale' => ['nullable', Rule::in(self::SALE_FILTERS)],
         ]);
 
         $timezone = $settings->timezone();
-        $query = $this->search($filters['search'] ?? null)
+        $query = $this->search($filters['search'] ?? null, $filters['sale'] ?? null)
             ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->inState($status))
             ->orderByDesc('number');
 
         return ExcelExport::download(
             'ordenes',
             $query,
-            ['N.º', 'Estado', 'Fecha', 'Comprador', 'Correo', 'Empresa', 'Detalle', 'Moneda', 'Subtotal', 'Descuento', 'Cupón', 'Total', 'Fecha de pago', 'Medio de pago', 'Cobrado por', 'N.º de operación', 'Reembolsada el', 'Motivo del reembolso', 'Cobrado', 'Por cobrar en cuotas'],
+            ['N.º', 'Estado', 'Fecha', 'Comprador', 'Correo', 'Empresa', 'Detalle', 'Moneda', 'Subtotal', 'Descuento', 'Cupón', 'Motivo del descuento', 'Total', 'Fecha de pago', 'Medio de pago', 'Cobrado por', 'N.º de operación', 'Reembolsada el', 'Motivo del reembolso', 'Cobrado', 'Por cobrar en cuotas', 'Vendido por'],
             fn (Order $order) => [
                 $order->number,
                 self::STATUS_LABELS[$order->state()] ?? $order->state(),
@@ -182,6 +187,7 @@ class OrderController extends Controller
                 (float) $order->subtotal_amount,
                 (float) $order->discount_amount,
                 $order->coupon_code,
+                $order->discount_reason,
                 (float) $order->total_amount,
                 ExcelExport::dateTime($order->payment?->paid_at, $timezone),
                 $order->payment ? (self::METHOD_LABELS[$order->payment->method] ?? $order->payment->method) : null,
@@ -192,6 +198,7 @@ class OrderController extends Controller
                 (float) OrderPresenter::make($order)['collected']['amount'],
                 // Solo debe la orden que ya recibió un pago
                 $order->status === Order::STATUS_PARTIAL ? (float) $order->installments->where('status', OrderInstallment::STATUS_PENDING)->sum('amount') : 0.0,
+                $order->seller ? trim("{$order->seller->first_name} {$order->seller->last_name}") : null,
             ]
         );
     }
@@ -240,6 +247,18 @@ class OrderController extends Controller
      */
     public function setInstallments(Request $request, Order $order): JsonResponse
     {
+        $order = $this->orders->setInstallments($order, $request->user(), self::validateInstallments($request));
+
+        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+    }
+
+    /**
+     * Las cuotas de un plan de pagos: cuántas, de cuánto y con fechas en orden desde hoy.
+     *
+     * @return list<array{amount: string, due_date: string}>
+     */
+    public static function validateInstallments(Request $request): array
+    {
         $today = OrderPresenter::today();
         $data = $request->validate([
             'installments' => ['required', 'array', 'min:'.OrderInstallment::MIN, 'max:'.OrderInstallment::MAX],
@@ -260,9 +279,7 @@ class OrderController extends Controller
             throw ValidationException::withMessages(['installments' => 'Cada cuota debe vencer después de la anterior.']);
         }
 
-        $order = $this->orders->setInstallments($order, $request->user(), $data['installments']);
-
-        return ApiResponse::success(OrderPresenter::make($order->load(self::RELATIONS)));
+        return $data['installments'];
     }
 
     /**
@@ -464,10 +481,15 @@ class OrderController extends Controller
      *
      * @return Builder<Order>
      */
-    private function search(?string $search): Builder
+    /**
+     * @param  string|null  $sale  ASSISTED = registradas por el personal; ONLINE = compradas por el propio alumno
+     */
+    private function search(?string $search, ?string $sale = null): Builder
     {
         return Order::query()
             ->with(self::RELATIONS)
+            ->when($sale === 'ASSISTED', fn (Builder $q) => $q->whereNotNull('sold_by'))
+            ->when($sale === 'ONLINE', fn (Builder $q) => $q->whereNull('sold_by')->whereNull('company_id'))
             ->when($search, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
                 $number = ctype_digit($search) ? (int) $search : null;

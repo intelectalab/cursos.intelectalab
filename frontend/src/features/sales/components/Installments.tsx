@@ -71,7 +71,7 @@ export const InstallmentList: React.FC<{ order: Order }> = ({ order }) => {
   );
 };
 
-interface PlanRow {
+export interface PlanRow {
   amount: string;
   due_date: string;
 }
@@ -92,7 +92,17 @@ function split(total: number, count: number, existing: PlanRow[]): PlanRow[] {
 }
 
 // El personal arma el plan de pagos de una orden pendiente
-export const InstallmentPlanForm: React.FC<{ order: Order; formId: string; onSubmit: (rows: PlanRow[]) => void }> = ({ order, formId, onSubmit }) => {
+/**
+ * Arma un plan de pagos. Como formulario propio (con formId y onSubmit) o
+ * dentro de otro formulario (embedded): entonces avisa cada cambio con onChange.
+ */
+export const InstallmentPlanForm: React.FC<{
+  order: Pick<Order, 'total_amount' | 'currency' | 'installments'>;
+  formId?: string;
+  onSubmit?: (rows: PlanRow[]) => void;
+  embedded?: boolean;
+  onChange?: (rows: PlanRow[], valid: boolean) => void;
+}> = ({ order, formId, onSubmit, embedded = false, onChange }) => {
   const total = Number(order.total_amount);
   const [rows, setRows] = useState<PlanRow[]>(() =>
     order.installments.length > 0 ? order.installments.map((installment) => ({ amount: installment.amount, due_date: installment.due_date })) : split(total, 3, []),
@@ -105,14 +115,25 @@ export const InstallmentPlanForm: React.FC<{ order: Order; formId: string; onSub
 
   const update = (index: number, patch: Partial<PlanRow>) => setRows((current) => current.map((row, position) => (position === index ? { ...row, ...patch } : row)));
 
+  const valid = difference === 0 && ordered;
+  useEffect(() => {
+    onChange?.(rows, valid);
+  }, [rows, valid, onChange]);
+
+  const Wrapper = embedded ? 'div' : 'form';
+
   return (
-    <form
-      id={formId}
+    <Wrapper
+      id={embedded ? undefined : formId}
       className="space-y-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (difference === 0 && ordered) onSubmit(rows);
-      }}
+      onSubmit={
+        embedded
+          ? undefined
+          : (event: React.FormEvent) => {
+              event.preventDefault();
+              if (valid) onSubmit?.(rows);
+            }
+      }
     >
       <Alert tone="info">
         El comprador entra al curso al pagar la <strong>primera cuota</strong>. Si no la paga hasta su fecha, la orden vence. Las siguientes, si no se pagan a tiempo, quedan como deuda y
@@ -201,7 +222,7 @@ export const InstallmentPlanForm: React.FC<{ order: Order; formId: string; onSub
             : `Sobran ${formatMoney(-difference / 100, order.currency)}: las cuotas pasan el total de ${formatMoney(order.total_amount, order.currency)}.`}
       </p>
       {!ordered && <Alert>Cada cuota debe vencer después de la anterior.</Alert>}
-    </form>
+    </Wrapper>
   );
 };
 

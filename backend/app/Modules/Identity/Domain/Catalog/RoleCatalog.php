@@ -80,7 +80,7 @@ class RoleCatalog
                 'description' => 'Gestión comercial y CRM',
                 // Además del Maestro §8.1: ve promociones y paquetes para poder ofrecerlos
                 // y la ficha de cada alumno, para saber qué compró y qué cursa
-                'permissions' => ['crm.*', 'quotations.*', 'orders.read', 'orders.create', 'promotions.read', 'packages.read', 'students.read', 'assistant.use'],
+                'permissions' => ['crm.*', 'quotations.*', 'orders.read', 'orders.create', 'orders.assisted', 'promotions.read', 'packages.read', 'students.read', 'assistant.use'],
             ],
             self::B2B => [
                 'name' => 'B2B autorizado',

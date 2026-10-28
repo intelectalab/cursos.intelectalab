@@ -18,6 +18,7 @@ const Register = lazyPage(() => import('../features/auth/pages/Register'), 'Regi
 const ForgotPassword = lazyPage(() => import('../features/auth/pages/PasswordRecovery'), 'ForgotPassword');
 const ResetPassword = lazyPage(() => import('../features/auth/pages/PasswordRecovery'), 'ResetPassword');
 const AccountPage = lazyPage(() => import('../features/account/pages/AccountPage'), 'AccountPage');
+const SaleReceiptPage = lazyPage(() => import('../features/sales/pages/SaleReceiptPage'), 'SaleReceiptPage');
 const EmailPreferencesPage = lazyPage(() => import('../features/account/pages/EmailPreferencesPage'), 'EmailPreferencesPage');
 const CourseEditorPage = lazyPage(() => import('../features/courses/pages/CourseEditorPage'), 'CourseEditorPage');
 const ClassroomPage = lazyPage(() => import('../features/enrollments/pages/ClassroomPage'), 'ClassroomPage');
@@ -94,6 +95,15 @@ function TenantRoutes() {
 
         {/* Rutas Protegidas Mapeadas Automáticamente */}
         <Route element={<ProtectedRoute />}>
+          {/* Constancia de venta para imprimir: sin el menú ni la barra */}
+          <Route
+            path="/orders/:orderId/receipt"
+            element={
+              <PermissionGate permission="orders.read">
+                <SaleReceiptPage />
+              </PermissionGate>
+            }
+          />
           <Route element={<AppLayout />}>
             {/* Cuenta propia: disponible para cualquier usuario autenticado */}
             <Route path="/account" element={<AccountPage />} />

@@ -90,6 +90,10 @@ export interface Order {
   discount_amount: string;
   // Cupón aplicado, si lo hubo
   coupon_code: string | null;
+  // Descuento manual del personal en una venta asistida
+  discount_reason: string | null;
+  // Venta asistida: quién del personal la registró
+  sold_by: string | null;
   // La orden es de un paquete: sus ítems son los cursos que incluye
   package: { id: string; title: string } | null;
   total_amount: string;
@@ -227,6 +231,40 @@ export interface CheckoutPackage extends CatalogPackage {
   owned_course_ids: string[];
 }
 
+// Venta asistida: lo que se puede vender y cómo se cobra
+export interface AssistedSaleOptions {
+  courses: { id: string; title: string; price: string }[];
+  packages: { id: string; title: string; price: string; courses: number }[];
+  payment_methods: PaymentMethod[];
+  currency: string;
+  expiration_hours: number;
+  max_days_to_pay: number;
+  document_types: string[];
+}
+
+export interface AssistedSaleStudent {
+  id: string;
+  name: string;
+  email: string;
+  document: string | null;
+}
+
+export type AssistedSaleMode = 'PAID' | 'LATER' | 'INSTALLMENTS';
+
+export interface AssistedSaleInput {
+  student_id?: string;
+  student?: { first_name: string; last_name: string; email: string; phone?: string; doc_type?: string; doc_number?: string };
+  course_id?: string;
+  package_id?: string;
+  coupon_code?: string;
+  discount?: { amount: number; reason: string };
+  mode: AssistedSaleMode;
+  expires_at?: string;
+  payment?: { method: PaymentMethod; reference?: string; notes?: string };
+  installments?: { amount: number; due_date: string }[];
+  expected_total?: string;
+}
+
 export interface ConfirmPaymentInput {
   method: PaymentMethod;
   reference: string | null;
@@ -308,7 +346,16 @@ export const salesApi = {
   async syncPayment(order: string) {
     return (await api.post(`/me/orders/${order}/pay/sync`)).data.data as MyOrder;
   },
-  async orders(params: { search?: string; status?: string; page?: number }) {
+  async assistedSaleOptions() {
+    return (await api.get('/orders/assisted/options')).data.data as AssistedSaleOptions;
+  },
+  async assistedSaleStudents(search: string) {
+    return (await api.get('/orders/assisted/students', { params: { search } })).data.data as AssistedSaleStudent[];
+  },
+  async placeAssistedSale(input: AssistedSaleInput) {
+    return (await postIdempotent('/orders/assisted', input)).data.data as Order;
+  },
+  async orders(params: { search?: string; status?: string; sale?: string; page?: number }) {
     const response = await api.get('/orders', { params });
     return { data: response.data.data as Order[], meta: response.data.meta as PageMeta };
   },

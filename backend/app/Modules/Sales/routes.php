@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Sales\Http\Controllers\AssistedSaleController;
 use App\Modules\Sales\Http\Controllers\ExchangeRateController;
 use App\Modules\Sales\Http\Controllers\OrderController;
 use App\Modules\Sales\Http\Controllers\PackageController;
@@ -65,6 +66,13 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     });
 
     // Personal: todas las órdenes de la organización. Soporte las consulta en solo lectura (Maestro §8.1).
+    // Venta asistida: el personal registra una compra a nombre de un alumno
+    Route::middleware('permission:orders.assisted')->prefix('/orders/assisted')->group(function () {
+        Route::get('/options', [AssistedSaleController::class, 'options']);
+        Route::get('/students', [AssistedSaleController::class, 'students']);
+        Route::post('/', [AssistedSaleController::class, 'store'])->middleware(['throttle:30,1', 'idempotent']);
+    });
+
     Route::middleware('permission:orders.read,orders.support.read')->group(function () {
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/options', [OrderController::class, 'options']);
