@@ -8,7 +8,7 @@
         body { font-family: Helvetica, Arial, sans-serif; font-size: 9px; color: #1e293b; }
         .head { width: 100%; border-bottom: 3px solid {{ $brand }}; padding-bottom: 8px; margin-bottom: 10px; }
         .head td { vertical-align: middle; }
-        .logo { height: 34px; max-width: 120px; }
+        .logo { height: 34px; max-width: 120px; margin-right: 10px; vertical-align: middle; }
         .organization { font-size: 15px; font-weight: bold; color: {{ $brand }}; }
         .meta { font-size: 8px; color: #64748b; text-align: right; }
         h2 { font-size: 12px; margin: 14px 0 6px; color: #0f172a; }

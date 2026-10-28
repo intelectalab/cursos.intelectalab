@@ -177,7 +177,7 @@ class ExcelExportTest extends TestCase
         // Cabecera con la academia, el título y el filtro usado; al final, el total de lo vendido
         $this->assertSame($this->tenant->name, $rows[0][0]);
         $this->assertSame('Órdenes de compra', $rows[1][0]);
-        $this->assertStringContainsString('Estado: PAID', $rows[2][0]);
+        $this->assertStringContainsString('Estado: Pagada', $rows[2][0]);
         $total = end($rows);
         $this->assertSame('Total', $total[0]);
         $this->assertEquals(100, $total[array_search('Total', $rows[3], true)]);

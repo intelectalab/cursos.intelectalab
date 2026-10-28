@@ -62,6 +62,14 @@ class ReportFile
         'period' => 'Periodo', 'compare' => 'Comparar',
     ];
 
+    /** Valores de los filtros en palabras (los códigos que usan las pantallas) */
+    private const VALUE_LABELS = [
+        'PENDING' => 'Pendiente', 'PARTIAL' => 'En cuotas', 'PAID' => 'Pagada', 'CANCELLED' => 'Cancelada', 'EXPIRED' => 'Vencida', 'REFUNDED' => 'Reembolsada',
+        'ACTIVE' => 'Activa', 'INACTIVE' => 'Inactiva', 'ENROLLED' => 'Con cursos', 'NOT_ENROLLED' => 'Sin cursos', 'COMPLETED' => 'Completada',
+        'ASSISTED' => 'Venta asistida', 'ONLINE' => 'Compra del alumno',
+        'CASH' => 'Efectivo', 'TRANSFER' => 'Transferencia', 'YAPE' => 'Yape', 'CARD' => 'Tarjeta', 'WALLET' => 'Saldo en la pasarela', 'PAYPAL' => 'PayPal', 'OTHER' => 'Otro',
+    ];
+
     public function __construct(
         private readonly TenantContext $context,
         private readonly FileStorage $storage,
@@ -333,7 +341,7 @@ class ReportFile
             ->map(function (string $value, string $key) use ($names) {
                 $shown = isset($names[$key]) && preg_match('/^[0-9a-f-]{36}$/i', $value) === 1 ? (($names[$key])($value) ?? $value) : $value;
 
-                return self::FILTER_LABELS[$key].': '.($key === 'debt' ? 'sí' : $shown);
+                return self::FILTER_LABELS[$key].': '.($key === 'debt' ? 'sí' : (self::VALUE_LABELS[$shown] ?? $shown));
             })
             ->implode(' · ');
     }
