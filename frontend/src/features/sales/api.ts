@@ -355,7 +355,7 @@ export const salesApi = {
   async placeAssistedSale(input: AssistedSaleInput) {
     return (await postIdempotent('/orders/assisted', input)).data.data as Order;
   },
-  async orders(params: { search?: string; status?: string; sale?: string; page?: number }) {
+  async orders(params: Record<string, string | number | undefined>) {
     const response = await api.get('/orders', { params });
     return { data: response.data.data as Order[], meta: response.data.meta as PageMeta };
   },

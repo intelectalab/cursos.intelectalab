@@ -164,14 +164,15 @@ class CertificateLayout
 
     /**
      * Punto de partida del editor: el certificado de siempre, con cada dato
-     * como un elemento que se puede mover.
+     * como un elemento que se puede mover. El nombre del alumno y el enlace
+     * de verificación llevan el color principal de la academia, si eligió uno.
      *
      * @return array{orientation: string, elements: list<array<string, mixed>>}
      */
-    public static function default(string $orientation = self::LANDSCAPE): array
+    public static function default(string $orientation = self::LANDSCAPE, ?string $brand = null): array
     {
         $navy = '#0a2540';
-        $blue = '#0c4a8a';
+        $blue = $brand ?? '#0c4a8a';
         $grey = '#475569';
 
         $text = fn (string $id, string $kind, string $value, float $x, float $y, float $w, float $size, array $style = []) => [

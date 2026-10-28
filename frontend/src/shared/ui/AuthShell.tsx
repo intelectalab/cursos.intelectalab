@@ -14,8 +14,8 @@ export const BrandMark: React.FC<{ tagline?: string }> = ({ tagline }) => (
         aria-hidden="true"
       >
         <path d="M19 6h10M21 6v10l-11 18a4 4 0 003.4 6h21.2a4 4 0 003.4-6L27 16V6" />
-        <path d="M14 28c3 1 7-1 10 0s7 1 10 0" fill="#38BDF8" fillOpacity="0.45" stroke="none" />
-        <circle cx="24" cy="22" r="1.5" fill="#38BDF8" />
+        <path d="M14 28c3 1 7-1 10 0s7 1 10 0" fill="var(--color-accent-400)" fillOpacity="0.45" stroke="none" />
+        <circle cx="24" cy="22" r="1.5" fill="var(--color-accent-400)" />
       </svg>
     </div>
     <div className="leading-tight">
@@ -24,12 +24,12 @@ export const BrandMark: React.FC<{ tagline?: string }> = ({ tagline }) => (
         <>
           <span className="block font-extrabold text-xl tracking-tight text-white">{tagline}</span>
           <span className="block text-[11px] font-medium text-brand-200">
-            con Intelecta<span className="text-sky-400">Lab_</span>
+            con Intelecta<span className="text-accent-400">Lab_</span>
           </span>
         </>
       ) : (
         <span className="font-extrabold text-xl tracking-tight text-white">
-          Intelecta<span className="text-sky-400">Lab_</span>
+          Intelecta<span className="text-accent-400">Lab_</span>
         </span>
       )}
     </div>
@@ -47,8 +47,8 @@ interface AuthShellProps {
 // Fondo de marca para las pantallas de acceso de una sola tarjeta
 export const AuthShell: React.FC<AuthShellProps> = ({ tagline, title, subtitle, children, footer }) => (
   <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-6">
-    <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-sky-500/25 blur-[110px] pointer-events-none" />
-    <div className="absolute -bottom-20 -right-10 w-[420px] h-[420px] rounded-full bg-sky-400/20 blur-[120px] pointer-events-none" />
+    <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-accent-500/25 blur-[110px] pointer-events-none" />
+    <div className="absolute -bottom-20 -right-10 w-[420px] h-[420px] rounded-full bg-accent-400/20 blur-[120px] pointer-events-none" />
     <div
       className="absolute inset-0 opacity-[0.07] pointer-events-none"
       style={{

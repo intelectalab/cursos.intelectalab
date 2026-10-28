@@ -10,6 +10,7 @@ use App\Modules\Support\Domain\Models\Ticket;
 use App\Modules\Support\Domain\Models\TicketAttachment;
 use App\Modules\Support\Http\TicketPresenter;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\DateRange;
 use App\Shared\Http\StateCounts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -42,6 +43,8 @@ class TicketController extends Controller
             // "me" = los míos; "none" = sin asignar; o el id de alguien del equipo
             'assignee' => ['nullable', 'string', 'max:36'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            // Creados entre esos días
+            ...DateRange::rules(),
         ]);
 
         $byState = function (Builder $q, string $status) use ($request) {
@@ -56,7 +59,7 @@ class TicketController extends Controller
             };
         };
 
-        $base = Ticket::query()
+        $base = DateRange::apply(Ticket::query(), 'created_at', $filters)
             ->when($filters['category'] ?? null, fn (Builder $q, string $category) => $q->where('category', $category))
             ->when($filters['assignee'] ?? null, fn (Builder $q, string $assignee) => match ($assignee) {
                 'none' => $q->whereNull('assignee_id'),

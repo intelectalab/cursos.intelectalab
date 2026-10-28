@@ -26,7 +26,7 @@ const CertificateCard: React.FC<{ certificate: MyCertificate }> = ({ certificate
     <Card className="overflow-hidden flex flex-col">
       <div className="relative px-5 py-6 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 text-white">
         <Award className="absolute right-4 top-4 w-14 h-14 text-white/10" aria-hidden="true" />
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-300">Certificado</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-accent-300">Certificado</p>
         <h2 className="mt-1 text-lg font-bold leading-snug">{certificate.course.title}</h2>
         <p className="mt-1 text-[13px] text-brand-100">
           {certificate.course.duration_hours ? `${certificate.course.duration_hours} horas · ` : ''}

@@ -30,7 +30,7 @@ import {
 const RESOURCE_ICON: Record<ResourceType, { icon: LucideIcon; tone: string }> = {
   VIDEO: { icon: Video, tone: 'bg-rose-50 text-rose-600' },
   DOCUMENT: { icon: Paperclip, tone: 'bg-amber-50 text-amber-600' },
-  LINK: { icon: Link2, tone: 'bg-sky-50 text-sky-600' },
+  LINK: { icon: Link2, tone: 'bg-accent-50 text-accent-600' },
   TEXT: { icon: FileText, tone: 'bg-violet-50 text-violet-600' },
 };
 

@@ -6,7 +6,8 @@ import { MODULE_GROUPS, visibleModules, type ModuleGroup, type ModuleItem, type 
 import { can } from '../../shared/auth/permissions';
 import { Avatar } from '../../shared/ui';
 import { salesApi } from '../../features/sales/api';
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight, FileText, X } from 'lucide-react';
+import { useSitePages } from '../../features/cms/useSitePages';
 
 // Grupos abiertos, recordados en el navegador
 const OPEN_KEY = 'erp.sidebar.open';
@@ -52,12 +53,12 @@ const Logo: React.FC = () => (
     aria-hidden="true"
   >
     <path d="M19 6h10M21 6v10l-11 18a4 4 0 003.4 6h21.2a4 4 0 003.4-6L27 16V6" />
-    <path d="M14 28c3 1 7-1 10 0s7 1 10 0" fill="#38BDF8" fillOpacity="0.45" stroke="none" />
+    <path d="M14 28c3 1 7-1 10 0s7 1 10 0" fill="var(--color-accent-400)" fillOpacity="0.45" stroke="none" />
     <circle cx="24" cy="22" r="1.5" fill="currentColor" />
   </svg>
 );
 
-const ModuleLink: React.FC<{ item: ModuleItem; collapsed: boolean; count: number; nested?: boolean; onNavigate: () => void }> = ({
+const ModuleLink: React.FC<{ item: Pick<ModuleItem, 'name' | 'href' | 'icon'>; collapsed: boolean; count: number; nested?: boolean; onNavigate: () => void }> = ({
   item,
   collapsed,
   count,
@@ -76,9 +77,9 @@ const ModuleLink: React.FC<{ item: ModuleItem; collapsed: boolean; count: number
   >
     {({ isActive }) => (
       <>
-        {isActive && !collapsed && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-sky-400" />}
+        {isActive && !collapsed && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-accent-400" />}
         <item.icon
-          className={`${nested ? 'w-4 h-4' : 'w-[18px] h-[18px]'} shrink-0 transition-colors ${isActive ? 'text-sky-400' : 'text-brand-300 group-hover:text-sky-300'}`}
+          className={`${nested ? 'w-4 h-4' : 'w-[18px] h-[18px]'} shrink-0 transition-colors ${isActive ? 'text-accent-400' : 'text-brand-300 group-hover:text-accent-300'}`}
         />
         {!collapsed && <span className="truncate">{item.name}</span>}
         {!collapsed && <Count value={count} title="Pendientes" />}
@@ -185,6 +186,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
 
   const fullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim();
 
+  // Solo para quien estudia en la academia
+  const sitePages = useSitePages();
+  const studentPages: Pick<ModuleItem, 'id' | 'name' | 'href' | 'icon'>[] = can(permissions, 'enrollments.self.read')
+    ? sitePages
+        .filter((page) => page.student_menu)
+        .map((page) => ({ id: `page-${page.slug}`, name: page.title, href: `/p/${page.slug}`, icon: FileText }))
+    : [];
+
   return (
     <>
       {/* Fondo del panel: tocarlo lo cierra */}
@@ -207,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
         } ${isCollapsed ? 'lg:w-[76px]' : 'lg:w-64'}`}
       >
         {/* Luz de marca, igual que en la pantalla de acceso */}
-        <div className="absolute -top-24 -left-16 w-64 h-64 rounded-full bg-sky-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -left-16 w-64 h-64 rounded-full bg-accent-500/20 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 -right-24 w-64 h-64 rounded-full bg-brand-500/20 blur-3xl pointer-events-none" />
 
         {/* 1. Marca */}
@@ -221,10 +230,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
             <img
               src={logoUrl}
               alt=""
-              className="w-9 h-9 shrink-0 rounded-xl bg-white object-contain p-1 shadow-lg shadow-sky-500/25 ring-1 ring-white/20"
+              className="w-9 h-9 shrink-0 rounded-xl bg-white object-contain p-1 shadow-lg shadow-accent-500/25 ring-1 ring-white/20"
             />
           ) : (
-            <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-brand-600 to-sky-500 p-2 shadow-lg shadow-sky-500/25 ring-1 ring-white/20">
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-brand-600 to-accent-500 p-2 shadow-lg shadow-accent-500/25 ring-1 ring-white/20">
               <Logo />
             </div>
           )}
@@ -237,12 +246,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
                     {tenant.name}
                   </span>
                   <span className="block text-[10px] font-medium text-brand-300 truncate">
-                    con Intelecta<span className="text-sky-400">Lab_</span>
+                    con Intelecta<span className="text-accent-400">Lab_</span>
                   </span>
                 </>
               ) : (
                 <span className="text-white font-extrabold text-[15px] tracking-tight">
-                  Intelecta<span className="text-sky-400">Lab_</span>
+                  Intelecta<span className="text-accent-400">Lab_</span>
                 </span>
               )}
             </div>
@@ -296,7 +305,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
                       holdsCurrent ? 'text-white' : 'text-brand-100/75 hover:bg-white/6 hover:text-white'
                     }`}
                   >
-                    <meta.icon className={`w-[18px] h-[18px] shrink-0 ${holdsCurrent ? 'text-sky-400' : 'text-brand-300 group-hover:text-sky-300'}`} />
+                    <meta.icon className={`w-[18px] h-[18px] shrink-0 ${holdsCurrent ? 'text-accent-400' : 'text-brand-300 group-hover:text-accent-300'}`} />
                     <span className="truncate">{meta.label}</span>
                     {!open && <Count value={total} title="Pendientes en este grupo" />}
                     <ChevronRight className={`w-4 h-4 shrink-0 text-brand-300 transition-transform ${open ? 'rotate-90' : ''} ${!open && total > 0 ? 'ml-1.5' : 'ml-auto'}`} />
@@ -314,6 +323,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isDrawer, isDrawe
               );
             })}
           </ul>
+
+          {/* Páginas que la academia enlaza en el menú de los alumnos (Páginas → Dónde aparece) */}
+          {studentPages.length > 0 && (
+            <>
+              {isCollapsed ? (
+                <div aria-hidden="true" className="mx-3 my-2 border-t border-white/10" />
+              ) : (
+                <p className="px-3 mt-5 mb-2 text-[11px] font-semibold uppercase tracking-wider text-brand-300/70">Información</p>
+              )}
+              <ul className="space-y-0.5">
+                {studentPages.map((item) => (
+                  <li key={item.id}>
+                    <ModuleLink item={item} collapsed={isCollapsed} count={0} onNavigate={onClose} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </nav>
 
         {/* 3. Usuario */}

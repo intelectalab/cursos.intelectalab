@@ -66,11 +66,11 @@ export const HelpTip: React.FC<{ text: string; label?: string; className?: strin
 
 const CARD_TONES: Record<Tone, { icon: string; ring: string; bar: string }> = {
   neutral: { icon: 'bg-slate-100 text-slate-600', ring: 'ring-slate-400 border-slate-400', bar: 'bg-slate-400' },
-  brand: { icon: 'bg-brand-50 text-brand-700', ring: 'ring-brand-500 border-brand-500', bar: 'bg-gradient-to-r from-brand-700 to-sky-500' },
+  brand: { icon: 'bg-brand-50 text-brand-700', ring: 'ring-brand-500 border-brand-500', bar: 'bg-gradient-to-r from-brand-700 to-accent-500' },
   success: { icon: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-500 border-emerald-500', bar: 'bg-emerald-500' },
   warning: { icon: 'bg-amber-50 text-amber-600', ring: 'ring-amber-500 border-amber-500', bar: 'bg-amber-500' },
   danger: { icon: 'bg-rose-50 text-rose-600', ring: 'ring-rose-500 border-rose-500', bar: 'bg-rose-500' },
-  info: { icon: 'bg-sky-50 text-sky-600', ring: 'ring-sky-500 border-sky-500', bar: 'bg-sky-500' },
+  info: { icon: 'bg-accent-50 text-accent-600', ring: 'ring-accent-500 border-accent-500', bar: 'bg-accent-500' },
   violet: { icon: 'bg-violet-50 text-violet-600', ring: 'ring-violet-500 border-violet-500', bar: 'bg-violet-500' },
 };
 

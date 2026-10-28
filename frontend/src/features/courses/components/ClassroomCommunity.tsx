@@ -26,14 +26,14 @@ export const ClassroomAnnouncements: React.FC<{ courseId: string }> = ({ courseI
   const shown = all ? items : items.slice(0, 2);
 
   return (
-    <section aria-label="Anuncios del curso" className="mb-5 rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white px-4 py-3.5">
+    <section aria-label="Anuncios del curso" className="mb-5 rounded-2xl border border-accent-200 bg-gradient-to-r from-accent-50 to-white px-4 py-3.5">
       <div className="flex items-center gap-2.5 mb-2">
-        <span className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+        <span className="w-8 h-8 rounded-xl bg-accent-100 text-accent-700 flex items-center justify-center shrink-0">
           <Megaphone className="w-4 h-4" />
         </span>
         <h2 className="text-sm font-semibold text-slate-900">Anuncios</h2>
       </div>
-      <ul className="divide-y divide-sky-100">
+      <ul className="divide-y divide-accent-100">
         {shown.map((item) => (
           <li key={item.id} className="py-2.5">
             <p className="text-[13px] font-semibold text-slate-900">{item.title}</p>
@@ -45,7 +45,7 @@ export const ClassroomAnnouncements: React.FC<{ courseId: string }> = ({ courseI
         ))}
       </ul>
       {items.length > 2 && (
-        <button type="button" className="text-xs font-semibold text-sky-700 underline cursor-pointer" onClick={() => setAll(!all)}>
+        <button type="button" className="text-xs font-semibold text-accent-700 underline cursor-pointer" onClick={() => setAll(!all)}>
           {all ? 'Ver menos' : `Ver los ${items.length} anuncios`}
         </button>
       )}

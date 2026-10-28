@@ -123,7 +123,7 @@ export const supportApi = {
   },
 
   // Personal de soporte
-  async inbox(params: { search?: string; status?: string; category?: string; assignee?: string; page?: number }) {
+  async inbox(params: { search?: string; status?: string; category?: string; assignee?: string; from?: string; to?: string; page?: number }) {
     const response = await api.get('/tickets', { params });
     return {
       data: response.data.data as TicketSummary[],

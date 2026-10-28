@@ -48,6 +48,9 @@ import { ExportButton } from '../../../shared/ui/ExportButton';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
 import { RefundWindowAlert } from '../components/RefundWindowAlert';
 import { NewSaleModal } from '../components/NewSaleModal';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
+import { useFilterOptions } from '../../../shared/filters/useFilterOptions';
+import { DateRangeFilter } from '../../../shared/ui/listFilters';
 
 // Detalle de una orden con sus acciones: confirmar el pago recibido o cancelarla
 const OrderModal: React.FC<{
@@ -439,10 +442,14 @@ export const OrdersPage: React.FC = () => {
   const { hasPermission } = useAuth();
   const [rows, setRows] = useState<Order[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  // Origen de la venta: ASSISTED (la registró el personal) u ONLINE (la compró el alumno)
-  const [sale, setSale] = useState('');
+  // Los filtros viven en la dirección de la página. sale: ASSISTED (la registró el personal) u ONLINE (la compró el alumno)
+  const urlFilters = useUrlFilters({ search: '', status: '', sale: '', course_id: '', package_id: '', method: '', seller_id: '', from: '', to: '' });
+  const { search, status, sale } = urlFilters.values;
+  const setSearch = (value: string) => urlFilters.set({ search: value });
+  const setStatus = (value: string) => urlFilters.set({ status: value });
+  const setSale = (value: string) => urlFilters.set({ sale: value });
+  const options = useFilterOptions();
+  const product = urlFilters.values.course_id ? `course:${urlFilters.values.course_id}` : urlFilters.values.package_id ? `package:${urlFilters.values.package_id}` : '';
   const [selling, setSelling] = useState(false);
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -478,7 +485,7 @@ export const OrdersPage: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const result = await salesApi.orders({ search: search || undefined, status: status || undefined, sale: sale || undefined, page });
+      const result = await salesApi.orders({ ...urlFilters.query, page });
       setRows(result.data);
       setMeta(result.meta);
       setState('ready');
@@ -486,7 +493,7 @@ export const OrdersPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, status, sale, page]);
+  }, [urlFilters.query, page]);
 
   // La búsqueda espera a que el usuario termine de escribir
   useEffect(() => {
@@ -494,7 +501,7 @@ export const OrdersPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [load]);
 
-  const filtered = search !== '' || status !== '' || sale !== '';
+  const filtered = urlFilters.active;
   const filter = (apply: () => void) => {
     apply();
     setPage(1);
@@ -519,7 +526,7 @@ export const OrdersPage: React.FC = () => {
         subtitle="Órdenes de compra de tus alumnos y confirmación de los pagos recibidos."
         action={
           <div className="flex flex-wrap gap-2">
-            <ExportButton path="/orders/export" params={{ search: search || undefined, status: status || undefined, sale: sale || undefined }} filename="ordenes.xlsx" />
+            <ExportButton path="/orders/export" params={urlFilters.query} filename="ordenes.xlsx" />
             {hasPermission('orders.assisted') && (
               <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setSelling(true)}>
                 Nueva venta
@@ -565,6 +572,46 @@ export const OrdersPage: React.FC = () => {
             <option value="ASSISTED">Venta asistida</option>
             <option value="ONLINE">Compra del alumno</option>
           </SearchSelect>
+          <SearchSelect
+            className={`${INPUT_CLASS} !w-56`}
+            aria-label="Filtrar por curso o paquete"
+            value={product}
+            onChange={(event) => {
+              const [kind, id = ''] = event.target.value.split(':');
+              filter(() => urlFilters.set({ course_id: kind === 'course' ? id : '', package_id: kind === 'package' ? id : '' }));
+            }}
+          >
+            <option value="">Todos los cursos y paquetes</option>
+            {options.courses.map((course) => (
+              <option key={course.id} value={`course:${course.id}`}>
+                {course.title}
+              </option>
+            ))}
+            {options.packages.map((pack) => (
+              <option key={pack.id} value={`package:${pack.id}`}>
+                Paquete: {pack.title}
+              </option>
+            ))}
+          </SearchSelect>
+          <SearchSelect className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por medio de pago" value={urlFilters.values.method} onChange={(event) => filter(() => urlFilters.set({ method: event.target.value }))}>
+            <option value="">Todos los medios de pago</option>
+            {(['TRANSFER', 'YAPE', 'CASH', 'CARD', 'WALLET', 'PAYPAL', 'OTHER'] as PaymentMethod[]).map((code) => (
+              <option key={code} value={code}>
+                {PAYMENT_METHOD_LABEL[code]}
+              </option>
+            ))}
+          </SearchSelect>
+          {options.sellers.length > 0 && (
+            <SearchSelect className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por quién vendió" value={urlFilters.values.seller_id} onChange={(event) => filter(() => urlFilters.set({ seller_id: event.target.value }))}>
+              <option value="">Todos los vendedores</option>
+              {options.sellers.map((seller) => (
+                <option key={seller.id} value={seller.id}>
+                  {seller.name}
+                </option>
+              ))}
+            </SearchSelect>
+          )}
+          <DateRangeFilter label="Fecha" from={urlFilters.values.from} to={urlFilters.values.to} onChange={(range) => filter(() => urlFilters.set(range))} />
           <HelpTip
             text={status ? (cards.find((card) => card.key === status)?.help ?? '') : 'Una orden nace pendiente; pasa a pagada al confirmarse el pago, o vence o se cancela si no se paga.'}
             label="Qué significa el estado elegido"
@@ -586,11 +633,7 @@ export const OrdersPage: React.FC = () => {
               filtered && (
                 <Button
                   onClick={() =>
-                    filter(() => {
-                      setSearch('');
-                      setStatus('');
-                      setSale('');
-                    })
+                    filter(() => urlFilters.clear())
                   }
                 >
                   Quitar filtros

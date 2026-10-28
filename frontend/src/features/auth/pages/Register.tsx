@@ -84,7 +84,7 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row font-sans bg-[#F4F7FB] selection:bg-[#0284C7] selection:text-white">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row font-sans bg-[#F4F7FB] selection:bg-accent-600 selection:text-white">
       
       {/* PANEL IZQUIERDO: Branding */}
       <div className="relative overflow-hidden lg:w-[48%] bg-gradient-to-b from-[#06396E] via-[#052E5A] to-[#042142] p-8 sm:p-12 lg:p-16 flex flex-col justify-between min-h-[420px] lg:min-h-screen text-white">
@@ -98,18 +98,18 @@ export const Register: React.FC = () => {
             backgroundSize: '48px 48px',
           }}
         />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#0284C7]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent-600/20 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
             <svg className="w-5 h-5 text-white" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 6h10M21 6v10l-11 18a4 4 0 003.4 6h21.2a4 4 0 003.4-6L27 16V6" />
-              <path d="M14 28c3 1 7-1 10 0s7 1 10 0" fill="#38BDF8" fillOpacity="0.4" stroke="none" />
+              <path d="M14 28c3 1 7-1 10 0s7 1 10 0" fill="var(--color-accent-400)" fillOpacity="0.4" stroke="none" />
               <circle cx="24" cy="22" r="1.5" fill="currentColor" />
             </svg>
           </div>
           <span className="font-extrabold text-lg tracking-tight text-white">
-            Intelecta<span className="text-[#38BDF8]">Lab_</span>
+            Intelecta<span className="text-accent-400">Lab_</span>
           </span>
         </div>
 
@@ -118,25 +118,25 @@ export const Register: React.FC = () => {
             Comienza tu espacio <br />
             multi-tenant hoy.
           </h1>
-          <p className="text-blue-100/75 text-sm sm:text-base max-w-lg leading-relaxed mb-8">
+          <p className="text-accent-100/75 text-sm sm:text-base max-w-lg leading-relaxed mb-8">
             Crea tu organización con entorno aislado en base de datos, roles preconfigurados y acceso inmediato.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-lg">
             <div className="bg-white/[0.06] backdrop-blur-md border border-white/10 rounded-2xl p-4">
-              <ShieldCheck className="w-5 h-5 text-[#38BDF8] mb-2" />
+              <ShieldCheck className="w-5 h-5 text-accent-400 mb-2" />
               <p className="text-xs font-semibold text-white/90">Aislamiento por esquema</p>
-              <p className="text-[11px] text-blue-200/60 mt-0.5">Seguridad nativa con PostgreSQL 15</p>
+              <p className="text-[11px] text-accent-200/60 mt-0.5">Seguridad nativa con PostgreSQL 15</p>
             </div>
             <div className="bg-white/[0.06] backdrop-blur-md border border-white/10 rounded-2xl p-4">
-              <Users className="w-5 h-5 text-[#38BDF8] mb-2" />
+              <Users className="w-5 h-5 text-accent-400 mb-2" />
               <p className="text-xs font-semibold text-white/90">Control RBAC completo</p>
-              <p className="text-[11px] text-blue-200/60 mt-0.5">Permisos granulares configurables</p>
+              <p className="text-[11px] text-accent-200/60 mt-0.5">Permisos granulares configurables</p>
             </div>
           </div>
         </div>
 
-        <div className="relative z-10 text-[11px] text-blue-200/60 font-medium">
+        <div className="relative z-10 text-[11px] text-accent-200/60 font-medium">
           &copy; {new Date().getFullYear()} IntelectaLab. Todos los derechos reservados.
         </div>
       </div>
@@ -176,7 +176,7 @@ export const Register: React.FC = () => {
                   placeholder="Ej. Academia Central S.A.C."
                   value={formData.organization_name}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-[#0284C7] focus:ring-2 focus:ring-[#0284C7]/20 focus:outline-none transition-all"
+                  className="w-full pl-10 pr-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-accent-600 focus:ring-2 focus:ring-accent-600/20 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -197,7 +197,7 @@ export const Register: React.FC = () => {
                   placeholder="academia-central"
                   value={formData.subdomain}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-l-xl text-xs text-slate-900 focus:bg-white focus:border-[#0284C7] focus:ring-2 focus:ring-[#0284C7]/20 focus:outline-none transition-all"
+                  className="w-full pl-10 pr-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-l-xl text-xs text-slate-900 focus:bg-white focus:border-accent-600 focus:ring-2 focus:ring-accent-600/20 focus:outline-none transition-all"
                 />
                 <span className="shrink-0 px-3 py-2 bg-slate-100 border border-slate-200 border-l-0 rounded-r-xl text-xs text-slate-500">
                   .{centralDomain}
@@ -220,7 +220,7 @@ export const Register: React.FC = () => {
                     placeholder="Carlos"
                     value={formData.first_name}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-[#0284C7] focus:ring-2 focus:ring-[#0284C7]/20 focus:outline-none transition-all"
+                    className="w-full pl-10 pr-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-accent-600 focus:ring-2 focus:ring-accent-600/20 focus:outline-none transition-all"
                   />
                 </div>
               </div>
@@ -236,7 +236,7 @@ export const Register: React.FC = () => {
                   placeholder="Mendoza"
                   value={formData.last_name}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-[#0284C7] focus:ring-2 focus:ring-[#0284C7]/20 focus:outline-none transition-all"
+                  className="w-full px-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-accent-600 focus:ring-2 focus:ring-accent-600/20 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -255,7 +255,7 @@ export const Register: React.FC = () => {
                   placeholder="administrador@tuempresa.com"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-[#0284C7] focus:ring-2 focus:ring-[#0284C7]/20 focus:outline-none transition-all"
+                  className="w-full pl-10 pr-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-accent-600 focus:ring-2 focus:ring-accent-600/20 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -275,7 +275,7 @@ export const Register: React.FC = () => {
                     placeholder="Min. 8 caracteres"
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-8 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-[#0284C7] focus:ring-2 focus:ring-[#0284C7]/20 focus:outline-none transition-all"
+                    className="w-full pl-10 pr-8 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-accent-600 focus:ring-2 focus:ring-accent-600/20 focus:outline-none transition-all"
                   />
                   <button
                     type="button"
@@ -301,7 +301,7 @@ export const Register: React.FC = () => {
                   placeholder="Repetir contraseña"
                   value={formData.password_confirmation}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-[#0284C7] focus:ring-2 focus:ring-[#0284C7]/20 focus:outline-none transition-all"
+                  className="w-full px-3.5 py-2 bg-[#EFF4FA] border border-transparent rounded-xl text-xs text-slate-900 focus:bg-white focus:border-accent-600 focus:ring-2 focus:ring-accent-600/20 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -309,7 +309,7 @@ export const Register: React.FC = () => {
             <button
               type="submit"
               disabled={status === 'processing'}
-              className="w-full !mt-5 py-3 px-4 bg-[#0284C7] hover:bg-[#0369A1] active:bg-[#075985] text-white text-xs font-semibold rounded-xl shadow-md shadow-[#0284C7]/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+              className="w-full !mt-5 py-3 px-4 bg-accent-600 hover:bg-accent-700 active:bg-[#075985] text-white text-xs font-semibold rounded-xl shadow-md shadow-accent-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
             >
               {status === 'processing' ? (
                 <>

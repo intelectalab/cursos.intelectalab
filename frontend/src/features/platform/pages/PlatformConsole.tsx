@@ -131,7 +131,7 @@ export const PlatformConsole: React.FC = () => {
   return (
     <div className="min-h-screen bg-canvas">
       <header className="relative overflow-hidden bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700">
-        <div className="absolute -top-24 right-10 w-72 h-72 rounded-full bg-sky-400/25 blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 right-10 w-72 h-72 rounded-full bg-accent-400/25 blur-3xl pointer-events-none" />
         <div className="relative max-w-6xl mx-auto h-16 px-6 flex items-center justify-between gap-4">
           <BrandMark tagline="Administración de la plataforma" />
           <div className="flex items-center gap-3">

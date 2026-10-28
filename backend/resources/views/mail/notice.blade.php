@@ -11,7 +11,7 @@
             <td align="center">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden;">
                     <tr>
-                        <td style="background: #084586; padding: 18px 28px;">
+                        <td style="background: {{ $color ?? '#084586' }}; padding: 18px 28px;">
                             <table role="presentation" cellpadding="0" cellspacing="0">
                                 <tr>
                                     @if ($logoUrl)
@@ -35,7 +35,7 @@
                             @endforeach
                             @if ($action)
                                 <p style="margin: 20px 0 8px;">
-                                    <a href="{{ $action['url'] }}" style="display: inline-block; padding: 11px 20px; background: #084586; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold;">{{ $action['label'] }}</a>
+                                    <a href="{{ $action['url'] }}" style="display: inline-block; padding: 11px 20px; background: {{ $color ?? '#084586' }}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold;">{{ $action['label'] }}</a>
                                 </p>
                                 <p style="margin: 12px 0 0; color: #64748b; font-size: 12px;">Si el botón no funciona, copia esta dirección en tu navegador:<br>{{ $action['url'] }}</p>
                             @endif

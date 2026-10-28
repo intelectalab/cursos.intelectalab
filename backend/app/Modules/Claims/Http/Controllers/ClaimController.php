@@ -7,6 +7,7 @@ use App\Modules\Claims\Application\ClaimService;
 use App\Modules\Claims\Domain\Models\Claim;
 use App\Modules\Claims\Http\ClaimPresenter;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\DateRange;
 use App\Shared\Http\StateCounts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +19,9 @@ use Illuminate\Validation\Rule;
  */
 class ClaimController extends Controller
 {
+    /** «Por vencer»: sin responder y con fecha límite de hoy a estos días */
+    private const DUE_SOON_DAYS = 3;
+
     private const RELATIONS = ['history.author', 'messages.author'];
 
     public function __construct(private readonly ClaimService $claims) {}
@@ -26,22 +30,26 @@ class ClaimController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
-            // PENDING = sin responder; OVERDUE = sin responder y fuera de plazo
-            'status' => ['nullable', Rule::in([...Claim::STATUSES, 'PENDING', 'OVERDUE'])],
+            // PENDING = sin responder; OVERDUE = sin responder y fuera de plazo; DUE_SOON = vence en los próximos días
+            'status' => ['nullable', Rule::in([...Claim::STATUSES, 'PENDING', 'OVERDUE', 'DUE_SOON'])],
             'type' => ['nullable', Rule::in(Claim::TYPES)],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            // Registradas entre esos días
+            ...DateRange::rules(),
         ]);
 
         $pending = fn (Builder $q) => $q->where('status', '!=', Claim::STATUS_ANSWERED);
         $overdue = fn (Builder $q) => $pending($q)->whereDate('due_at', '<', now()->toDateString());
+        $dueSoon = fn (Builder $q) => $pending($q)->whereBetween('due_at', [now()->toDateString(), now()->addDays(self::DUE_SOON_DAYS)->toDateString()]);
 
         $byState = fn (Builder $q, string $status) => match ($status) {
             'PENDING' => $pending($q),
             'OVERDUE' => $overdue($q),
+            'DUE_SOON' => $dueSoon($q),
             default => $q->where('status', $status),
         };
 
-        $base = Claim::query()
+        $base = DateRange::apply(Claim::query(), 'created_at', $filters)
             ->when($filters['type'] ?? null, fn (Builder $q, string $type) => $q->where('type', $type))
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
@@ -53,7 +61,7 @@ class ClaimController extends Controller
             });
 
         // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
-        $states = StateCounts::of($base, ['PENDING', 'OVERDUE', ...Claim::STATUSES], $byState);
+        $states = StateCounts::of($base, ['PENDING', 'OVERDUE', 'DUE_SOON', ...Claim::STATUSES], $byState);
 
         $claims = $base
             ->when($filters['status'] ?? null, $byState)

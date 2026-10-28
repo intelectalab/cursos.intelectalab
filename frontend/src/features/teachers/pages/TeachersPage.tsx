@@ -22,6 +22,9 @@ import {
   THead,
   Tr,
 } from '../../../shared/ui';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
+import { useFilterOptions } from '../../../shared/filters/useFilterOptions';
 import { FilterCards, type FilterCard } from '../../../shared/ui/filters';
 import type { PageMeta } from '../../identity/api';
 import { NewPersonModal } from '../../identity/components/NewPersonModal';
@@ -39,8 +42,14 @@ export const TeachersPage: React.FC = () => {
 
   const [rows, setRows] = useState<TeacherRow[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<TeacherFilter>('');
+  // Los filtros viven en la dirección de la página
+  const urlFilters = useUrlFilters({ search: '', filter: '', course_id: '' });
+  const { search, course_id: courseId } = urlFilters.values;
+  const filter = urlFilters.values.filter as TeacherFilter;
+  const setSearch = (value: string) => urlFilters.set({ search: value });
+  const setFilter = (value: TeacherFilter) => urlFilters.set({ filter: value });
+  const setCourseId = (value: string) => urlFilters.set({ course_id: value });
+  const options = useFilterOptions();
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -50,7 +59,7 @@ export const TeachersPage: React.FC = () => {
   const load = useCallback(async () => {
     setState('loading');
     try {
-      const result = await teachersApi.list({ search: search || undefined, filter: filter || undefined, page });
+      const result = await teachersApi.list({ search: search || undefined, filter: filter || undefined, course_id: courseId || undefined, page });
       setRows(result.data);
       setMeta(result.meta);
       setState('ready');
@@ -58,7 +67,7 @@ export const TeachersPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, filter, page]);
+  }, [search, filter, courseId, page]);
 
   // La búsqueda espera a que el usuario termine de escribir
   useEffect(() => {
@@ -71,7 +80,7 @@ export const TeachersPage: React.FC = () => {
     setPage(1);
   };
 
-  const filtered = search !== '' || filter !== '';
+  const filtered = search !== '' || filter !== '' || courseId !== '';
   const counts = meta?.counts ?? {};
   const cards: FilterCard[] = [
     { key: '', label: 'Todos', value: counts.ALL ?? null, icon: Users, tone: 'brand', help: 'Todas las personas con el rol Docente o asignadas a algún curso, según la búsqueda.' },
@@ -115,6 +124,14 @@ export const TeachersPage: React.FC = () => {
               onChange={(event) => apply(() => setSearch(event.target.value))}
             />
           </div>
+          <SearchSelect className={`${INPUT_CLASS} !w-56`} aria-label="Filtrar por curso" value={courseId} onChange={(event) => ((value: string) => apply(() => setCourseId(value)))(event.target.value)}>
+            <option value="">Todos los cursos</option>
+            {options.courses.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title}
+              </option>
+            ))}
+          </SearchSelect>
         </div>
 
         {state === 'loading' && <LoadingState />}
@@ -131,6 +148,7 @@ export const TeachersPage: React.FC = () => {
                     apply(() => {
                       setSearch('');
                       setFilter('');
+                      setCourseId('');
                     })
                   }
                 >

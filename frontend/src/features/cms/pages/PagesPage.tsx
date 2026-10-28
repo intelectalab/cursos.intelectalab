@@ -7,6 +7,7 @@ import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, Modal, PageHeader, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
 import { formatDateTime } from '../../sales/api';
 import { cmsApi, slugify, type PageSummary } from '../api';
+import { appPath, displayAddress } from '../../../shared/tenancy/hosts';
 
 const NewPageModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const navigate = useNavigate();
@@ -59,7 +60,7 @@ const NewPageModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             }}
           />
         </Field>
-        <Field label="Dirección" hint={`La página quedará en ${window.location.host}/p/${slug || 'direccion'}`}>
+        <Field label="Dirección" hint={`La página quedará en ${displayAddress()}/p/${slug || 'direccion'}`}>
           <input
             className={`${INPUT_CLASS} font-mono`}
             required
@@ -80,6 +81,17 @@ const NewPageModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 };
 
 // Páginas de la academia: Nosotros, Términos, Privacidad, Preguntas frecuentes…
+// Resumen de dónde aparece el enlace de una página
+function placesOf(page: PageSummary): string {
+  const places = [
+    page.show_in_footer && 'Pie',
+    page.show_in_header && 'Menú superior',
+    page.show_in_auth && 'Inicio de sesión',
+    page.show_in_student_menu && 'Menú de alumnos',
+  ].filter(Boolean);
+  return places.length > 0 ? places.join(' · ') : 'Solo con su enlace';
+}
+
 export const PagesPage: React.FC = () => {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('cms.update');
@@ -139,7 +151,7 @@ export const PagesPage: React.FC = () => {
           <EmptyState
             icon={FileText}
             title="Aún no hay páginas"
-            text="Crea las páginas informativas de tu academia, como Nosotros, Términos y condiciones o Preguntas frecuentes. Se enlazan al pie de tu catálogo."
+            text="Crea las páginas informativas de tu academia, como Nosotros, Términos y condiciones o Preguntas frecuentes. En cada una eliges dónde aparece su enlace: el pie, el menú superior, el inicio de sesión o el menú de los alumnos."
             action={newButton}
           />
         )}
@@ -148,7 +160,7 @@ export const PagesPage: React.FC = () => {
             <THead>
               <Th>Página</Th>
               <Th>Estado</Th>
-              <Th>Al pie del sitio</Th>
+              <Th>Dónde aparece</Th>
               <Th>Última edición</Th>
               <Th />
             </THead>
@@ -171,7 +183,7 @@ export const PagesPage: React.FC = () => {
                       {page.review_status === 'CHANGES_REQUESTED' && <Badge tone="danger">Devuelta</Badge>}
                     </div>
                   </Td>
-                  <Td className="text-slate-700">{page.show_in_footer ? 'Sí' : 'No'}</Td>
+                  <Td className="text-slate-700 text-xs">{placesOf(page)}</Td>
                   <Td className="whitespace-nowrap">
                     <p className="text-slate-700">{formatDateTime(page.updated_at)}</p>
                     <p className="text-xs text-slate-500">{page.updated_by}</p>
@@ -179,7 +191,7 @@ export const PagesPage: React.FC = () => {
                   <Td>
                     {page.status === 'PUBLISHED' && (
                       <a
-                        href={page.path}
+                        href={appPath(page.path)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap"

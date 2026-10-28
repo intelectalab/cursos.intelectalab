@@ -40,7 +40,7 @@ export const PublicPage: React.FC = () => {
     state.status === 'ready' ? (
       <div className="max-w-3xl">
         <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">{state.page.title}</h1>
-        <p className="mt-3 text-sm text-sky-100/80">Actualizado el {formatDate(state.page.published_at)}</p>
+        <p className="mt-3 text-sm text-accent-100/80">Actualizado el {formatDate(state.page.published_at)}</p>
       </div>
     ) : undefined;
 

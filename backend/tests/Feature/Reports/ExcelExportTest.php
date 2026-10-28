@@ -49,7 +49,13 @@ class ExcelExportTest extends TestCase
 
         $sheets = [];
         foreach ($reader->getSheetIterator() as $sheet) {
-            $sheets[$sheet->getName()] = array_map(fn ($row) => $row->toArray(), iterator_to_array($sheet->getRowIterator(), false));
+            $rows = array_map(fn ($row) => $row->toArray(), iterator_to_array($sheet->getRowIterator(), false));
+            // Arriba van la academia, el título y la fecha (la fila en blanco no se lee); al final, los totales
+            $rows = array_slice($rows, 3);
+            if ($rows !== [] && end($rows)[0] === 'Total') {
+                array_pop($rows);
+            }
+            $sheets[$sheet->getName()] = $rows;
         }
         $reader->close();
 
@@ -84,11 +90,11 @@ class ExcelExportTest extends TestCase
         $admin = fn () => $this->withToken($this->admin);
 
         // Órdenes: todas, y solo las pagadas
-        $orders = $this->sheets($admin()->get($this->api('/orders/export')))['ordenes'];
+        $orders = $this->sheets($admin()->get($this->api('/orders/export')))['Órdenes de compra'];
         $this->assertSame('N.º', $orders[0][0]);
         $this->assertCount(3, $orders);
 
-        $paid = $this->sheets($admin()->get($this->api('/orders/export?status=PAID')))['ordenes'];
+        $paid = $this->sheets($admin()->get($this->api('/orders/export?status=PAID')))['Órdenes de compra'];
         $this->assertCount(2, $paid);
         $row = array_combine($paid[0], $paid[1]);
         $this->assertSame('Pagada', $row['Estado']);
@@ -101,11 +107,11 @@ class ExcelExportTest extends TestCase
         $this->assertSame('2026-03-02 10:00', $row['Fecha de pago']);
 
         // Alumnos: la búsqueda acota el archivo
-        $students = $this->sheets($admin()->get($this->api('/students/export?search=luis')))['alumnos'];
+        $students = $this->sheets($admin()->get($this->api('/students/export?search=luis')))['Alumnos'];
         $this->assertCount(2, $students);
         $this->assertSame('luis@acme.com', array_combine($students[0], $students[1])['Correo']);
 
-        $enrolled = $this->sheets($admin()->get($this->api('/students/export?filter=ENROLLED')))['alumnos'];
+        $enrolled = $this->sheets($admin()->get($this->api('/students/export?filter=ENROLLED')))['Alumnos'];
         $this->assertSame(['ana@acme.com'], array_column(array_slice($enrolled, 1), 2));
 
         // Matrículas: solo Ana quedó matriculada
@@ -138,7 +144,7 @@ class ExcelExportTest extends TestCase
         $admin()->postJson($this->api('/crm/leads'), ['first_name' => 'Carla', 'last_name' => 'Ríos', 'company_name' => 'Minera Andes', 'email' => 'carla@andes.pe', 'source' => 'EVENT'])->assertCreated();
         $admin()->postJson($this->api('/crm/leads'), ['first_name' => 'Pedro', 'email' => 'pedro@otra.pe', 'source' => 'WEB'])->assertCreated();
 
-        $leads = $this->sheets($admin()->get($this->api('/crm/leads/export?search=andes')))['prospectos'];
+        $leads = $this->sheets($admin()->get($this->api('/crm/leads/export?search=andes')))['Prospectos'];
         $this->assertCount(2, $leads);
         $row = array_combine($leads[0], $leads[1]);
         $this->assertSame('Minera Andes', $row['Empresa']);
@@ -152,5 +158,39 @@ class ExcelExportTest extends TestCase
         foreach (['/orders/export', '/students/export', '/enrollments/export', '/crm/leads/export', '/reports/overview/export'] as $path) {
             $this->withToken($student)->get($this->api($path), ['Accept' => 'application/json'])->assertForbidden();
         }
+    }
+
+    public function test_the_file_carries_the_academy_title_filters_totals_and_other_formats(): void
+    {
+        $this->sales();
+        $admin = fn () => $this->withToken($this->admin);
+
+        $response = $admin()->get($this->api('/orders/export?status=PAID'))->assertOk();
+        $reader = new Reader;
+        $reader->open($response->baseResponse->getFile()->getPathname());
+        $rows = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            $rows = array_map(fn ($row) => $row->toArray(), iterator_to_array($sheet->getRowIterator(), false));
+        }
+        $reader->close();
+
+        // Cabecera con la academia, el título y el filtro usado; al final, el total de lo vendido
+        $this->assertSame($this->tenant->name, $rows[0][0]);
+        $this->assertSame('Órdenes de compra', $rows[1][0]);
+        $this->assertStringContainsString('Estado: PAID', $rows[2][0]);
+        $total = end($rows);
+        $this->assertSame('Total', $total[0]);
+        $this->assertEquals(100, $total[array_search('Total', $rows[3], true)]);
+
+        // PDF, CSV y ODS
+        $pdf = $admin()->get($this->api('/orders/export?format=pdf'))->assertOk();
+        $this->assertStringStartsWith('%PDF', file_get_contents($pdf->baseResponse->getFile()->getPathname()));
+        $this->assertStringEndsWith('.pdf', (string) $pdf->headers->get('Content-Disposition'));
+
+        $csv = file_get_contents($admin()->get($this->api('/students/export?format=csv'))->assertOk()->baseResponse->getFile()->getPathname());
+        $this->assertStringContainsString('Nombres,Apellidos,Correo', $csv);
+
+        $this->assertStringEndsWith('.ods', (string) $admin()->get($this->api('/enrollments/export?format=ods'))->assertOk()->headers->get('Content-Disposition'));
+        $admin()->get($this->api('/orders/export?format=doc'))->assertStatus(422);
     }
 }

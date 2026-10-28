@@ -175,7 +175,7 @@ function resourceBody(input: Partial<ResourceInput>): FormData {
 }
 
 export const coursesApi = {
-  async list(params: { search?: string; status?: string; category?: string; page?: number }) {
+  async list(params: { search?: string; status?: string; category?: string; teacher_id?: string; page?: number }) {
     const response = await api.get('/courses', { params });
     return {
       data: response.data.data as CourseSummary[],

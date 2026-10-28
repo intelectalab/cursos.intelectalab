@@ -111,7 +111,7 @@ export const AssistantLauncher: React.FC = () => {
           onClick={() => setOpen(true)}
           aria-label="Abrir el asistente (Ctrl+K)"
           title="Asistente (Ctrl+K)"
-          className="fixed z-40 bottom-4 right-[4.75rem] w-12 h-12 rounded-full bg-gradient-to-br from-brand-800 to-sky-600 text-white shadow-raised flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+          className="fixed z-40 bottom-4 right-[4.75rem] w-12 h-12 rounded-full bg-gradient-to-br from-brand-800 to-accent-600 text-white shadow-raised flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
         >
           <Sparkles className="w-5 h-5" />
         </button>
@@ -123,13 +123,13 @@ export const AssistantLauncher: React.FC = () => {
           aria-label="Asistente"
           className="fixed z-50 inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-[420px] md:h-[min(640px,calc(100vh-2rem))] bg-slate-50 md:rounded-2xl shadow-pop border border-slate-200 flex flex-col overflow-hidden animate-rise"
         >
-          <header className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-brand-900 via-brand-800 to-sky-700 text-white">
+          <header className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-brand-900 via-brand-800 to-accent-700 text-white">
             <span className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center">
               <Bot className="w-4.5 h-4.5" />
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold">Asistente</p>
-              <p className="text-[11px] text-sky-100 truncate">Pregunta en español sobre {tenant?.name ?? 'tu academia'}</p>
+              <p className="text-[11px] text-accent-100 truncate">Pregunta en español sobre {tenant?.name ?? 'tu academia'}</p>
             </div>
             <button type="button" onClick={close} aria-label="Cerrar el asistente" className="p-1.5 rounded-lg hover:bg-white/15 cursor-pointer">
               <X className="w-4 h-4" />

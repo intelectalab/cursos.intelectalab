@@ -9,6 +9,7 @@ import {
   Badge,
   Button,
   Card,
+  CHECKBOX_CLASS,
   EmptyState,
   ErrorState,
   INPUT_CLASS,
@@ -27,6 +28,10 @@ import type { PageMeta } from '../../identity/api';
 import { NewPersonModal } from '../../identity/components/NewPersonModal';
 import { studentsApi, type StudentFilter, type StudentRow } from '../api';
 import { ExportButton } from '../../../shared/ui/ExportButton';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
+import { ClearFilters, DateRangeFilter } from '../../../shared/ui/listFilters';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
+import { useFilterOptions } from '../../../shared/filters/useFilterOptions';
 
 function formatDate(value: string | null): string {
   if (!value) return 'Nunca';
@@ -42,8 +47,11 @@ export const StudentsPage: React.FC = () => {
 
   const [rows, setRows] = useState<StudentRow[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<StudentFilter>('');
+  // Todos los filtros viven en la dirección de la página
+  const { values, set, clear, active: filtered, query } = useUrlFilters({ search: '', filter: '', course_id: '', group_id: '', company_id: '', debt: '', from: '', to: '' });
+  const { search } = values;
+  const filter = values.filter as StudentFilter;
+  const options = useFilterOptions();
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -53,7 +61,7 @@ export const StudentsPage: React.FC = () => {
   const load = useCallback(async () => {
     setState('loading');
     try {
-      const result = await studentsApi.list({ search: search || undefined, filter: filter || undefined, page });
+      const result = await studentsApi.list({ ...query, page });
       setRows(result.data);
       setMeta(result.meta);
       setState('ready');
@@ -61,7 +69,7 @@ export const StudentsPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, filter, page]);
+  }, [query, page]);
 
   // La búsqueda espera a que el usuario termine de escribir
   useEffect(() => {
@@ -69,12 +77,10 @@ export const StudentsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [load]);
 
-  const apply = (change: () => void) => {
-    change();
+  const apply = (patch: Partial<typeof values>) => {
+    set(patch);
     setPage(1);
   };
-
-  const filtered = search !== '' || filter !== '';
   const counts = meta?.counts ?? {};
   const cards: FilterCard[] = [
     { key: '', label: 'Todos', value: counts.ALL ?? null, icon: Users, tone: 'brand', help: 'Todas las personas con el rol Alumno o con alguna matrícula, según la búsqueda.' },
@@ -91,7 +97,7 @@ export const StudentsPage: React.FC = () => {
         subtitle="Quiénes estudian en tu academia. Abre un alumno para ver sus cursos, compras, certificados y consultas en un solo lugar."
         action={
           <>
-            <ExportButton path="/students/export" params={{ search: search || undefined, filter: filter || undefined }} filename="alumnos.xlsx" />
+            <ExportButton path="/students/export" params={query} filename="alumnos.xlsx" />
             {canCreate && (
               <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
                 Nuevo alumno
@@ -101,7 +107,7 @@ export const StudentsPage: React.FC = () => {
         }
       />
 
-      <FilterCards cards={cards} active={filter} label="Alumnos por situación" onSelect={(key) => apply(() => setFilter(key as StudentFilter))} />
+      <FilterCards cards={cards} active={filter} label="Alumnos por situación" onSelect={(key) => apply({ filter: key })} />
 
       {notice && (
         <div className="mb-4">
@@ -118,9 +124,43 @@ export const StudentsPage: React.FC = () => {
               placeholder="Buscar por nombre, correo o documento"
               aria-label="Buscar alumnos"
               value={search}
-              onChange={(event) => apply(() => setSearch(event.target.value))}
+              onChange={(event) => apply({ search: event.target.value })}
             />
           </div>
+          <SearchSelect className={`${INPUT_CLASS} !w-56`} aria-label="Filtrar por curso" value={values.course_id} onChange={(event) => apply({ course_id: event.target.value })}>
+            <option value="">Todos los cursos</option>
+            {options.courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.title}
+              </option>
+            ))}
+          </SearchSelect>
+          {options.groups.length > 0 && (
+            <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por grupo" value={values.group_id} onChange={(event) => apply({ group_id: event.target.value })}>
+              <option value="">Todos los grupos</option>
+              {options.groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </SearchSelect>
+          )}
+          {options.companies.length > 0 && (
+            <SearchSelect className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por empresa" value={values.company_id} onChange={(event) => apply({ company_id: event.target.value })}>
+              <option value="">Todas las empresas</option>
+              {options.companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </SearchSelect>
+          )}
+          <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
+            <input type="checkbox" className={CHECKBOX_CLASS} checked={values.debt === '1'} onChange={(event) => apply({ debt: event.target.checked ? '1' : '' })} />
+            Con cuotas vencidas
+          </label>
+          <DateRangeFilter label="Registrados" from={values.from} to={values.to} onChange={(range) => apply(range)} />
+          <ClearFilters active={filtered} onClear={() => apply(Object.fromEntries(Object.keys(values).map((key) => [key, ''])))} />
         </div>
 
         {state === 'loading' && <LoadingState />}
@@ -133,12 +173,10 @@ export const StudentsPage: React.FC = () => {
             action={
               filtered && (
                 <Button
-                  onClick={() =>
-                    apply(() => {
-                      setSearch('');
-                      setFilter('');
-                    })
-                  }
+                  onClick={() => {
+                    clear();
+                    setPage(1);
+                  }}
                 >
                   Quitar filtros
                 </Button>

@@ -14,7 +14,7 @@ export const ForceTwoFactorSetup: React.FC = () => {
       title="Activa la verificación en dos pasos"
       subtitle={`Hola, ${user?.first_name ?? ''}. ${tenant?.name ?? 'Tu academia'} pide a su personal un código del teléfono además de la contraseña. Actívala para continuar.`}
       footer={
-        <button type="button" onClick={logout} className="font-semibold text-sky-200 hover:text-white transition-colors cursor-pointer">
+        <button type="button" onClick={logout} className="font-semibold text-accent-200 hover:text-white transition-colors cursor-pointer">
           Cerrar sesión
         </button>
       }

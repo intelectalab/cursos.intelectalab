@@ -42,6 +42,7 @@ import { RefundPolicySection } from '../components/RefundPolicySection';
 import { AssistantAliasesSection } from '../components/AssistantAliasesSection';
 import { PaymentGatewaysSection } from '../components/PaymentGatewaysSection';
 import { PlanCard } from '../components/PlanCard';
+import { AppearanceSection } from '../components/AppearanceSection';
 
 interface Settings {
   name: string;
@@ -477,6 +478,8 @@ export const SettingsPage: React.FC = () => {
             </Field>
           </div>
         </Section>
+
+        <AppearanceSection logoUrl={form.logo_url} editable={editable} />
 
         <Section icon={Globe2} tone="success" title="Región y monedas" text="Monedas en las que vendes y zona horaria de la operación.">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

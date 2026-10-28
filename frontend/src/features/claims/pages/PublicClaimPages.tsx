@@ -9,12 +9,12 @@ import { ClaimSheet } from '../components/ClaimSheet';
 
 const Hero: React.FC<{ title: string; text: string }> = ({ title, text }) => (
   <div className="max-w-2xl">
-    <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-sky-200">
+    <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-accent-200">
       <BookOpenCheck className="w-4 h-4" />
       Libro de Reclamaciones
     </p>
     <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-white tracking-tight">{title}</h1>
-    <p className="mt-3 text-sky-100/90 text-[15px] leading-relaxed">{text}</p>
+    <p className="mt-3 text-accent-100/90 text-[15px] leading-relaxed">{text}</p>
   </div>
 );
 

@@ -228,10 +228,10 @@ export const MyOrderPage: React.FC = () => {
           )}
 
           {order.status === 'PARTIAL' && (
-            <Card className={`p-5 sm:p-6 ${next?.overdue ? 'border-rose-200 bg-rose-50/60' : 'border-sky-200 bg-sky-50/60'}`}>
+            <Card className={`p-5 sm:p-6 ${next?.overdue ? 'border-rose-200 bg-rose-50/60' : 'border-accent-200 bg-accent-50/60'}`}>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className={`w-5 h-5 shrink-0 mt-0.5 ${next?.overdue ? 'text-rose-600' : 'text-sky-600'}`} />
+                  <CheckCircle2 className={`w-5 h-5 shrink-0 mt-0.5 ${next?.overdue ? 'text-rose-600' : 'text-accent-600'}`} />
                   <div>
                     <p className="text-sm font-semibold text-slate-900">Ya tienes acceso al curso</p>
                     <p className="text-[13px] text-slate-700">

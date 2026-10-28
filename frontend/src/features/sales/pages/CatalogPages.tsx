@@ -123,7 +123,7 @@ export const PublicCatalogPage: React.FC = () => {
     <PublicShell
       hero={
         <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-wider text-sky-300">Catálogo de cursos</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent-300">Catálogo de cursos</p>
           <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-white">Aprende con {tenant?.name}</h1>
           <p className="mt-3 text-sm sm:text-base text-brand-100">
             Elige un curso, revisa su temario y empieza cuando quieras. Solo necesitas crear tu cuenta para comprar.

@@ -19,7 +19,7 @@ const Shell: React.FC<{ title: string; subtitle: string; children: React.ReactNo
       title={title}
       subtitle={subtitle}
       footer={
-        <Link to="/login" className="inline-flex items-center gap-1.5 font-semibold text-sky-200 hover:text-white transition-colors">
+        <Link to="/login" className="inline-flex items-center gap-1.5 font-semibold text-accent-200 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Volver a iniciar sesión
         </Link>

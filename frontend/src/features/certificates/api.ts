@@ -169,7 +169,7 @@ export const certificatesApi = {
   async verify(code: string) {
     return (await api.get(`/certificates/verify/${encodeURIComponent(code)}`)).data.data as Verification;
   },
-  async list(params: { search?: string; status?: string; page?: number }) {
+  async list(params: Record<string, string | number | undefined>) {
     const response = await api.get('/certificates', { params });
     return { data: response.data.data as Certificate[], meta: response.data.meta as PageMeta };
   },

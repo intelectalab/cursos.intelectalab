@@ -23,7 +23,8 @@ class PasswordResetMail extends TenantNoticeMail
         array $lines,
         ?array $action,
         public readonly string $url,
+        ?string $color = null,
     ) {
-        parent::__construct($organization, $logoUrl, $title, $greeting, $lines, $action);
+        parent::__construct($organization, $logoUrl, $title, $greeting, $lines, $action, color: $color);
     }
 }

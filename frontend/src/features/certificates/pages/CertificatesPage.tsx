@@ -26,6 +26,9 @@ import type { PageMeta } from '../../identity/api';
 import { CERTIFICATE_STATUS_LABEL, CERTIFICATE_STATUS_TONE, certificatesApi, formatDate, type Certificate } from '../api';
 import { IssueModal, RevokeModal, TemplateModal } from '../components/CertificateDialogs';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
+import { useFilterOptions } from '../../../shared/filters/useFilterOptions';
+import { DateRangeFilter } from '../../../shared/ui/listFilters';
 
 type Dialog = { kind: 'issue' } | { kind: 'template' } | { kind: 'revoke'; certificate: Certificate };
 
@@ -38,8 +41,12 @@ export const CertificatesPage: React.FC = () => {
 
   const [rows, setRows] = useState<Certificate[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
+  // Los filtros viven en la dirección de la página
+  const urlFilters = useUrlFilters({ search: '', status: '', course_id: '', from: '', to: '' });
+  const { search, status } = urlFilters.values;
+  const setSearch = (value: string) => urlFilters.set({ search: value });
+  const setStatus = (value: string) => urlFilters.set({ status: value });
+  const options = useFilterOptions();
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -49,7 +56,7 @@ export const CertificatesPage: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const result = await certificatesApi.list({ search: search || undefined, status: status || undefined, page });
+      const result = await certificatesApi.list({ ...urlFilters.query, page });
       setRows(result.data);
       setMeta(result.meta);
       setState('ready');
@@ -57,7 +64,7 @@ export const CertificatesPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, status, page]);
+  }, [urlFilters.query, page]);
 
   // La búsqueda espera a que el usuario termine de escribir
   useEffect(() => {
@@ -65,7 +72,7 @@ export const CertificatesPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [load]);
 
-  const filtered = search !== '' || status !== '';
+  const filtered = urlFilters.active;
   const filter = (apply: () => void) => {
     apply();
     setPage(1);
@@ -143,6 +150,15 @@ export const CertificatesPage: React.FC = () => {
             <option value="REVOKED">Anulados</option>
           </SearchSelect>
           <HelpTip text="Vigente: es válido al verificarlo. Anulado: el personal lo retiró y figura como no válido." label="Qué significa el estado de un certificado" />
+          <SearchSelect className={`${INPUT_CLASS} !w-56`} aria-label="Filtrar por curso" value={urlFilters.values.course_id} onChange={(event) => filter(() => urlFilters.set({ course_id: event.target.value }))}>
+            <option value="">Todos los cursos</option>
+            {options.courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.title}
+              </option>
+            ))}
+          </SearchSelect>
+          <DateRangeFilter label="Emitidos" from={urlFilters.values.from} to={urlFilters.values.to} onChange={(range) => filter(() => urlFilters.set(range))} />
         </div>
 
         {state === 'loading' && <LoadingState />}
@@ -160,10 +176,7 @@ export const CertificatesPage: React.FC = () => {
               filtered && (
                 <Button
                   onClick={() =>
-                    filter(() => {
-                      setSearch('');
-                      setStatus('');
-                    })
+                    filter(() => urlFilters.clear())
                   }
                 >
                   Quitar filtros

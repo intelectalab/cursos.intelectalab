@@ -8,7 +8,6 @@ use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Shared\Export\ExcelExport;
 use App\Shared\Http\ApiResponse;
-use App\Shared\Import\Spreadsheet;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,7 +50,7 @@ class ReportController extends Controller
             'certificates_issued' => 'Certificados emitidos',
         ];
 
-        return ExcelExport::send("reporte-{$data['period']['from']}-a-{$data['period']['to']}", Spreadsheet::workbook([
+        return ExcelExport::respond("reporte-{$data['period']['from']}-a-{$data['period']['to']}", [
             'Resumen' => [
                 'headers' => ['Indicador', "Del {$data['period']['from']} al {$data['period']['to']}", "Periodo anterior ({$data['period']['previous_from']} al {$data['period']['previous_to']})"],
                 'rows' => array_map(
@@ -86,7 +85,7 @@ class ReportController extends Controller
                 'headers' => ['Curso', 'Matriculados', 'Completaron', 'Finalización (%)'],
                 'rows' => array_map(fn (array $course) => [$course['title'], $course['enrolled'], $course['completed'], $course['rate']], $data['completion']),
             ],
-        ]));
+        ]);
     }
 
     private function number(int|string $value): int|float

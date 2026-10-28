@@ -2,6 +2,7 @@
 
 use App\Modules\Reports\Http\Controllers\AlertController;
 use App\Modules\Reports\Http\Controllers\DashboardController;
+use App\Modules\Reports\Http\Controllers\FilterOptionsController;
 use App\Modules\Reports\Http\Controllers\ReportController;
 use App\Modules\Reports\Http\Controllers\StudentController;
 use App\Modules\Reports\Http\Controllers\TeacherController;
@@ -33,3 +34,7 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:teachers
 // Lo que espera al personal, para la campana de avisos: cada cifra solo llega a quien puede atenderla
 Route::get('/alerts/summary', [AlertController::class, 'summary'])
     ->middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:payments.confirm,orders.read,tickets.read,cms.publish,submissions.review,submissions.assigned.review,claims.read,schedules.manage,schedules.self,enrollments.read']);
+
+// Opciones de los filtros de los listados: quien ve alguno de ellos
+Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'permission:students.read,teachers.read,enrollments.read,users.read,courses.read,orders.read,certificates.read,tickets.read,claims.read'])
+    ->get('/filter-options', FilterOptionsController::class);

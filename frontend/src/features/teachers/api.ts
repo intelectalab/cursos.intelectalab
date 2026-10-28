@@ -39,7 +39,7 @@ export interface TeacherProfile {
 }
 
 export const teachersApi = {
-  async list(params: { search?: string; filter?: string; page?: number }) {
+  async list(params: { search?: string; filter?: string; course_id?: string; page?: number }) {
     const response = await api.get('/teachers', { params });
     return { data: response.data.data as TeacherRow[], meta: response.data.meta as PageMeta };
   },

@@ -8,14 +8,15 @@ use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Application\EnrollmentService;
 use App\Modules\Enrollments\Application\ProgressService;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
+use App\Modules\Identity\Domain\Models\GroupMember;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Application\TenantSettingsService;
 use App\Shared\Export\ExcelExport;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\DateRange;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Http\StateCounts;
-use App\Shared\Import\Spreadsheet;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -74,10 +75,9 @@ class EnrollmentController extends Controller
         $progress = $this->progress->summariesAcrossCourses($enrollments);
         $timezone = $settings->timezone();
 
-        return ExcelExport::send('matriculas', Spreadsheet::write(
-            'Matrículas',
-            ['Alumno', 'Correo', 'Curso', 'Situación', 'Origen', 'Avance (%)', 'Matriculado el', 'Acceso desde', 'Acceso hasta', 'Completado el', 'Cancelado el'],
-            $enrollments->map(fn (Enrollment $enrollment) => [
+        return ExcelExport::respond('matriculas', ['Matrículas' => [
+            'headers' => ['Alumno', 'Correo', 'Curso', 'Situación', 'Origen', 'Avance (%)', 'Matriculado el', 'Acceso desde', 'Acceso hasta', 'Completado el', 'Cancelado el'],
+            'rows' => $enrollments->map(fn (Enrollment $enrollment) => [
                 trim("{$enrollment->student->first_name} {$enrollment->student->last_name}"),
                 $enrollment->student->email,
                 $enrollment->course->title,
@@ -89,8 +89,8 @@ class EnrollmentController extends Controller
                 $enrollment->ends_at?->toDateString(),
                 ExcelExport::date($enrollment->completed_at, $timezone),
                 ExcelExport::date($enrollment->cancelled_at, $timezone),
-            ])->all()
-        ));
+            ])->all(),
+        ]]);
     }
 
     /**
@@ -254,6 +254,10 @@ class EnrollmentController extends Controller
             // Compatibilidad: el filtro anterior por estado guardado
             'status' => ['nullable', Rule::in([Enrollment::STATUS_ACTIVE, Enrollment::STATUS_CANCELLED])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'group_id' => ['nullable', 'uuid'],
+            // Matriculado entre (from, to) y su acceso vence entre (expires_from, expires_to)
+            ...DateRange::rules(),
+            ...DateRange::rules('expires_'),
         ];
     }
 
@@ -302,8 +306,9 @@ class EnrollmentController extends Controller
      */
     private function search(array $filters): Builder
     {
-        return Enrollment::query()
+        $query = Enrollment::query()
             ->when($filters['course_id'] ?? null, fn (Builder $q, string $course) => $q->where('course_id', $course))
+            ->when($filters['group_id'] ?? null, fn (Builder $q, string $group) => $q->whereIn('student_id', GroupMember::query()->select('user_id')->where('group_id', $group)))
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
                 $like = '%'.mb_strtolower($search).'%';
 
@@ -312,6 +317,10 @@ class EnrollmentController extends Controller
                     ->orWhereRaw('lower(first_name) like ?', [$like])
                     ->orWhereRaw('lower(last_name) like ?', [$like]));
             });
+
+        DateRange::apply($query, 'enrolled_at', $filters);
+
+        return DateRange::apply($query, 'ends_at', $filters, 'expires_');
     }
 
     /**

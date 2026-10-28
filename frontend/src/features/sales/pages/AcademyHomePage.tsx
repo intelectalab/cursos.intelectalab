@@ -46,11 +46,11 @@ export const AcademyHomePage: React.FC = () => {
   const hero = (
     <div className="max-w-2xl">
       <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.08] text-white">{tenant?.name}</h1>
-      <p className="mt-4 text-[15px] sm:text-base leading-relaxed text-sky-100/90">
+      <p className="mt-4 text-[15px] sm:text-base leading-relaxed text-accent-100/90">
         Aprende a tu ritmo, desde cualquier dispositivo, y obtén tu certificado al terminar cada curso.
       </p>
       <div className="mt-7 flex flex-wrap gap-3">
-        <Link to="/catalog" className={`${BUTTON} bg-white text-brand-800 hover:bg-sky-50`}>
+        <Link to="/catalog" className={`${BUTTON} bg-white text-brand-800 hover:bg-accent-50`}>
           Ver cursos
           <ArrowRight className="w-4 h-4" aria-hidden="true" />
         </Link>
@@ -59,7 +59,7 @@ export const AcademyHomePage: React.FC = () => {
           Ya tengo una cuenta
         </Link>
       </div>
-      <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-sky-100/85">
+      <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-accent-100/85">
         <li className="inline-flex items-center gap-1.5">
           <Clock className="w-4 h-4" aria-hidden="true" />A tu propio ritmo
         </li>
@@ -104,7 +104,7 @@ export const AcademyHomePage: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-10 rounded-3xl bg-gradient-to-br from-brand-50 to-sky-50 ring-1 ring-brand-100 p-6 sm:p-8 flex flex-wrap items-center justify-between gap-5">
+      <div className="mt-10 rounded-3xl bg-gradient-to-br from-brand-50 to-accent-50 ring-1 ring-brand-100 p-6 sm:p-8 flex flex-wrap items-center justify-between gap-5">
         <div>
           <h2 className="text-lg font-bold text-slate-900">¿Primera vez aquí?</h2>
           <p className="text-[13px] text-slate-600">Crea tu cuenta gratis para comprar cursos y seguir tu avance.</p>

@@ -101,8 +101,8 @@ export const TaskPanel: React.FC<{
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-3 p-4 rounded-xl border bg-sky-50 border-sky-200 text-sky-900" role="status">
-              <Hourglass className="w-6 h-6 text-sky-600 shrink-0" />
+            <div className="flex items-center gap-3 p-4 rounded-xl border bg-accent-50 border-accent-200 text-accent-900" role="status">
+              <Hourglass className="w-6 h-6 text-accent-600 shrink-0" />
               <p className="text-[13px]">
                 <span className="block font-semibold">Entregada el {formatDate(submission.submitted_at)}</span>
                 Tu docente aún no la revisa{state.can_submit ? '; mientras tanto puedes reemplazarla.' : '.'}

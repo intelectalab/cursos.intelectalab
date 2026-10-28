@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CardHeader, CHECKBOX_CLASS, ConfirmModal, ErrorState, Field, INPUT_CLASS, LoadingState, Modal } from '../../../shared/ui';
 import { formatDateTime } from '../../sales/api';
-import { cmsApi, type ImageRules, type Page, type PageNode } from '../api';
+import { cmsApi, type ImageRules, type Page, type PageNode, type PagePlacement } from '../api';
 import { PageContentView } from '../components/PageContentView';
 import { PageEditor } from '../components/PageEditor';
 import { appPath } from '../../../shared/tenancy/hosts';
@@ -13,6 +13,14 @@ import { appPath } from '../../../shared/tenancy/hosts';
 type Confirm = 'publish' | 'unpublish' | 'delete' | 'review' | 'return';
 
 // Redacción de una página: borrador, vista previa y publicación
+// Lugares donde puede aparecer el enlace de una página
+const PLACES: { key: 'show_in_footer' | 'show_in_header' | 'show_in_auth' | 'show_in_student_menu'; label: string; hint: string }[] = [
+  { key: 'show_in_footer', label: 'Pie del sitio público', hint: 'Junto al Libro de Reclamaciones, en la portada, el catálogo y las páginas públicas.' },
+  { key: 'show_in_header', label: 'Menú superior del sitio público', hint: 'Arriba, junto a «Iniciar sesión».' },
+  { key: 'show_in_auth', label: 'Inicio de sesión y registro', hint: 'Debajo del formulario para entrar o crear una cuenta.' },
+  { key: 'show_in_student_menu', label: 'Menú de los alumnos', hint: 'En el menú de la izquierda, para quien estudia en tu academia.' },
+];
+
 export const PageEditorPage: React.FC = () => {
   const { pageId = '' } = useParams();
   const navigate = useNavigate();
@@ -24,7 +32,7 @@ export const PageEditorPage: React.FC = () => {
   const [imageRules, setImageRules] = useState<ImageRules>({ max_kb: 2048, extensions: ['png', 'jpg', 'jpeg', 'webp'] });
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
-  const [footer, setFooter] = useState(true);
+  const [placement, setPlacement] = useState<PagePlacement>({ show_in_footer: true, show_in_header: false, show_in_auth: false, show_in_student_menu: false, menu_order: 0 });
   const [content, setContent] = useState<PageNode>({ type: 'doc', content: [] });
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState(false);
@@ -40,7 +48,13 @@ export const PageEditorPage: React.FC = () => {
     setPage(loaded);
     setTitle(loaded.title);
     setSlug(loaded.slug);
-    setFooter(loaded.show_in_footer);
+    setPlacement({
+      show_in_footer: loaded.show_in_footer,
+      show_in_header: loaded.show_in_header,
+      show_in_auth: loaded.show_in_auth,
+      show_in_student_menu: loaded.show_in_student_menu,
+      menu_order: loaded.menu_order,
+    });
     setContent(loaded.content);
     setDirty(false);
   };
@@ -77,7 +91,7 @@ export const PageEditorPage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const saved = await cmsApi.save(pageId, { title: title.trim(), slug, content, show_in_footer: footer });
+      const saved = await cmsApi.save(pageId, { title: title.trim(), slug, content, ...placement });
       apply(saved);
       return saved;
     } catch (err) {
@@ -245,14 +259,36 @@ export const PageEditorPage: React.FC = () => {
                   onChange={(event) => touch(() => setSlug(event.target.value))}
                 />
               </Field>
-              <label className="flex items-start gap-2.5 text-[13px] text-slate-700 cursor-pointer">
-                <input type="checkbox" className={`${CHECKBOX_CLASS} mt-0.5`} disabled={!canEdit} checked={footer} onChange={(event) => touch(() => setFooter(event.target.checked))} />
-                <span>
-                  Enlazar al pie del sitio
-                  <span className="block text-xs text-slate-500">Aparece junto al Libro de Reclamaciones en las páginas públicas.</span>
-                </span>
-              </label>
-              <p className="text-xs text-slate-500">La dirección y el pie se aplican al guardar. El título y el contenido se ven recién al publicar.</p>
+              <fieldset className="space-y-2.5">
+                <legend className="text-[13px] font-medium text-slate-700 mb-1">Dónde aparece</legend>
+                {PLACES.map((place) => (
+                  <label key={place.key} className="flex items-start gap-2.5 text-[13px] text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className={`${CHECKBOX_CLASS} mt-0.5`}
+                      disabled={!canEdit}
+                      checked={placement[place.key]}
+                      onChange={(event) => touch(() => setPlacement((current) => ({ ...current, [place.key]: event.target.checked })))}
+                    />
+                    <span>
+                      {place.label}
+                      <span className="block text-xs text-slate-500">{place.hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+              <Field label="Orden" hint="Los enlaces van de menor a mayor; a igual número, por título.">
+                <input
+                  className={`${INPUT_CLASS} w-28`}
+                  type="number"
+                  min={0}
+                  max={999}
+                  disabled={!canEdit}
+                  value={placement.menu_order}
+                  onChange={(event) => touch(() => setPlacement((current) => ({ ...current, menu_order: Math.max(0, Math.min(999, Number(event.target.value) || 0)) })))}
+                />
+              </Field>
+              <p className="text-xs text-slate-500">La dirección, dónde aparece y el orden se aplican al guardar. El título y el contenido se ven recién al publicar.</p>
             </div>
           </Card>
 

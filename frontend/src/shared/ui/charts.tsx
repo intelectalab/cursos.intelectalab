@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 // Paleta categórica validada para daltonismo (orden fijo: el color sigue a la categoría, nunca se repite).
 // Tres tonos claros quedan bajo 3:1 sobre blanco: por eso cada gráfico de partes lleva leyenda con los valores.
 const SERIES_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
-// Una sola serie (columnas en el tiempo, ranking): el azul de la marca
-const SINGLE = '#0f5aa6';
+// Una sola serie (columnas en el tiempo, ranking): el color principal de la academia
+const SINGLE = 'var(--color-brand-600)';
 
 export interface ChartItem {
   label: string;

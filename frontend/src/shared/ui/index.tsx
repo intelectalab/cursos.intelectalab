@@ -66,7 +66,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon: I
     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
       <div className="flex items-center gap-3.5 min-w-0">
         {Icon && (
-          <div className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-sky-500 text-white flex items-center justify-center shadow-md shadow-brand-700/25">
+          <div className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-accent-500 text-white flex items-center justify-center shadow-md shadow-brand-700/25">
             <Icon className="w-5 h-5" />
           </div>
         )}
@@ -106,7 +106,7 @@ const TONES = {
   success: { chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500', icon: 'bg-emerald-50 text-emerald-600' },
   warning: { chip: 'bg-amber-50 text-amber-800 ring-amber-200', dot: 'bg-amber-500', icon: 'bg-amber-50 text-amber-600' },
   danger: { chip: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-500', icon: 'bg-rose-50 text-rose-600' },
-  info: { chip: 'bg-sky-50 text-sky-700 ring-sky-200', dot: 'bg-sky-500', icon: 'bg-sky-50 text-sky-600' },
+  info: { chip: 'bg-accent-50 text-accent-700 ring-accent-200', dot: 'bg-accent-500', icon: 'bg-accent-50 text-accent-600' },
   violet: { chip: 'bg-violet-50 text-violet-700 ring-violet-200', dot: 'bg-violet-500', icon: 'bg-violet-50 text-violet-600' },
 };
 
@@ -127,12 +127,12 @@ export const Badge: React.FC<{ tone?: Tone; dot?: boolean; children: React.React
 );
 
 const AVATAR_COLORS = [
-  'from-brand-700 to-sky-500',
+  'from-brand-700 to-accent-500',
   'from-violet-600 to-fuchsia-500',
   'from-emerald-600 to-teal-400',
   'from-amber-600 to-orange-400',
   'from-rose-600 to-pink-400',
-  'from-cyan-700 to-sky-400',
+  'from-cyan-700 to-accent-400',
 ];
 
 export const Avatar: React.FC<{ name: string; size?: 'sm' | 'md' | 'lg' }> = ({ name, size = 'md' }) => {
@@ -314,7 +314,7 @@ export const ErrorState: React.FC<{ message: string; onRetry?: () => void }> = (
 const ALERT_TONES = {
   danger: { box: 'bg-rose-50 border-rose-200 text-rose-800', icon: AlertCircle, role: 'alert' },
   success: { box: 'bg-emerald-50 border-emerald-200 text-emerald-800', icon: CheckCircle2, role: 'status' },
-  info: { box: 'bg-sky-50 border-sky-200 text-sky-800', icon: AlertCircle, role: 'status' },
+  info: { box: 'bg-accent-50 border-accent-200 text-accent-800', icon: AlertCircle, role: 'status' },
   warning: { box: 'bg-amber-50 border-amber-200 text-amber-900', icon: AlertCircle, role: 'status' },
 };
 

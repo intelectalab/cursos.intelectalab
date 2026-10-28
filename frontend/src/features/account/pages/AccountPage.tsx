@@ -198,7 +198,7 @@ export const AccountPage: React.FC = () => {
       <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-5 items-start">
         <div className="space-y-5">
           <Card className="relative overflow-hidden p-6">
-            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-r from-brand-800 via-brand-700 to-sky-600" />
+            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-r from-brand-800 via-brand-700 to-accent-600" />
             <div className="relative pt-9">
               <span className="inline-flex rounded-full ring-4 ring-white">
                 <Avatar name={`${user?.first_name} ${user?.last_name}`} size="lg" />

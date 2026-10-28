@@ -345,7 +345,7 @@ export const ClassroomPage: React.FC<{ preview?: boolean }> = ({ preview = false
               aria-label="Avance del curso"
             >
               <div
-                className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-600 to-sky-500'}`}
+                className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-600 to-accent-500'}`}
                 style={{ width: `${progress.percent}%` }}
               />
             </div>

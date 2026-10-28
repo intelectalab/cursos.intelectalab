@@ -5,6 +5,7 @@ import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Card, CHECKBOX_CLASS, EmptyState, ErrorState, Field, INPUT_CLASS, LoadingState, Modal, Table, TBody, Td, Th, THead, Tr } from '../../../shared/ui';
 import { formatMoney } from '../../sales/api';
 import { promotionsApi, type Package, type Product } from '../api';
+import { appPath } from '../../../shared/tenancy/hosts';
 
 const PackageFormModal: React.FC<{
   item?: Package;
@@ -219,7 +220,7 @@ export const PackagesTab: React.FC<{ canManage: boolean }> = ({ canManage }) => 
                   <Td>
                     {item.for_sale && (
                       <a
-                        href={item.path}
+                        href={appPath(item.path)}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(event) => event.stopPropagation()}

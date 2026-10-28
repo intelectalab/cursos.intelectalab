@@ -50,7 +50,7 @@ export const VerifyPage: React.FC = () => {
     <PublicShell
       hero={
         <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-wider text-sky-300">Verificación de certificados</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent-300">Verificación de certificados</p>
           <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-white">Comprueba un certificado</h1>
           <p className="mt-3 text-sm sm:text-base text-brand-100">Escribe el código que figura en el certificado, o escanea su código QR.</p>
         </div>

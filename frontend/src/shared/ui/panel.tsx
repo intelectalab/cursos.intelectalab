@@ -20,7 +20,7 @@ const TOP_BORDER: Record<PanelCard['tone'], string> = {
   success: 'border-t-emerald-500',
   warning: 'border-t-amber-500',
   danger: 'border-t-rose-500',
-  info: 'border-t-sky-500',
+  info: 'border-t-accent-500',
   violet: 'border-t-violet-500',
 };
 

@@ -102,7 +102,7 @@ export const claimsApi = {
   },
 
   // Personal
-  async list(params: { search?: string; status?: string; type?: string; page?: number }) {
+  async list(params: { search?: string; status?: string; type?: string; from?: string; to?: string; page?: number }) {
     const response = await api.get('/claims', { params });
     return {
       data: response.data.data as ClaimSummary[],

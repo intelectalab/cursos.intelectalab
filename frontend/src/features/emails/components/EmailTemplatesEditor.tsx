@@ -26,7 +26,7 @@ const GUIDE: Record<Props['audience'], string> = {
 
 /** Guía corta de la pantalla, siempre a mano. */
 const Guide: React.FC<{ audience: Props['audience'] }> = ({ audience }) => (
-  <details className="group mb-5 rounded-2xl bg-gradient-to-br from-brand-50 to-sky-50 ring-1 ring-brand-100 open:pb-1" open>
+  <details className="group mb-5 rounded-2xl bg-gradient-to-br from-brand-50 to-accent-50 ring-1 ring-brand-100 open:pb-1" open>
     <summary className="flex items-center gap-2.5 px-5 py-4 cursor-pointer select-none text-[13px] font-semibold text-brand-900">
       <BookOpenText className="w-4 h-4 text-brand-700" aria-hidden="true" />
       Cómo usar esta pantalla

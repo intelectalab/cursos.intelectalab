@@ -9,6 +9,15 @@ export interface PageNode {
   content?: PageNode[];
 }
 
+/** Dónde aparece el enlace de una página y en qué posición */
+export interface PagePlacement {
+  show_in_footer: boolean;
+  show_in_header: boolean;
+  show_in_auth: boolean;
+  show_in_student_menu: boolean;
+  menu_order: number;
+}
+
 export interface PageSummary {
   id: string;
   slug: string;
@@ -17,6 +26,11 @@ export interface PageSummary {
   // El borrador tiene cambios que el público todavía no ve
   pending_changes: boolean;
   show_in_footer: boolean;
+  // Otros lugares donde aparece su enlace y su posición
+  show_in_header: boolean;
+  show_in_auth: boolean;
+  show_in_student_menu: boolean;
+  menu_order: number;
   published_at: string | null;
   updated_at: string;
   updated_by: string | null;
@@ -66,7 +80,7 @@ export const cmsApi = {
   async create(input: { title: string; slug: string }) {
     return (await api.post('/pages', input)).data.data as Page;
   },
-  async save(id: string, input: { title: string; slug: string; content: PageNode; show_in_footer: boolean }) {
+  async save(id: string, input: { title: string; slug: string; content: PageNode } & PagePlacement) {
     return (await api.put(`/pages/${id}`, input)).data.data as Page;
   },
   async publish(id: string) {

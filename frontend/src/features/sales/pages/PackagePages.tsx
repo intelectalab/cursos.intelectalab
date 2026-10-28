@@ -30,7 +30,7 @@ export const PackageCard: React.FC<{ item: CatalogPackage }> = ({ item }) => (
     className="group flex flex-col rounded-2xl border border-brand-200/70 bg-gradient-to-br from-white to-brand-50/60 p-5 shadow-card hover:shadow-raised hover:-translate-y-0.5 transition-all"
   >
     <div className="flex items-center gap-2.5">
-      <span className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-sky-500 text-white flex items-center justify-center">
+      <span className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-accent-500 text-white flex items-center justify-center">
         <Layers className="w-4 h-4" />
       </span>
       <Badge tone="brand">Paquete · {item.courses.length} cursos</Badge>

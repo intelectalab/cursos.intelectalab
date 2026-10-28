@@ -2,12 +2,15 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { Building2, Loader2 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { centralUrl, displayAddress, guessCentralDomain, setTenancyMode, type TenancyMode } from './hosts';
+import { applyTheme, type Appearance } from './theme';
 
 export interface CurrentTenant {
   id: string;
   name: string;
   slug: string;
   logo_url: string | null;
+  // Colores y pantalla de acceso de la academia (Configuración → Apariencia)
+  appearance: Appearance;
 }
 
 interface TenantContextType {
@@ -16,6 +19,7 @@ interface TenantContextType {
   centralDomain: string;
   // Refleja en toda la aplicación un cambio hecho en Configuración
   setLogoUrl: (logoUrl: string | null) => void;
+  setAppearance: (appearance: Appearance) => void;
 }
 
 type State =
@@ -30,7 +34,7 @@ const DEFAULT_TAB_ICON = '/intelectalab.svg';
 
 const Notice: React.FC<{ title: string; text: string; action?: React.ReactNode }> = ({ title, text, action }) => (
   <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-6 text-center">
-    <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-sky-500/25 blur-[110px] pointer-events-none" />
+    <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-accent-500/25 blur-[110px] pointer-events-none" />
     <div className="relative w-full max-w-[420px] bg-white rounded-3xl shadow-pop p-9">
       <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4 ring-8 ring-brand-50/50">
         <Building2 className="w-5 h-5" />
@@ -94,6 +98,15 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [tabIcon]);
 
+  // Los colores de la academia en toda la aplicación; en el dominio central, los de IntelectaLab
+  const primary = state.status === 'ready' ? (state.tenant?.appearance?.primary ?? null) : null;
+  const accent = state.status === 'ready' ? (state.tenant?.appearance?.accent ?? null) : null;
+  useEffect(() => applyTheme(primary, accent), [primary, accent]);
+
+  const setAppearance = useCallback((appearance: Appearance) => {
+    setState((current) => (current.status === 'ready' && current.tenant ? { ...current, tenant: { ...current.tenant, appearance } } : current));
+  }, []);
+
   const setLogoUrl = useCallback((logoUrl: string | null) => {
     setState((current) =>
       current.status === 'ready' && current.tenant
@@ -155,7 +168,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   return (
-    <TenantContext.Provider value={{ tenant: state.tenant, centralDomain: state.centralDomain, setLogoUrl }}>
+    <TenantContext.Provider value={{ tenant: state.tenant, centralDomain: state.centralDomain, setLogoUrl, setAppearance }}>
       {children}
     </TenantContext.Provider>
   );

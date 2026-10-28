@@ -9,7 +9,6 @@ use App\Shared\Dashboard\Panel;
 use App\Shared\Dashboard\PanelPeriod;
 use App\Shared\Export\ExcelExport;
 use App\Shared\Http\ApiResponse;
-use App\Shared\Import\Spreadsheet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -46,7 +45,7 @@ class DashboardController extends Controller
             $sheets += Panel::sheets($this->dashboard->section($section, $period, $this->settings->currency())->toArray());
         }
 
-        return ExcelExport::send("panel-{$period->from->toDateString()}-al-{$period->to->toDateString()}", Spreadsheet::workbook($sheets));
+        return ExcelExport::respond("panel-{$period->from->toDateString()}-al-{$period->to->toDateString()}", $sheets);
     }
 
     private function period(Request $request): PanelPeriod

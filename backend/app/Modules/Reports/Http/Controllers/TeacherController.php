@@ -3,6 +3,7 @@
 namespace App\Modules\Reports\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Courses\Domain\Models\CourseTeacher;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Reports\Application\TeacherDirectory;
 use App\Shared\Http\ApiResponse;
@@ -25,9 +26,12 @@ class TeacherController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'filter' => ['nullable', Rule::in(TeacherDirectory::FILTERS)],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'course_id' => ['nullable', 'uuid'],
         ]);
 
-        $base = $this->teachers->query($filters['search'] ?? null);
+        // Con course_id: solo quienes dictan ese curso
+        $base = $this->teachers->query($filters['search'] ?? null)
+            ->when($filters['course_id'] ?? null, fn ($query, string $course) => $query->whereIn('users.id', CourseTeacher::query()->select('user_id')->where('course_id', $course)));
 
         // Cuántos hay en cada situación con la búsqueda actual: alimenta las tarjetas que filtran
         $counts = StateCounts::of($base, TeacherDirectory::FILTERS, fn ($query, string $filter) => $this->teachers->filter($query, $filter));

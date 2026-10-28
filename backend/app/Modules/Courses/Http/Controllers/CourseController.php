@@ -33,12 +33,14 @@ class CourseController extends Controller
             'status' => ['nullable', Rule::in(Course::STATUSES)],
             'category' => ['nullable', 'string', 'max:80'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'teacher_id' => ['nullable', 'uuid'],
         ]);
 
         $base = $this->access->scope(Course::query(), $request->user())
             ->with(['cover', 'currentVersion', 'teachers'])
             ->withCount(['sections', 'resources'])
             ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('category', $category))
+            ->when($filters['teacher_id'] ?? null, fn ($query, string $teacher) => $query->whereHas('teachers', fn ($teachers) => $teachers->whereKey($teacher)))
             ->when($filters['search'] ?? null, fn ($query, $search) => $query
                 ->whereRaw('lower(title) like ?', ['%'.mb_strtolower($search).'%']));
 

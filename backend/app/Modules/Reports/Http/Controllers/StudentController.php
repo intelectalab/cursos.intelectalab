@@ -28,9 +28,11 @@ class StudentController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'filter' => ['nullable', Rule::in(StudentDirectory::FILTERS)],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            ...StudentDirectory::filterRules(),
         ]);
 
         $base = $this->students->query($filters['search'] ?? null);
+        $this->students->narrow($base, $filters);
 
         // Cuántos hay en cada situación con la búsqueda actual: alimenta las tarjetas que filtran
         $counts = StateCounts::of($base, StudentDirectory::FILTERS, fn ($query, string $filter) => $this->students->filter($query, $filter));
@@ -55,9 +57,11 @@ class StudentController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'filter' => ['nullable', Rule::in(StudentDirectory::FILTERS)],
+            ...StudentDirectory::filterRules(),
         ]);
 
         $query = $this->students->query($filters['search'] ?? null);
+        $this->students->narrow($query, $filters);
 
         if ($filters['filter'] ?? null) {
             $this->students->filter($query, $filters['filter']);

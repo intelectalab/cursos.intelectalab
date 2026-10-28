@@ -72,7 +72,7 @@ export interface StudentProfile {
 }
 
 export const studentsApi = {
-  async list(params: { search?: string; filter?: string; page?: number }) {
+  async list(params: Record<string, string | number | undefined>) {
     const response = await api.get('/students', { params });
     return { data: response.data.data as StudentRow[], meta: response.data.meta as PageMeta };
   },

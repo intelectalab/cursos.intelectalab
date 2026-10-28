@@ -34,6 +34,7 @@ class TenantNotifier
         private readonly EmailTemplates $templates,
         private readonly TenantMailer $mailer,
         private readonly EmailPreferences $preferences,
+        private readonly TenantAppearance $appearance,
     ) {}
 
     /**
@@ -103,7 +104,7 @@ class TenantNotifier
      *
      * @param  array{subject: string, lines: list<string>, button: ?string}  $content
      * @param  string|null  $url  dirección completa a la que lleva el botón
-     * @return array{organization: string, logoUrl: ?string, title: string, greeting: ?string, lines: list<string>, action: ?array{label: string, url: string}}
+     * @return array{organization: string, logoUrl: ?string, title: string, greeting: ?string, lines: list<string>, action: ?array{label: string, url: string}, color: string}
      */
     public function parts(Tenant $tenant, ?string $name, array $content, ?string $url): array
     {
@@ -117,6 +118,7 @@ class TenantNotifier
             'greeting' => filled($name) ? "Hola {$name}:" : null,
             'lines' => $content['lines'],
             'action' => $content['button'] !== null && $url !== null ? ['label' => $content['button'], 'url' => $url] : null,
+            'color' => $this->appearance->primaryColor(),
         ];
     }
 

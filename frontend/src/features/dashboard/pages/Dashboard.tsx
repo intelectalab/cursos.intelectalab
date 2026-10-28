@@ -118,7 +118,7 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Bienvenida */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 text-white p-7 sm:p-9 shadow-raised">
-        <div className="absolute -top-20 -right-10 w-80 h-80 rounded-full bg-sky-400/25 blur-3xl pointer-events-none" />
+        <div className="absolute -top-20 -right-10 w-80 h-80 rounded-full bg-accent-400/25 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 left-1/3 w-80 h-80 rounded-full bg-brand-400/20 blur-3xl pointer-events-none" />
         <div
           className="absolute inset-0 opacity-[0.07] pointer-events-none"
@@ -131,7 +131,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-200 capitalize">
+            <p className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-200 capitalize">
               <Sparkles className="w-3.5 h-3.5" />
               {today}
             </p>
@@ -159,7 +159,7 @@ export const Dashboard: React.FC = () => {
                 key={role}
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-white/12 ring-1 ring-white/20 backdrop-blur text-xs font-medium"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-sky-300" />
+                <ShieldCheck className="w-3.5 h-3.5 text-accent-300" />
                 {role}
               </span>
             ))}

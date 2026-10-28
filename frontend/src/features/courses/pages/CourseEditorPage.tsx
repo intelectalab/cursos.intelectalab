@@ -125,7 +125,7 @@ const CoverField: React.FC<{
 
   return (
     <div>
-      <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-sky-500">
+      <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-accent-500">
         {course.cover_url ? (
           <img src={course.cover_url} alt="Portada del curso" className="w-full h-full object-cover" />
         ) : (
@@ -440,7 +440,7 @@ export const CourseEditorPage: React.FC = () => {
       {/* Cabecera del curso */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
         <div className="flex items-start gap-4 min-w-0">
-          <div className="hidden sm:block w-28 shrink-0 aspect-[16/9] rounded-xl overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-sky-500 shadow-card">
+          <div className="hidden sm:block w-28 shrink-0 aspect-[16/9] rounded-xl overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-accent-500 shadow-card">
             {course.cover_url ? (
               <img src={course.cover_url} alt="" className="w-full h-full object-cover" />
             ) : (

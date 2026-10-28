@@ -42,6 +42,8 @@ import {
 } from '../api';
 import { ReplyBox, TicketStatusBadge, TicketThread } from '../components/TicketParts';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
+import { ClearFilters, DateRangeFilter } from '../../../shared/ui/listFilters';
 
 type Agent = { id: string; name: string };
 
@@ -202,10 +204,14 @@ export const SupportPage: React.FC = () => {
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [states, setStates] = useState<Record<string, number>>({});
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('PENDING');
-  const [assignee, setAssignee] = useState('');
-  const [category, setCategory] = useState('');
+  // Los filtros viven en la dirección de la página. Se abre en «Por atender»; «Todas» se guarda como ALL
+  const urlFilters = useUrlFilters({ search: '', status: 'PENDING', assignee: '', category: '', from: '', to: '' });
+  const { search, assignee, category, from, to } = urlFilters.values;
+  const status = urlFilters.values.status === 'ALL' ? '' : urlFilters.values.status;
+  const setSearch = (value: string) => urlFilters.set({ search: value });
+  const setStatus = (value: string) => urlFilters.set({ status: value || 'ALL' });
+  const setAssignee = (value: string) => urlFilters.set({ assignee: value });
+  const setCategory = (value: string) => urlFilters.set({ category: value });
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -218,6 +224,8 @@ export const SupportPage: React.FC = () => {
         status: status || undefined,
         assignee: assignee || undefined,
         category: category || undefined,
+        from: from || undefined,
+        to: to || undefined,
         page,
       });
       setRows(result.data);
@@ -228,7 +236,7 @@ export const SupportPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, status, assignee, category, page]);
+  }, [search, status, assignee, category, from, to, page]);
 
   useEffect(() => {
     const timer = setTimeout(load, 250);
@@ -246,7 +254,7 @@ export const SupportPage: React.FC = () => {
     apply();
     setPage(1);
   };
-  const filtered = search !== '' || status !== 'PENDING' || assignee !== '' || category !== '';
+  const filtered = search !== '' || status !== 'PENDING' || assignee !== '' || category !== '' || from !== '' || to !== '';
   const cards: FilterCard[] = [
     { key: '', label: 'Todas', value: states.ALL ?? null, icon: LifeBuoy, tone: 'brand', help: 'Todas las consultas que coinciden con la búsqueda.' },
     { key: 'PENDING', label: 'Por atender', value: states.PENDING ?? null, icon: Inbox, tone: 'info', help: 'Abiertas o en atención: todavía no se resuelven.' },
@@ -293,6 +301,8 @@ export const SupportPage: React.FC = () => {
               </option>
             ))}
           </SearchSelect>
+          <DateRangeFilter label="Creadas" from={from} to={to} onChange={(range) => filter(() => urlFilters.set(range))} />
+          <ClearFilters active={filtered} onClear={() => filter(() => urlFilters.clear())} />
         </div>
 
         {state === 'loading' && <LoadingState />}

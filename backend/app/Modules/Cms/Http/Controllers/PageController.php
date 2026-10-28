@@ -60,6 +60,10 @@ class PageController extends Controller
             'slug' => $this->slugRules($context, $page),
             'content' => ['present', 'array'],
             'show_in_footer' => ['required', 'boolean'],
+            'show_in_header' => ['sometimes', 'boolean'],
+            'show_in_auth' => ['sometimes', 'boolean'],
+            'show_in_student_menu' => ['sometimes', 'boolean'],
+            'menu_order' => ['sometimes', 'integer', 'min:0', 'max:999'],
         ], $this->messages());
 
         return $this->respond($this->pages->saveDraft($page, $request->user(), $data));

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../AuthContext';
@@ -8,6 +8,8 @@ import { useTenant } from '../../../shared/tenancy/TenantContext';
 import { Alert, Button, Field, INPUT_CLASS } from '../../../shared/ui';
 import { AuthShell } from '../../../shared/ui/AuthShell';
 import { appPath } from '../../../shared/tenancy/hosts';
+import { useSitePages } from '../../cms/useSitePages';
+import { AuthPageLinks } from '../../cms/components/AuthPageLinks';
 
 const EMPTY = { first_name: '', last_name: '', email: '', password: '', password_confirmation: '' };
 
@@ -21,19 +23,9 @@ export const SignUp: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(false);
-  const [legalPages, setLegalPages] = useState<{ slug: string; title: string }[]>([]);
-
-  // Textos legales que la academia tiene publicados (los mismos del pie del sitio)
-  useEffect(() => {
-    let active = true;
-    api
-      .get('/site/pages')
-      .then((response) => active && setLegalPages(response.data.data))
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Textos legales que la academia tiene publicados (los del pie del sitio) y los enlaces del inicio de sesión y registro
+  const sitePages = useSitePages();
+  const legalPages = sitePages.filter((page) => page.footer);
 
   const next = nextPath(location.search, '/available-courses');
   const hasNext = new URLSearchParams(location.search).has('next');
@@ -76,7 +68,7 @@ export const SignUp: React.FC = () => {
       title="Crea tu cuenta"
       subtitle={`Regístrate para comprar y llevar los cursos de ${tenant?.name ?? 'la academia'}.`}
       footer={
-        <Link to="/catalog" className="inline-flex items-center gap-1.5 font-semibold text-sky-200 hover:text-white transition-colors">
+        <Link to="/catalog" className="inline-flex items-center gap-1.5 font-semibold text-accent-200 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Volver al catálogo
         </Link>
@@ -143,6 +135,7 @@ export const SignUp: React.FC = () => {
           </Link>
         </p>
       </form>
+      <AuthPageLinks className="mt-5" />
     </AuthShell>
   );
 };

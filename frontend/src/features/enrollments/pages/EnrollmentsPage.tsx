@@ -10,6 +10,9 @@ import { BulkValidityModal, EnrollModal } from '../components/EnrollmentDialogs'
 import { EnrollmentTable } from '../components/EnrollmentTable';
 import { ExportButton } from '../../../shared/ui/ExportButton';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
+import { useFilterOptions } from '../../../shared/filters/useFilterOptions';
+import { DateRangeFilter } from '../../../shared/ui/listFilters';
 
 // Situaciones por las que se puede filtrar y qué significa cada una
 const SITUATIONS: { key: string; label: string; help: string }[] = [
@@ -30,9 +33,13 @@ export const EnrollmentsPage: React.FC = () => {
   const [rows, setRows] = useState<Enrollment[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [courses, setCourses] = useState<EnrollableCourse[]>([]);
-  const [search, setSearch] = useState('');
-  const [courseId, setCourseId] = useState('');
-  const [stateFilter, setStateFilter] = useState('');
+  // Los filtros viven en la dirección de la página
+  const urlFilters = useUrlFilters({ search: '', course_id: '', state: '', group_id: '', from: '', to: '', expires_from: '', expires_to: '' });
+  const { search, course_id: courseId, state: stateFilter, group_id: groupId } = urlFilters.values;
+  const setSearch = (value: string) => urlFilters.set({ search: value });
+  const setCourseId = (value: string) => urlFilters.set({ course_id: value });
+  const setStateFilter = (value: string) => urlFilters.set({ state: value });
+  const options = useFilterOptions();
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -45,6 +52,7 @@ export const EnrollmentsPage: React.FC = () => {
         search: search || undefined,
         course_id: courseId || undefined,
         state: stateFilter || undefined,
+        ...urlFilters.query,
         page,
       });
       setRows(result.data);
@@ -54,7 +62,7 @@ export const EnrollmentsPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, courseId, stateFilter, page]);
+  }, [search, courseId, stateFilter, urlFilters.query, page]);
 
   // La búsqueda espera a que el usuario termine de escribir
   useEffect(() => {
@@ -66,7 +74,7 @@ export const EnrollmentsPage: React.FC = () => {
     enrollmentsApi.options().then(setCourses).catch(() => setCourses([]));
   }, []);
 
-  const filtered = search !== '' || courseId !== '' || stateFilter !== '';
+  const filtered = urlFilters.active;
   const filter = (apply: () => void) => {
     apply();
     setPage(1);
@@ -100,7 +108,7 @@ export const EnrollmentsPage: React.FC = () => {
           <>
             <ExportButton
               path="/enrollments/export"
-              params={{ search: search || undefined, course_id: courseId || undefined, state: stateFilter || undefined }}
+              params={urlFilters.query}
               filename="matriculas.xlsx"
             />
             {canEnroll && (
@@ -161,6 +169,23 @@ export const EnrollmentsPage: React.FC = () => {
               label="Qué significa la situación elegida"
             />
           </div>
+          {options.groups.length > 0 && (
+            <SearchSelect className={`${INPUT_CLASS} !w-44`} aria-label="Filtrar por grupo" value={groupId} onChange={(event) => filter(() => urlFilters.set({ group_id: event.target.value }))}>
+              <option value="">Todos los grupos</option>
+              {options.groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </SearchSelect>
+          )}
+          <DateRangeFilter label="Matriculados" from={urlFilters.values.from} to={urlFilters.values.to} onChange={(range) => filter(() => urlFilters.set(range))} />
+          <DateRangeFilter
+            label="Acceso vence"
+            from={urlFilters.values.expires_from}
+            to={urlFilters.values.expires_to}
+            onChange={(range) => filter(() => urlFilters.set({ expires_from: range.from, expires_to: range.to }))}
+          />
         </div>
 
         <BulkBar count={selected.length} noun={['matrícula elegida', 'matrículas elegidas']} onClear={() => setSelected([])}>
@@ -187,11 +212,7 @@ export const EnrollmentsPage: React.FC = () => {
               filtered ? (
                 <Button
                   onClick={() =>
-                    filter(() => {
-                      setSearch('');
-                      setCourseId('');
-                      setStateFilter('');
-                    })
+                    filter(() => urlFilters.clear())
                   }
                 >
                   Quitar filtros

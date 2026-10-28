@@ -3,6 +3,7 @@
 namespace App\Modules\Reports\Application;
 
 use App\Modules\Academic\Application\GradebookService;
+use App\Modules\B2b\Domain\Models\CorporateAccount;
 use App\Modules\B2b\Domain\Models\CorporateMember;
 use App\Modules\Certificates\Domain\Models\Certificate;
 use App\Modules\Enrollments\Application\ProgressService;
@@ -10,11 +11,15 @@ use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Enrollments\Http\ClassroomPresenter;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\Group;
+use App\Modules\Identity\Domain\Models\GroupMember;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Domain\Models\Order;
+use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\Payment;
+use App\Modules\Sales\Http\OrderPresenter;
 use App\Modules\Support\Domain\Models\Ticket;
 use App\Modules\Tenancy\Application\EmailPreferences;
+use App\Shared\Http\DateRange;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -70,6 +75,44 @@ class StudentDirectory
                     ->orWhereRaw('lower(users.last_name) like ?', [$like])
                     ->orWhereRaw('lower(users.doc_number) like ?', [$like]));
             });
+    }
+
+    /**
+     * Filtros adicionales del listado: curso, grupo, empresa, deuda y fecha de registro.
+     *
+     * @param  Builder<User>  $query
+     * @param  array{course_id?: ?string, group_id?: ?string, company_id?: ?string, debt?: ?bool, from?: ?string, to?: ?string}  $filters
+     */
+    public function narrow(Builder $query, array $filters): void
+    {
+        $query
+            // Con matrícula (activa o no) en ese curso
+            ->when($filters['course_id'] ?? null, fn (Builder $q, string $course) => $q->whereIn('users.id', Enrollment::query()->select('student_id')->where('course_id', $course)))
+            ->when($filters['group_id'] ?? null, fn (Builder $q, string $group) => $q->whereIn('users.id', GroupMember::query()->select('user_id')->where('group_id', $group)))
+            ->when($filters['company_id'] ?? null, fn (Builder $q, string $company) => $q->whereIn('users.id', CorporateMember::query()
+                ->select('user_id')
+                ->whereIn('corporate_account_id', CorporateAccount::query()->select('id')->where('company_id', $company))))
+            // Con alguna cuota vencida sin pagar en una compra que ya empezó a pagar
+            ->when($filters['debt'] ?? false, fn (Builder $q) => $q->whereIn('users.id', Order::query()
+                ->select('customer_id')
+                ->where('status', Order::STATUS_PARTIAL)
+                ->whereHas('installments', fn (Builder $due) => $due->where('status', OrderInstallment::STATUS_PENDING)->where('due_date', '<', OrderPresenter::today()))));
+
+        DateRange::apply($query, 'users.created_at', $filters);
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    public static function filterRules(): array
+    {
+        return [
+            'course_id' => ['nullable', 'uuid'],
+            'group_id' => ['nullable', 'uuid'],
+            'company_id' => ['nullable', 'uuid'],
+            'debt' => ['nullable', 'boolean'],
+            ...DateRange::rules(),
+        ];
     }
 
     /**

@@ -19,6 +19,7 @@ use App\Modules\Tenancy\Application\TenantUrls;
 use App\Shared\Export\ExcelExport;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\DateRange;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
@@ -140,9 +141,10 @@ class OrderController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'sale' => ['nullable', Rule::in(self::SALE_FILTERS)],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            ...self::filterRules(),
         ]);
 
-        $base = $this->search($filters['search'] ?? null, $filters['sale'] ?? null);
+        $base = $this->narrow($this->search($filters['search'] ?? null, $filters['sale'] ?? null), $filters);
 
         // Cuántas hay en cada estado con la búsqueda actual: alimenta las tarjetas que filtran
         $counts = StateCounts::of($base, Order::STATUSES, fn (Builder $q, string $status) => $q->inState($status));
@@ -164,10 +166,11 @@ class OrderController extends Controller
             'status' => ['nullable', Rule::in(Order::STATUSES)],
             'search' => ['nullable', 'string', 'max:100'],
             'sale' => ['nullable', Rule::in(self::SALE_FILTERS)],
+            ...self::filterRules(),
         ]);
 
         $timezone = $settings->timezone();
-        $query = $this->search($filters['search'] ?? null, $filters['sale'] ?? null)
+        $query = $this->narrow($this->search($filters['search'] ?? null, $filters['sale'] ?? null), $filters)
             ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->inState($status))
             ->orderByDesc('number');
 
@@ -481,6 +484,38 @@ class OrderController extends Controller
      *
      * @return Builder<Order>
      */
+    /**
+     * @return array<string, array<int, mixed>>
+     */
+    private static function filterRules(): array
+    {
+        return [
+            'course_id' => ['nullable', 'uuid'],
+            'package_id' => ['nullable', 'uuid'],
+            'method' => ['nullable', Rule::in(array_keys(self::METHOD_LABELS))],
+            'seller_id' => ['nullable', 'uuid'],
+            ...DateRange::rules(),
+        ];
+    }
+
+    /**
+     * Curso o paquete comprado, medio de pago (del pago único o de alguna cuota), quién vendió y fecha de la orden.
+     *
+     * @param  Builder<Order>  $query
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Order>
+     */
+    private function narrow(Builder $query, array $filters): Builder
+    {
+        $query
+            ->when($filters['course_id'] ?? null, fn (Builder $q, string $course) => $q->whereHas('items', fn (Builder $items) => $items->where('course_id', $course)))
+            ->when($filters['package_id'] ?? null, fn (Builder $q, string $package) => $q->where('package_id', $package))
+            ->when($filters['method'] ?? null, fn (Builder $q, string $method) => $q->whereIn('id', Payment::query()->select('order_id')->where('method', $method)->where('status', Payment::STATUS_CONFIRMED)))
+            ->when($filters['seller_id'] ?? null, fn (Builder $q, string $seller) => $q->where('sold_by', $seller));
+
+        return DateRange::apply($query, 'orders.created_at', $filters);
+    }
+
     /**
      * @param  string|null  $sale  ASSISTED = registradas por el personal; ONLINE = compradas por el propio alumno
      */

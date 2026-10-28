@@ -14,21 +14,26 @@ use Illuminate\Http\JsonResponse;
 class PublicPageController extends Controller
 {
     /**
-     * Páginas que se enlazan al pie del sitio.
+     * Páginas publicadas que se enlazan en algún lugar del sitio, con dónde
+     * aparece cada una, en su orden (y a igual orden, por título).
      */
     public function index(): JsonResponse
     {
         $pages = Page::query()
             ->where('status', Page::STATUS_PUBLISHED)
-            ->where('show_in_footer', true)
+            ->where(fn ($query) => $query->where('show_in_footer', true)->orWhere('show_in_header', true)->orWhere('show_in_auth', true)->orWhere('show_in_student_menu', true))
             ->with('currentVersion')
             ->get()
-            ->sortBy(fn (Page $page) => mb_strtolower($page->currentVersion->title))
+            ->sortBy(fn (Page $page) => [$page->menu_order, mb_strtolower($page->currentVersion->title)])
             ->values();
 
         return ApiResponse::success($pages->map(fn (Page $page) => [
             'slug' => $page->slug,
             'title' => $page->currentVersion->title,
+            'footer' => $page->show_in_footer,
+            'header' => $page->show_in_header,
+            'auth' => $page->show_in_auth,
+            'student_menu' => $page->show_in_student_menu,
         ]));
     }
 

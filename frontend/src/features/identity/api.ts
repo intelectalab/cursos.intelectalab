@@ -100,7 +100,7 @@ export const identityApi = {
     return (await api.delete(`/groups/${id}/members/${userId}`)).data.data as GroupDetail;
   },
 
-  async listUsers(params: { search?: string; status?: string; page?: number; per_page?: number }) {
+  async listUsers(params: { search?: string; status?: string; role_id?: string; page?: number; per_page?: number }) {
     const response = await api.get('/users', { params });
     return response.data as { data: UserRow[]; meta: PageMeta };
   },

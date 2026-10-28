@@ -28,6 +28,12 @@ return [
             'limit' => 'image',
             'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
         ],
+        // Imagen de fondo de la pantalla de acceso de la organización (Apariencia)
+        'login_background' => [
+            'visibility' => 'public',
+            'limit' => 'image',
+            'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
+        ],
         'course_cover' => [
             'visibility' => 'public',
             'limit' => 'image',

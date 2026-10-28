@@ -14,9 +14,11 @@ use App\Modules\Courses\Domain\Models\Course;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
 use App\Modules\Files\Application\FileStorage;
 use App\Modules\Files\Domain\Models\File;
+use App\Modules\Tenancy\Application\TenantAppearance;
 use App\Modules\Tenancy\Application\TenantUrls;
 use App\Shared\Http\ApiException;
 use App\Shared\Http\ApiResponse;
+use App\Shared\Http\DateRange;
 use App\Shared\Http\ErrorCode;
 use App\Shared\Http\StateCounts;
 use App\Shared\Tenancy\TenantContext;
@@ -59,9 +61,11 @@ class CertificateController extends Controller
             'status' => ['nullable', Rule::in(Certificate::STATUSES)],
             'course_id' => ['nullable', 'uuid'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            // Emitidos entre esos días
+            ...DateRange::rules(),
         ]);
 
-        $base = Certificate::query()
+        $base = DateRange::apply(Certificate::query(), 'issued_at', $filters)
             ->with(['student', 'issuer'])
             ->when($filters['course_id'] ?? null, fn (Builder $q, string $course) => $q->where('course_id', $course))
             ->when($filters['search'] ?? null, function (Builder $q, string $search) {
@@ -191,8 +195,8 @@ class CertificateController extends Controller
                 'single_style_fonts' => CertificateLayout::SINGLE_STYLE_FONTS,
                 'max_elements' => CertificateLayout::MAX_ELEMENTS,
                 'defaults' => [
-                    CertificateLayout::LANDSCAPE => CertificateLayout::default(CertificateLayout::LANDSCAPE),
-                    CertificateLayout::PORTRAIT => CertificateLayout::default(CertificateLayout::PORTRAIT),
+                    CertificateLayout::LANDSCAPE => CertificateLayout::default(CertificateLayout::LANDSCAPE, app(TenantAppearance::class)->current()['primary']),
+                    CertificateLayout::PORTRAIT => CertificateLayout::default(CertificateLayout::PORTRAIT, app(TenantAppearance::class)->current()['primary']),
                 ],
             ],
         ]);

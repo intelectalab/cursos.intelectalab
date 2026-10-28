@@ -14,7 +14,7 @@ export const MyCourseCard: React.FC<{ course: MyCourse }> = ({ course }) => {
 
   const body = (
     <>
-      <div className="relative aspect-[16/9] bg-gradient-to-br from-brand-800 via-brand-700 to-sky-500 overflow-hidden">
+      <div className="relative aspect-[16/9] bg-gradient-to-br from-brand-800 via-brand-700 to-accent-500 overflow-hidden">
         {course.cover_url ? (
           <img src={course.cover_url} alt="" className={`w-full h-full object-cover ${locked ? 'grayscale opacity-70' : ''}`} loading="lazy" />
         ) : (
@@ -62,7 +62,7 @@ export const MyCourseCard: React.FC<{ course: MyCourse }> = ({ course }) => {
           </div>
           <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
             <div
-              className={`h-full rounded-full ${percent === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-600 to-sky-500'}`}
+              className={`h-full rounded-full ${percent === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-600 to-accent-500'}`}
               style={{ width: `${percent}%` }}
             />
           </div>

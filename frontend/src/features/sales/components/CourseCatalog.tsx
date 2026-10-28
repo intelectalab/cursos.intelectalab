@@ -12,7 +12,7 @@ import { Stars } from '../../courses/components/Stars';
 const RESOURCE_ICON: Record<ResourceType, LucideIcon> = { VIDEO: Video, DOCUMENT: Paperclip, LINK: Link2, TEXT: FileText };
 
 export const CourseCover: React.FC<{ url: string | null; className?: string }> = ({ url, className = '' }) => (
-  <div className={`relative aspect-[16/9] bg-gradient-to-br from-brand-800 via-brand-700 to-sky-500 overflow-hidden ${className}`}>
+  <div className={`relative aspect-[16/9] bg-gradient-to-br from-brand-800 via-brand-700 to-accent-500 overflow-hidden ${className}`}>
     {url ? (
       <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
     ) : (

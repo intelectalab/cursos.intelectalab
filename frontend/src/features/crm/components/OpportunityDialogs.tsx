@@ -280,7 +280,7 @@ export const OpportunityModal: React.FC<{
                       onClick={() => move(stage)}
                       className={`h-8 px-3 rounded-full text-xs font-semibold transition-all ${
                         current
-                          ? 'text-white bg-gradient-to-r from-brand-700 to-sky-500 shadow-sm shadow-brand-700/30'
+                          ? 'text-white bg-gradient-to-r from-brand-700 to-accent-500 shadow-sm shadow-brand-700/30'
                           : 'text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer disabled:cursor-default disabled:hover:bg-slate-100 disabled:opacity-70'
                       }`}
                     >

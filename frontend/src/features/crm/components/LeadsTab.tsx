@@ -101,7 +101,7 @@ export const LeadsTab: React.FC<{ canManage: boolean; owners: Person[] }> = ({ c
             label="Qué significa el estado de un prospecto"
           />
           <div className="ml-auto flex flex-wrap gap-2">
-            <ExportButton path="/crm/leads/export" params={{ search: search || undefined, status: status || undefined }} filename="prospectos.xlsx" label="Exportar" />
+            <ExportButton path="/crm/leads/export" params={{ search: search || undefined, status: status || undefined }} filename="prospectos.xlsx"  />
             {canManage && (
               <>
                 <Button icon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => setDialog({ kind: 'import' })}>

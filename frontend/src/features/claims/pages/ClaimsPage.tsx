@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlarmClock, BookOpenCheck, CheckCircle2, ExternalLink, FileSearch, Inbox, MailOpen, Search } from 'lucide-react';
+import { AlarmClock, BookOpenCheck, CheckCircle2, ExternalLink, FileSearch, Hourglass, Inbox, MailOpen, Search } from 'lucide-react';
 import { FilterCards, type FilterCard } from '../../../shared/ui/filters';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
@@ -29,6 +29,9 @@ import { formatDateTime } from '../../sales/api';
 import { claimsApi, CLAIM_TYPE_LABEL, type Claim, type ClaimSummary } from '../api';
 import { ClaimSheet, ClaimStatusBadge } from '../components/ClaimSheet';
 import { appPath } from '../../../shared/tenancy/hosts';
+import { SearchSelect } from '../../../shared/ui/SearchSelect';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
+import { ClearFilters, DateRangeFilter } from '../../../shared/ui/listFilters';
 
 const ClaimModal: React.FC<{ claimId: string; canManage: boolean; onClose: () => void; onChanged: () => void }> = ({ claimId, canManage, onClose, onChanged }) => {
   const [claim, setClaim] = useState<Claim | null>(null);
@@ -163,8 +166,12 @@ export const ClaimsPage: React.FC = () => {
   const [rows, setRows] = useState<ClaimSummary[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [states, setStates] = useState<Record<string, number>>({});
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('PENDING');
+  // Los filtros viven en la dirección de la página. Se abre en «Sin responder»; «Todas» se guarda como ALL
+  const urlFilters = useUrlFilters({ search: '', status: 'PENDING', type: '', from: '', to: '' });
+  const { search, type, from, to } = urlFilters.values;
+  const status = urlFilters.values.status === 'ALL' ? '' : urlFilters.values.status;
+  const setSearch = (value: string) => urlFilters.set({ search: value });
+  const setStatus = (value: string) => urlFilters.set({ status: value || 'ALL' });
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -172,7 +179,7 @@ export const ClaimsPage: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const result = await claimsApi.list({ search: search || undefined, status: status || undefined, page });
+      const result = await claimsApi.list({ search: search || undefined, status: status || undefined, type: type || undefined, from: from || undefined, to: to || undefined, page });
       setRows(result.data);
       setMeta(result.meta);
       setStates(result.states);
@@ -181,7 +188,7 @@ export const ClaimsPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, status, page]);
+  }, [search, status, type, from, to, page]);
 
   useEffect(() => {
     const timer = setTimeout(load, 250);
@@ -192,10 +199,11 @@ export const ClaimsPage: React.FC = () => {
     apply();
     setPage(1);
   };
-  const filtered = search !== '' || status !== 'PENDING';
+  const filtered = search !== '' || status !== 'PENDING' || type !== '' || from !== '' || to !== '';
   const cards: FilterCard[] = [
     { key: '', label: 'Todas', value: states.ALL ?? null, icon: BookOpenCheck, tone: 'brand', help: 'Todas las hojas que coinciden con la búsqueda.' },
     { key: 'PENDING', label: 'Sin responder', value: states.PENDING ?? null, icon: Inbox, tone: 'info', help: 'Recibidas o en revisión: todavía no tienen respuesta.' },
+    { key: 'DUE_SOON', label: 'Por vencer', value: states.DUE_SOON ?? null, icon: Hourglass, tone: 'warning', help: 'Sin respuesta y su fecha límite es hoy o en los próximos 3 días.' },
     { key: 'OVERDUE', label: 'Fuera de plazo', value: states.OVERDUE ?? null, icon: AlarmClock, tone: 'danger', help: 'Sin respuesta y con la fecha límite vencida. Respóndelas primero.' },
     { key: 'RECEIVED', label: 'Recibidas', value: states.RECEIVED ?? null, icon: MailOpen, tone: 'warning', help: 'Registradas por el consumidor; nadie empezó a revisarlas.' },
     { key: 'IN_REVIEW', label: 'En revisión', value: states.IN_REVIEW ?? null, icon: FileSearch, tone: 'violet', help: 'Alguien del personal las está revisando.' },
@@ -235,6 +243,16 @@ export const ClaimsPage: React.FC = () => {
               onChange={(event) => filter(() => setSearch(event.target.value))}
             />
           </div>
+          <SearchSelect className={`${INPUT_CLASS} !w-40`} aria-label="Filtrar por tipo" value={type} onChange={(event) => filter(() => urlFilters.set({ type: event.target.value }))}>
+            <option value="">Reclamos y quejas</option>
+            {(Object.keys(CLAIM_TYPE_LABEL) as (keyof typeof CLAIM_TYPE_LABEL)[]).map((key) => (
+              <option key={key} value={key}>
+                {CLAIM_TYPE_LABEL[key]}
+              </option>
+            ))}
+          </SearchSelect>
+          <DateRangeFilter label="Registradas" from={from} to={to} onChange={(range) => filter(() => urlFilters.set(range))} />
+          <ClearFilters active={filtered} onClear={() => filter(() => urlFilters.clear())} />
         </div>
 
         {state === 'loading' && <LoadingState />}

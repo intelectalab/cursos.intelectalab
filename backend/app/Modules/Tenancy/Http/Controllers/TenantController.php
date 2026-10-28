@@ -4,6 +4,7 @@ namespace App\Modules\Tenancy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Tenancy\Application\ProvisionTenant;
+use App\Modules\Tenancy\Application\TenantAppearance;
 use App\Modules\Tenancy\Application\TenantLogoService;
 use App\Modules\Tenancy\Application\TenantUrls;
 use App\Modules\Tenancy\Domain\Models\Tenant;
@@ -18,13 +19,14 @@ class TenantController extends Controller
      * Contexto público del host actual: la organización del subdominio,
      * o null en el dominio central.
      */
-    public function current(Request $request, TenantLogoService $logo): JsonResponse
+    public function current(Request $request, TenantLogoService $logo, TenantAppearance $appearance): JsonResponse
     {
         /** @var Tenant|null $tenant */
         $tenant = $request->attributes->get('tenant');
 
         return ApiResponse::success(
-            $tenant ? $this->present($tenant) + ['logo_url' => $logo->url()] : null,
+            // La apariencia va aquí porque se aplica desde la pantalla de acceso, antes de iniciar sesión
+            $tenant ? $this->present($tenant) + ['logo_url' => $logo->url(), 'appearance' => $appearance->current()] : null,
             // La aplicación web arma con esto los enlaces hacia cada organización
             ['central_domain' => config('tenancy.central_domain'), 'tenancy_mode' => TenantUrls::mode()]
         );

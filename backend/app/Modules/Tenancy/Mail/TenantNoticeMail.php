@@ -27,6 +27,8 @@ class TenantNoticeMail extends Mailable
         public readonly array $lines,
         public readonly ?array $action = null,
         public readonly ?array $unsubscribe = null,
+        // Color principal de la academia (cabecera y botón); null = el de IntelectaLab
+        public readonly ?string $color = null,
     ) {}
 
     public function envelope(): Envelope

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Tenancy\Http\Controllers\AppearanceController;
 use App\Modules\Tenancy\Http\Controllers\EmailPreferencesController;
 use App\Modules\Tenancy\Http\Controllers\EmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\GradeScaleController;
@@ -62,6 +63,15 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     Route::put('/settings', [TenantSettingsController::class, 'update'])->middleware('permission:tenant_settings.update');
     Route::post('/settings/logo', [TenantSettingsController::class, 'uploadLogo'])->middleware('permission:tenant_settings.update');
     Route::delete('/settings/logo', [TenantSettingsController::class, 'removeLogo'])->middleware('permission:tenant_settings.update');
+
+    // Apariencia: colores de la academia y su pantalla de acceso
+    Route::get('/settings/appearance', [AppearanceController::class, 'show'])->middleware('permission:tenant_settings.read');
+    Route::middleware('permission:tenant_settings.update')->group(function () {
+        Route::put('/settings/appearance', [AppearanceController::class, 'update']);
+        Route::delete('/settings/appearance', [AppearanceController::class, 'reset']);
+        Route::post('/settings/appearance/login-background', [AppearanceController::class, 'uploadBackground']);
+        Route::delete('/settings/appearance/login-background', [AppearanceController::class, 'removeBackground']);
+    });
 
     // Escalas de notas guardadas por la organización
     Route::get('/settings/grade-scales', [GradeScaleController::class, 'index'])->middleware('permission:tenant_settings.read');

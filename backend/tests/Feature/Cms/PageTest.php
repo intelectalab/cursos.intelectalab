@@ -297,4 +297,38 @@ class PageTest extends TestCase
         $this->visit('/site/pages/terminos', 'globex')->assertStatus(404);
         $this->visit('/site/pages/terminos')->assertOk();
     }
+
+    public function test_each_page_chooses_where_its_link_appears_and_its_order(): void
+    {
+        $faq = $this->page('Preguntas frecuentes', 'preguntas');
+        $this->save($faq, $this->doc('Respuestas.'), ['title' => 'Preguntas frecuentes', 'slug' => 'preguntas', 'show_in_footer' => false, 'show_in_header' => true, 'show_in_auth' => true, 'show_in_student_menu' => true, 'menu_order' => 1])
+            ->assertOk()
+            ->assertJsonPath('data.show_in_header', true)
+            ->assertJsonPath('data.show_in_student_menu', true)
+            ->assertJsonPath('data.menu_order', 1);
+        $this->withToken($this->admin)->postJson($this->api("/pages/{$faq}/publish"))->assertOk();
+
+        $terms = $this->page();
+        $this->save($terms, $this->doc('Condiciones.'), ['menu_order' => 2])->assertOk();
+        $this->withToken($this->admin)->postJson($this->api("/pages/{$terms}/publish"))->assertOk();
+
+        // Sin ningún lugar marcado, la página se publica pero no se enlaza
+        $hidden = $this->page('Oculta', 'oculta');
+        $this->save($hidden, $this->doc('Solo con su enlace.'), ['title' => 'Oculta', 'slug' => 'oculta', 'show_in_footer' => false])->assertOk();
+        $this->withToken($this->admin)->postJson($this->api("/pages/{$hidden}/publish"))->assertOk();
+
+        $this->visit('/site/pages')->assertOk()
+            ->assertJsonCount(2, 'data')
+            // Por orden: primero «Preguntas frecuentes» (1), después «Términos» (2)
+            ->assertJsonPath('data.0.slug', 'preguntas')
+            ->assertJsonPath('data.0.footer', false)
+            ->assertJsonPath('data.0.header', true)
+            ->assertJsonPath('data.0.auth', true)
+            ->assertJsonPath('data.0.student_menu', true)
+            ->assertJsonPath('data.1.slug', 'terminos')
+            ->assertJsonPath('data.1.footer', true);
+        $this->visit('/site/pages/oculta')->assertOk();
+
+        $this->save($terms, $this->doc('Condiciones.'), ['menu_order' => 1000])->assertStatus(422);
+    }
 }

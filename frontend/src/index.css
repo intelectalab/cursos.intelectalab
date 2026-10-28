@@ -28,6 +28,20 @@
   --color-brand-900: #041e3d;
   --color-brand-950: #03152b;
 
+  /* Acento (celeste): detalles, degradados y el foco. Cada academia puede
+     cambiar brand-* y accent-* con sus colores (shared/tenancy/theme.ts) */
+  --color-accent-50: #f0f9ff;
+  --color-accent-100: #e0f2fe;
+  --color-accent-200: #bae6fd;
+  --color-accent-300: #7dd3fc;
+  --color-accent-400: #38bdf8;
+  --color-accent-500: #0ea5e9;
+  --color-accent-600: #0284c7;
+  --color-accent-700: #0369a1;
+  --color-accent-800: #075985;
+  --color-accent-900: #0c4a6e;
+  --color-accent-950: #082f49;
+
   /* Fondo de la aplicación */
   --color-canvas: #f3f6fb;
 
@@ -47,7 +61,7 @@
 
   /* Foco visible en todo control */
   :focus-visible {
-    outline: 2px solid var(--color-sky-500);
+    outline: 2px solid var(--color-accent-500);
     outline-offset: 2px;
   }
 }

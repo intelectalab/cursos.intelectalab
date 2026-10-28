@@ -497,10 +497,10 @@ export const CertificateEditorPage: React.FC = () => {
                 images.background && <img src={images.background} alt="" className="absolute inset-0 w-full h-full pointer-events-none" draggable={false} />
               ) : (
                 <>
-                  <div className="absolute left-0 top-0 w-full bg-[#0a2540]" style={{ height: 12 * scale }} />
-                  <div className="absolute left-0 w-full bg-sky-400" style={{ top: 12 * scale, height: 1.6 * scale }} />
+                  <div className="absolute left-0 top-0 w-full bg-brand-900" style={{ height: 12 * scale }} />
+                  <div className="absolute left-0 w-full bg-accent-400" style={{ top: 12 * scale, height: 1.6 * scale }} />
                   <div
-                    className="absolute border-[#0a2540] pointer-events-none"
+                    className="absolute border-brand-900 pointer-events-none"
                     style={{ left: 10 * scale, top: 20 * scale, width: (sheetWidth - 22) * scale, height: (sheetHeight - 30) * scale, borderWidth: Math.max(0.6 * scale, 1) }}
                   />
                 </>

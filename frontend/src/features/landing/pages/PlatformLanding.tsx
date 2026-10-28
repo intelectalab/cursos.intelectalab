@@ -110,8 +110,8 @@ export const PlatformLanding: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-canvas text-slate-900">
       {/* Encabezado y portada sobre el fondo de marca, como el acceso y el sitio de cada academia */}
       <div className="relative overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600">
-        <div className="absolute -top-28 -left-20 w-[460px] h-[460px] rounded-full bg-sky-500/25 blur-[110px] pointer-events-none" />
-        <div className="absolute -bottom-32 right-0 w-[460px] h-[460px] rounded-full bg-sky-400/20 blur-[120px] pointer-events-none" />
+        <div className="absolute -top-28 -left-20 w-[460px] h-[460px] rounded-full bg-accent-500/25 blur-[110px] pointer-events-none" />
+        <div className="absolute -bottom-32 right-0 w-[460px] h-[460px] rounded-full bg-accent-400/20 blur-[120px] pointer-events-none" />
         <div
           className="absolute inset-0 opacity-[0.07] pointer-events-none"
           style={{
@@ -125,13 +125,13 @@ export const PlatformLanding: React.FC = () => {
             <BrandMark />
           </Link>
           <nav className="flex items-center gap-1 sm:gap-2">
-            <a href="#planes" className="hidden sm:inline-flex h-9 px-3 items-center rounded-lg text-[13px] font-semibold text-sky-100 hover:text-white hover:bg-white/10">
+            <a href="#planes" className="hidden sm:inline-flex h-9 px-3 items-center rounded-lg text-[13px] font-semibold text-accent-100 hover:text-white hover:bg-white/10">
               Planes
             </a>
-            <button type="button" onClick={() => setLoginOpen(true)} className="hidden sm:inline-flex h-9 px-3 items-center rounded-lg text-[13px] font-semibold text-sky-100 hover:text-white hover:bg-white/10 cursor-pointer whitespace-nowrap">
+            <button type="button" onClick={() => setLoginOpen(true)} className="hidden sm:inline-flex h-9 px-3 items-center rounded-lg text-[13px] font-semibold text-accent-100 hover:text-white hover:bg-white/10 cursor-pointer whitespace-nowrap">
               Iniciar sesión
             </button>
-            <Link to="/register" className="inline-flex h-9 px-4 items-center rounded-lg bg-white text-brand-800 text-[13px] font-semibold hover:bg-sky-50">
+            <Link to="/register" className="inline-flex h-9 px-4 items-center rounded-lg bg-white text-brand-800 text-[13px] font-semibold hover:bg-accent-50">
               Comenzar
             </Link>
           </nav>
@@ -139,18 +139,18 @@ export const PlatformLanding: React.FC = () => {
 
         <section className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-16 sm:pt-12 sm:pb-24 grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
           <div>
-            <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur text-[11px] font-bold tracking-wide text-sky-200">
+            <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur text-[11px] font-bold tracking-wide text-accent-200">
               <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
               PLATAFORMA DE CURSOS VIRTUALES
             </span>
             <h1 className="mt-5 text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08] text-white">
-              Tu academia virtual, <span className="text-sky-300">lista en minutos.</span>
+              Tu academia virtual, <span className="text-accent-300">lista en minutos.</span>
             </h1>
             <p className="mt-5 text-[15px] leading-relaxed text-brand-100/85 max-w-lg">
               Registra tu academia, publica tus cursos y vende en línea. Empieza con {trialDays} días gratis y elige tu plan cuando estés listo.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#planes" className={`${BUTTON} bg-white text-brand-800 hover:bg-sky-50 shadow-lg shadow-black/10`}>
+              <a href="#planes" className={`${BUTTON} bg-white text-brand-800 hover:bg-accent-50 shadow-lg shadow-black/10`}>
                 Ver planes
                 <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </a>
@@ -180,7 +180,7 @@ export const PlatformLanding: React.FC = () => {
               </div>
               <div className="mt-5 flex items-end gap-1.5 h-16" aria-hidden="true">
                 {[38, 52, 45, 61, 58, 72, 66, 84].map((height, index) => (
-                  <span key={index} className={`flex-1 rounded-t-md ${index === 7 ? 'bg-brand-700' : 'bg-sky-200'}`} style={{ height: `${height}%` }} />
+                  <span key={index} className={`flex-1 rounded-t-md ${index === 7 ? 'bg-brand-700' : 'bg-accent-200'}`} style={{ height: `${height}%` }} />
                 ))}
               </div>
               <div className="mt-5 pt-4 border-t border-slate-100">
@@ -251,7 +251,7 @@ export const PlatformLanding: React.FC = () => {
       </main>
 
       <footer className="bg-gradient-to-br from-brand-900 to-brand-800 py-7 px-4 text-center text-xs text-brand-200">
-        © {new Date().getFullYear()} Intelecta<span className="text-sky-400">Lab_</span> · Plataforma de cursos virtuales
+        © {new Date().getFullYear()} Intelecta<span className="text-accent-400">Lab_</span> · Plataforma de cursos virtuales
       </footer>
 
       {loginOpen && <AcademyLogin centralDomain={centralDomain} onClose={() => setLoginOpen(false)} />}

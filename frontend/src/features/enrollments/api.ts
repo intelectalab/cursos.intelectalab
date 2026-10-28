@@ -224,7 +224,7 @@ export const enrollmentsApi = {
   async candidates(course: string, search?: string) {
     return (await api.get(`/courses/${course}/enrollment-candidates`, { params: { search: search || undefined } })).data.data as StudentRef[];
   },
-  async all(params: { course_id?: string; search?: string; state?: string; page?: number }) {
+  async all(params: Record<string, string | number | undefined>) {
     const response = await api.get('/enrollments', { params });
     return { data: response.data.data as Enrollment[], meta: response.data.meta as PageMeta };
   },

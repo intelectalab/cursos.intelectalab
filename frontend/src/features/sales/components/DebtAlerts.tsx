@@ -272,7 +272,7 @@ export const DebtAlerts: React.FC = () => {
         aria-label={badge > 0 ? `Avisos: ${badge} por atender` : 'Avisos'}
         aria-expanded={open}
         aria-controls="lista-de-avisos"
-        className="pointer-events-auto relative w-12 h-12 rounded-full bg-gradient-to-br from-brand-700 to-sky-500 text-white shadow-raised flex items-center justify-center cursor-pointer hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+        className="pointer-events-auto relative w-12 h-12 rounded-full bg-gradient-to-br from-brand-700 to-accent-500 text-white shadow-raised flex items-center justify-center cursor-pointer hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
         onClick={() => setOpen((current) => !current)}
       >
         <Bell className="w-5 h-5" />

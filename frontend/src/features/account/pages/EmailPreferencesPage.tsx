@@ -14,12 +14,12 @@ interface Preferences {
 
 const Hero: React.FC = () => (
   <div className="max-w-2xl">
-    <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-sky-200">
+    <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-accent-200">
       <MailX className="w-4 h-4" />
       Correos
     </p>
     <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-white tracking-tight">Elige qué correos recibes</h1>
-    <p className="mt-3 text-sky-100/90 text-[15px] leading-relaxed">Puedes dejar de recibir un tipo de correo y volver a recibirlo cuando quieras.</p>
+    <p className="mt-3 text-accent-100/90 text-[15px] leading-relaxed">Puedes dejar de recibir un tipo de correo y volver a recibirlo cuando quieras.</p>
   </div>
 );
 

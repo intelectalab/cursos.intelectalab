@@ -143,7 +143,7 @@ export const STAGE_TONE: Record<Stage, Tone> = {
 };
 // Franja de color que encabeza cada columna del tablero
 export const STAGE_BAR: Record<Stage, string> = {
-  NEW: 'from-sky-500 to-sky-400',
+  NEW: 'from-accent-500 to-accent-400',
   CONTACTED: 'from-brand-700 to-brand-500',
   PROPOSAL: 'from-violet-600 to-fuchsia-500',
   NEGOTIATION: 'from-amber-500 to-orange-400',

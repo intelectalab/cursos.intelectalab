@@ -55,10 +55,12 @@ class UserController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string', 'max:30'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'role_id' => ['nullable', 'uuid'],
         ]);
 
         $base = User::query()
             ->with('roles')
+            ->when($filters['role_id'] ?? null, fn ($query, string $role) => $query->whereHas('roles', fn ($roles) => $roles->whereKey($role)))
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $like = '%'.mb_strtolower($search).'%';
 

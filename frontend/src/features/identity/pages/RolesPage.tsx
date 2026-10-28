@@ -260,9 +260,9 @@ export const RolesPage: React.FC = () => {
 
             {hasFullAccess ? (
               <Card className="relative overflow-hidden p-6">
-                <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-sky-400/15 blur-3xl pointer-events-none" />
+                <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-accent-400/15 blur-3xl pointer-events-none" />
                 <div className="relative flex items-center gap-3.5">
-                  <span className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-sky-500 text-white flex items-center justify-center shadow-md shadow-brand-700/25">
+                  <span className="w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-brand-700 to-accent-500 text-white flex items-center justify-center shadow-md shadow-brand-700/25">
                     <ShieldCheck className="w-5 h-5" />
                   </span>
                   <div>
@@ -289,7 +289,7 @@ export const RolesPage: React.FC = () => {
                           <div className="flex items-center gap-2 mt-1.5">
                             <span className="h-1.5 w-20 rounded-full bg-slate-200 overflow-hidden">
                               <span
-                                className="block h-full rounded-full bg-gradient-to-r from-brand-600 to-sky-500 transition-all"
+                                className="block h-full rounded-full bg-gradient-to-r from-brand-600 to-accent-500 transition-all"
                                 style={{ width: `${(selectedCount / codes.length) * 100}%` }}
                               />
                             </span>

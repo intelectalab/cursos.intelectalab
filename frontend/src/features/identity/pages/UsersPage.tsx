@@ -25,6 +25,7 @@ import {
   THead,
   Tr,
 } from '../../../shared/ui';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
 import { BulkBar, FilterCards, HelpTip, SelectAll, SelectRow, type FilterCard } from '../../../shared/ui/filters';
 import { ImportModal } from '../../../shared/ui/ImportModal';
 import { GroupsTab } from '../components/GroupsTab';
@@ -359,8 +360,12 @@ export const UsersPage: React.FC = () => {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
+  // Los filtros viven en la dirección de la página
+  const urlFilters = useUrlFilters({ search: '', status: '', role_id: '' });
+  const { search, status, role_id: roleId } = urlFilters.values;
+  const setSearch = (value: string) => urlFilters.set({ search: value });
+  const setStatus = (value: string) => urlFilters.set({ status: value });
+  const setRoleId = (value: string) => urlFilters.set({ role_id: value });
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -374,7 +379,7 @@ export const UsersPage: React.FC = () => {
   const load = useCallback(async () => {
     setState('loading');
     try {
-      const result = await identityApi.listUsers({ search: search || undefined, status: status || undefined, page });
+      const result = await identityApi.listUsers({ search: search || undefined, status: status || undefined, role_id: roleId || undefined, page });
       setRows(result.data);
       setMeta(result.meta);
       setState('ready');
@@ -382,7 +387,7 @@ export const UsersPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, status, page]);
+  }, [search, status, roleId, page]);
 
   // La búsqueda espera a que el usuario termine de escribir
   useEffect(() => {
@@ -395,7 +400,7 @@ export const UsersPage: React.FC = () => {
     identityApi.listRoles().then(setRoles).catch(() => setRoles([]));
   }, [canPickRoles]);
 
-  const filtered = search !== '' || status !== '';
+  const filtered = search !== '' || status !== '' || roleId !== '';
   const filter = (apply: () => void) => {
     apply();
     setPage(1);
@@ -508,6 +513,14 @@ export const UsersPage: React.FC = () => {
               label="Qué significa el estado de un usuario"
             />
           </div>
+          <SearchSelect className={`${INPUT_CLASS} !w-48`} aria-label="Filtrar por rol" value={roleId} onChange={(event) => ((value: string) => filter(() => setRoleId(value)))(event.target.value)}>
+            <option value="">Todos los roles</option>
+            {roles.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </SearchSelect>
         </div>
 
         {canUpdate && (
@@ -535,6 +548,7 @@ export const UsersPage: React.FC = () => {
                     filter(() => {
                       setSearch('');
                       setStatus('');
+                      setRoleId('');
                     })
                   }
                 >

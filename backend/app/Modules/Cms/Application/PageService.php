@@ -47,7 +47,7 @@ class PageService
     /**
      * Guarda el borrador. El público sigue viendo la versión publicada.
      *
-     * @param  array{title: string, slug: string, content: array<string, mixed>, show_in_footer: bool}  $data
+     * @param  array{title: string, slug: string, content: array<string, mixed>, show_in_footer: bool, show_in_header?: bool, show_in_auth?: bool, show_in_student_menu?: bool, menu_order?: int}  $data
      */
     public function saveDraft(Page $page, User $actor, array $data): Page
     {
@@ -59,7 +59,7 @@ class PageService
             ]);
         }
 
-        // La dirección y el pie se aplican al instante; título y contenido esperan a publicarse.
+        // La dirección y dónde aparece se aplican al instante; título y contenido esperan a publicarse.
         // El contenido se compara como estructura: el orden de las claves no cuenta como cambio.
         $draftChanged = $page->title !== $data['title'] || $page->content != $content;
 
@@ -67,6 +67,10 @@ class PageService
             'title' => $data['title'],
             'slug' => $data['slug'],
             'show_in_footer' => $data['show_in_footer'],
+            'show_in_header' => $data['show_in_header'] ?? $page->show_in_header,
+            'show_in_auth' => $data['show_in_auth'] ?? $page->show_in_auth,
+            'show_in_student_menu' => $data['show_in_student_menu'] ?? $page->show_in_student_menu,
+            'menu_order' => $data['menu_order'] ?? $page->menu_order,
         ]);
 
         if ($draftChanged) {

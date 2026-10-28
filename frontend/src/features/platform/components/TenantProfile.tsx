@@ -350,7 +350,7 @@ export const TenantProfile: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               <li key={month.month} className="flex flex-col items-center gap-1.5 min-w-0">
                 <span className="text-[11px] sm:text-xs font-semibold text-slate-800 tnum truncate max-w-full">{formatMoney(month.total, profile.currency)}</span>
                 <span className="w-full h-24 flex items-end rounded-lg bg-slate-100 overflow-hidden" aria-hidden="true">
-                  <span className="block w-full rounded-lg bg-gradient-to-t from-brand-700 to-sky-500" style={{ height: `${(Number(month.total) / highest) * 100}%` }} />
+                  <span className="block w-full rounded-lg bg-gradient-to-t from-brand-700 to-accent-500" style={{ height: `${(Number(month.total) / highest) * 100}%` }} />
                 </span>
                 <span className="text-xs text-slate-500">{formatMonth(month.month)}</span>
                 <span className="text-[11px] text-slate-500">

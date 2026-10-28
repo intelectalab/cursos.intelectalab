@@ -45,7 +45,7 @@ export const ForcePasswordChange: React.FC = () => {
       title="Crea tu contraseña"
       subtitle={`Hola, ${user?.first_name ?? ''}. Entraste con una contraseña temporal: cámbiala por una que solo tú conozcas para continuar.`}
       footer={
-        <button type="button" onClick={logout} className="font-semibold text-sky-200 hover:text-white transition-colors cursor-pointer">
+        <button type="button" onClick={logout} className="font-semibold text-accent-200 hover:text-white transition-colors cursor-pointer">
           Cerrar sesión
         </button>
       }

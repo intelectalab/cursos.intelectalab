@@ -17,6 +17,8 @@ import {
   PageHeader,
   Pagination,
 } from '../../../shared/ui';
+import { useUrlFilters } from '../../../shared/filters/useUrlFilters';
+import { useFilterOptions } from '../../../shared/filters/useFilterOptions';
 import { FilterCards, HelpTip, type FilterCard } from '../../../shared/ui/filters';
 import type { PageMeta } from '../../identity/api';
 import {
@@ -79,7 +81,7 @@ const CourseCard: React.FC<{ course: CourseSummary }> = ({ course }) => (
     to={`/courses/${course.id}`}
     className="group flex flex-col bg-white border border-slate-200/80 rounded-2xl shadow-card overflow-hidden hover:shadow-raised hover:-translate-y-0.5 transition-all"
   >
-    <div className="relative aspect-[16/9] bg-gradient-to-br from-brand-800 via-brand-700 to-sky-500 overflow-hidden">
+    <div className="relative aspect-[16/9] bg-gradient-to-br from-brand-800 via-brand-700 to-accent-500 overflow-hidden">
       {course.cover_url ? (
         <img src={course.cover_url} alt="" className="w-full h-full object-cover" loading="lazy" />
       ) : (
@@ -149,9 +151,14 @@ export const CoursesPage: React.FC = () => {
   const [rows, setRows] = useState<CourseSummary[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [options, setOptions] = useState<CourseOptions | null>(null);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const [category, setCategory] = useState('');
+  // Los filtros viven en la dirección de la página
+  const urlFilters = useUrlFilters({ search: '', status: '', category: '', teacher_id: '' });
+  const { search, status, category, teacher_id: teacherId } = urlFilters.values;
+  const setSearch = (value: string) => urlFilters.set({ search: value });
+  const setStatus = (value: string) => urlFilters.set({ status: value });
+  const setCategory = (value: string) => urlFilters.set({ category: value });
+  const setTeacherId = (value: string) => urlFilters.set({ teacher_id: value });
+  const filterOptions = useFilterOptions();
   const [page, setPage] = useState(1);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -165,6 +172,7 @@ export const CoursesPage: React.FC = () => {
         search: search || undefined,
         status: status || undefined,
         category: category || undefined,
+        teacher_id: teacherId || undefined,
         page,
       });
       setRows(result.data);
@@ -175,7 +183,7 @@ export const CoursesPage: React.FC = () => {
       setErrorMessage(apiErrorMessage(err, 'Verifica tu conexión e inténtalo nuevamente.'));
       setState('error');
     }
-  }, [search, status, category, page]);
+  }, [search, status, category, teacherId, page]);
 
   // La búsqueda espera a que el usuario termine de escribir
   useEffect(() => {
@@ -187,7 +195,7 @@ export const CoursesPage: React.FC = () => {
     coursesApi.options().then(setOptions).catch(() => setOptions(null));
   }, []);
 
-  const filtered = search !== '' || status !== '' || category !== '';
+  const filtered = search !== '' || status !== '' || category !== '' || teacherId !== '';
   const counts = meta?.counts ?? {};
   const cards: FilterCard[] = [
     { key: '', label: 'Todos', value: counts.ALL ?? null, icon: BookOpen, tone: 'brand', help: 'Todos los cursos que coinciden con la búsqueda y la categoría.' },
@@ -199,6 +207,7 @@ export const CoursesPage: React.FC = () => {
     setSearch('');
     setStatus('');
     setCategory('');
+    setTeacherId('');
     setPage(1);
   };
 
@@ -300,6 +309,16 @@ export const CoursesPage: React.FC = () => {
                 </option>
               ))}
             </SearchSelect>
+          )}
+          {filterOptions.teachers.length > 0 && (
+            <SearchSelect className={`${INPUT_CLASS} !w-52`} aria-label="Filtrar por docente" value={teacherId} onChange={(event) => ((value: string) => { setTeacherId(value); setPage(1); })(event.target.value)}>
+            <option value="">Todos los docentes</option>
+            {filterOptions.teachers.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </SearchSelect>
           )}
         </div>
       </Card>

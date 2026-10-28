@@ -55,8 +55,8 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
     <InstallmentList order={order} />
 
     {order.status === 'REFUNDED' && !order.payment && order.refunded_at && (
-      <div className="p-3 rounded-xl border border-sky-200 bg-sky-50/60 text-[13px]">
-        <p className="text-xs font-semibold text-sky-800">Reembolsada el {formatDateTime(order.refunded_at)}</p>
+      <div className="p-3 rounded-xl border border-accent-200 bg-accent-50/60 text-[13px]">
+        <p className="text-xs font-semibold text-accent-800">Reembolsada el {formatDateTime(order.refunded_at)}</p>
         <p className="text-slate-800 break-words">
           Se devolvieron {formatMoney(order.refunded_amount, order.currency)}, lo cobrado hasta ese día.{' '}
           {order.installments.find((installment) => installment.payment?.refund?.reason)?.payment?.refund?.reason}
@@ -98,8 +98,8 @@ export const OrderSummary: React.FC<{ order: Order }> = ({ order }) => (
           </div>
         )}
         {order.payment.refund && (
-          <div className="sm:col-span-2 p-3 rounded-xl border border-sky-200 bg-sky-50/60">
-            <dt className="text-xs font-semibold text-sky-800">Reembolsado el {formatDateTime(order.payment.refund.at)}</dt>
+          <div className="sm:col-span-2 p-3 rounded-xl border border-accent-200 bg-accent-50/60">
+            <dt className="text-xs font-semibold text-accent-800">Reembolsado el {formatDateTime(order.payment.refund.at)}</dt>
             <dd className="text-slate-800 break-words">
               {order.payment.refund.reason}
               {order.payment.refund.reference && <span className="block text-xs text-slate-600 mt-0.5">Referencia de la devolución: {order.payment.refund.reference}</span>}

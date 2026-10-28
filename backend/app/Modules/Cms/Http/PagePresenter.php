@@ -23,6 +23,11 @@ class PagePresenter
             // El borrador tiene cambios que el público todavía no ve
             'pending_changes' => $page->hasPendingChanges(),
             'show_in_footer' => $page->show_in_footer,
+            // Otros lugares donde aparece su enlace y su posición
+            'show_in_header' => $page->show_in_header,
+            'show_in_auth' => $page->show_in_auth,
+            'show_in_student_menu' => $page->show_in_student_menu,
+            'menu_order' => $page->menu_order,
             'published_at' => $page->published_at?->toIso8601String(),
             'updated_at' => $page->draft_updated_at->toIso8601String(),
             'updated_by' => self::name($page->editor),

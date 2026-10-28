@@ -29,7 +29,7 @@ type Api = ReturnType<typeof accountApi>;
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
   <div className="flex items-center gap-2 min-w-[120px]">
     <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-      <div className={`h-full rounded-full ${value === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-600 to-sky-500'}`} style={{ width: `${value}%` }} />
+      <div className={`h-full rounded-full ${value === 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-brand-600 to-accent-500'}`} style={{ width: `${value}%` }} />
     </div>
     <span className="text-xs font-semibold text-slate-700 tnum w-9 text-right">{value}%</span>
   </div>
