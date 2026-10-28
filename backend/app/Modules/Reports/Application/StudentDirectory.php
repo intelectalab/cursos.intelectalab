@@ -14,6 +14,7 @@ use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\Payment;
 use App\Modules\Support\Domain\Models\Ticket;
+use App\Modules\Tenancy\Application\EmailPreferences;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -37,6 +38,7 @@ class StudentDirectory
     public function __construct(
         private readonly ProgressService $progress,
         private readonly GradebookService $gradebook,
+        private readonly EmailPreferences $emails,
     ) {}
 
     /**
@@ -130,6 +132,8 @@ class StudentDirectory
                     ->where('user_id', $student->id)
                     ->with('account.company')
                     ->first()?->account?->company?->name,
+                // Tipos de correo de los que se dio de baja
+                'email_opt_outs' => $this->emails->optedOutNames($student->email),
             ],
             'enrollments' => $this->enrollments($student),
             'orders' => $orders->map(fn (Order $order) => [

@@ -62,7 +62,7 @@ export interface StudentTicket {
 
 // Ficha completa del alumno ("Alumno 360")
 export interface StudentProfile {
-  student: StudentRow & { must_change_password: boolean; groups: string[]; company: string | null };
+  student: StudentRow & { must_change_password: boolean; groups: string[]; company: string | null; email_opt_outs: string[] };
   enrollments: StudentEnrollment[];
   orders: StudentOrder[];
   // Lo pagado, por código de moneda

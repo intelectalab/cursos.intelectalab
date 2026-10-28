@@ -3,6 +3,7 @@
 namespace App\Modules\Tenancy\Application;
 
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Domain\EmailCatalog;
 use App\Modules\Tenancy\Domain\Models\Tenant;
 use App\Modules\Tenancy\Mail\TenantNoticeMail;
 use App\Shared\Tenancy\TenantContext;
@@ -18,6 +19,9 @@ use Throwable;
  *   no se avisa de algo que no pasó.
  * - Un correo que no sale no detiene la operación; queda en el registro.
  * - Lleva el nombre y el logo de la organización, y enlaces a su dirección.
+ *
+ * Si la persona se dio de baja de ese tipo de correo, no sale; si se puede
+ * dar de baja, lleva el enlace al pie (EmailPreferences).
  */
 class TenantNotifier
 {
@@ -29,6 +33,7 @@ class TenantNotifier
         private readonly TenantLogoService $logo,
         private readonly EmailTemplates $templates,
         private readonly TenantMailer $mailer,
+        private readonly EmailPreferences $preferences,
     ) {}
 
     /**
@@ -66,7 +71,20 @@ class TenantNotifier
             return;
         }
 
-        $this->send($tenant, $email, $this->mail($tenant, $name, $content, $path), $content['subject']);
+        $category = EmailCatalog::optOutOf($key);
+        if ($category !== null && $this->preferences->optedOut($email, $category)) {
+            return;
+        }
+
+        $mail = $category === null
+            ? $this->mail($tenant, $name, $content, $path)
+            : new TenantNoticeMail(...$this->parts($tenant, $name, $content, $path === null ? null : $this->origin($tenant).$path), unsubscribe: [
+                'label' => 'Dejar de recibir «'.EmailCatalog::OPT_OUTS[$category]['name'].'»',
+                'url' => EmailPreferences::pageUrl($tenant, $email, $category),
+                'one_click' => EmailPreferences::oneClickUrl($tenant, $email, $category),
+            ]);
+
+        $this->send($tenant, $email, $mail, $content['subject']);
     }
 
     /**

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, BookOpen, Building2, KeyRound, LifeBuoy, Mail, Phone, Receipt, UsersRound, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Award, BookOpen, Building2, KeyRound, LifeBuoy, Mail, MailX, Phone, Receipt, UsersRound, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Avatar, Badge, Button, Card, CardHeader, EmptyState, ErrorState, LoadingState, StatCard, Table, TBody, Td, Th, THead, Tr, type Tone } from '../../../shared/ui';
@@ -100,6 +100,7 @@ export const StudentProfilePage: React.FC = () => {
               {student.phone && <Fact icon={Phone}>{student.phone}</Fact>}
               {student.company && <Fact icon={Building2}>{student.company}</Fact>}
               {student.groups.length > 0 && <Fact icon={UsersRound}>{student.groups.join(', ')}</Fact>}
+              {student.email_opt_outs.length > 0 && <Fact icon={MailX}>No recibe: {student.email_opt_outs.join(', ')}</Fact>}
             </div>
             <p className="text-xs text-slate-500 mt-2">
               {student.document ? `${student.document} · ` : ''}Registrado el {formatDate(student.created_at)} · Último acceso:{' '}

@@ -44,6 +44,9 @@
                     <tr>
                         <td style="padding: 16px 28px; background: #f8fafc; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px; line-height: 1.5;">
                             Este mensaje lo envía {{ $organization }} de forma automática; no hace falta responderlo.
+                            @if (! empty($unsubscribe))
+                                <br><a href="{{ $unsubscribe['url'] }}" style="color: #475569;">{{ $unsubscribe['label'] }}</a>
+                            @endif
                         </td>
                     </tr>
                 </table>

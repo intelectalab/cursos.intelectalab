@@ -18,6 +18,7 @@ const Register = lazyPage(() => import('../features/auth/pages/Register'), 'Regi
 const ForgotPassword = lazyPage(() => import('../features/auth/pages/PasswordRecovery'), 'ForgotPassword');
 const ResetPassword = lazyPage(() => import('../features/auth/pages/PasswordRecovery'), 'ResetPassword');
 const AccountPage = lazyPage(() => import('../features/account/pages/AccountPage'), 'AccountPage');
+const EmailPreferencesPage = lazyPage(() => import('../features/account/pages/EmailPreferencesPage'), 'EmailPreferencesPage');
 const CourseEditorPage = lazyPage(() => import('../features/courses/pages/CourseEditorPage'), 'CourseEditorPage');
 const ClassroomPage = lazyPage(() => import('../features/enrollments/pages/ClassroomPage'), 'ClassroomPage');
 const ClassroomPreviewPage = lazyPage(() => import('../features/enrollments/pages/ClassroomPage'), 'ClassroomPreviewPage');
@@ -88,6 +89,8 @@ function TenantRoutes() {
         <Route path="/p/:slug" element={<PublicPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Darse de baja de correos: a esta dirección lleva el enlace al pie de cada correo */}
+        <Route path="/correos" element={<EmailPreferencesPage />} />
 
         {/* Rutas Protegidas Mapeadas Automáticamente */}
         <Route element={<ProtectedRoute />}>

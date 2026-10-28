@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Tenancy\Http\Controllers\EmailPreferencesController;
 use App\Modules\Tenancy\Http\Controllers\EmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\GradeScaleController;
 use App\Modules\Tenancy\Http\Controllers\HolidayController;
@@ -40,6 +41,19 @@ Route::prefix('platform/emails')->middleware(['central', 'auth:sanctum', 'platfo
     Route::delete('/{key}', [PlatformEmailTemplateController::class, 'destroy'])->where('key', '[a-z_]+');
     Route::post('/{key}/preview', [PlatformEmailTemplateController::class, 'preview'])->where('key', '[a-z_]+')->middleware('throttle:60,1');
     Route::post('/{key}/test', [PlatformEmailTemplateController::class, 'test'])->where('key', '[a-z_]+')->middleware('throttle:10,1');
+});
+
+// Darse de baja de correos: desde el enlace del correo (sin sesión) y con un clic desde el programa de correo
+Route::middleware('tenant')->prefix('/email-preferences/{token}')->where(['token' => '[A-Za-z0-9_-]+\.[a-f0-9]{32}'])->group(function () {
+    Route::get('/', [EmailPreferencesController::class, 'show'])->middleware('throttle:30,1');
+    Route::put('/', [EmailPreferencesController::class, 'update'])->middleware('throttle:10,1');
+    Route::post('/unsubscribe', [EmailPreferencesController::class, 'oneClick'])->middleware('throttle:10,1');
+});
+
+// Los correos que recibe quien inició sesión («Mi cuenta»)
+Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->prefix('/auth/email-preferences')->group(function () {
+    Route::get('/', [EmailPreferencesController::class, 'mine']);
+    Route::put('/', [EmailPreferencesController::class, 'updateMine']);
 });
 
 // Configuración general de la organización

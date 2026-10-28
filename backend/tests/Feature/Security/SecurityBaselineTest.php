@@ -52,6 +52,10 @@ class SecurityBaselineTest extends TestCase
         'POST api/v1/platform/payments/webhooks/{gateway}',
         'GET api/v1/site/pages',
         'GET api/v1/site/pages/{slug}',
+        // Darse de baja de correos: el permiso va en la firma del enlace
+        'GET api/v1/email-preferences/{token}',
+        'PUT api/v1/email-preferences/{token}',
+        'POST api/v1/email-preferences/{token}/unsubscribe',
     ];
 
     /** Rutas con sesión que no piden permiso: la cuenta de la propia persona. */
@@ -68,6 +72,9 @@ class SecurityBaselineTest extends TestCase
         'POST api/v1/auth/two-factor/confirm',
         'DELETE api/v1/auth/two-factor',
         'POST api/v1/auth/two-factor/recovery-codes',
+        // Correos que recibe la propia persona
+        'GET api/v1/auth/email-preferences',
+        'PUT api/v1/auth/email-preferences',
     ];
 
     public function test_every_route_requires_a_session_unless_it_is_declared_public(): void

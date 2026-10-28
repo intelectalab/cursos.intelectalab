@@ -37,7 +37,19 @@ final class EmailCatalog
     ];
 
     /**
-     * @return array<string, array{scope: string, group: string, name: string, when: string, to: string, required: bool, variables: array<string, array{0: string, 1: string}>, essential: list<string>, subject: string, body: string, button: ?string}>
+     * Tipos de correo de los que cada persona puede darse de baja. Los demás
+     * (cuenta, compras y pagos, consultas, reclamos) siempre le llegan.
+     * «staff» solo lo ve quien trabaja en la academia.
+     */
+    public const OPT_OUTS = [
+        'courses' => ['name' => 'Avisos de mis cursos', 'description' => 'Cuando te matriculan en un curso o recibes un certificado.', 'staff' => false],
+        'reminders' => ['name' => 'Recordatorios', 'description' => 'Acceso por vencer, cuota por vencer y clase en vivo del día.', 'staff' => false],
+        'announcements' => ['name' => 'Anuncios de los docentes', 'description' => 'Los anuncios que publican los docentes de tus cursos.', 'staff' => false],
+        'staff' => ['name' => 'Avisos de trabajo', 'description' => 'Consultas y reclamos nuevos, cobros en revisión, páginas por revisar y horarios.', 'staff' => true],
+    ];
+
+    /**
+     * @return array<string, array{scope: string, group: string, name: string, when: string, to: string, required: bool, optout: ?string, variables: array<string, array{0: string, 1: string}>, essential: list<string>, subject: string, body: string, button: ?string}>
      */
     public static function all(): array
     {
@@ -45,8 +57,17 @@ final class EmailCatalog
             'variables' => [],
             'essential' => [],
             'required' => false,
+            'optout' => null,
             'button' => null,
         ], self::DEFINITIONS);
+    }
+
+    /**
+     * El tipo de baja al que pertenece un correo, o null si siempre llega.
+     */
+    public static function optOutOf(string $key): ?string
+    {
+        return self::all()[$key]['optout'] ?? null;
     }
 
     /**
@@ -162,6 +183,7 @@ final class EmailCatalog
             'name' => 'Matrícula hecha por el personal',
             'when' => 'Cuando el personal matricula a alguien en un curso (a mano, por grupo, al importar o por licencia de empresa). Quien compra recibe en cambio el aviso de su pago.',
             'to' => 'El alumno',
+            'optout' => 'courses',
             'variables' => [
                 'curso' => ['Nombre del curso', 'Excel para finanzas'],
                 'vigencia' => ['Fecha hasta la que tiene acceso (vacío si no vence)', '30/04/2027'],
@@ -176,6 +198,7 @@ final class EmailCatalog
             'name' => 'Anuncio del curso',
             'when' => 'Cuando el docente o la academia publica un anuncio en un curso y marca «Avisar también por correo».',
             'to' => 'Los alumnos con acceso al curso',
+            'optout' => 'announcements',
             'variables' => [
                 'curso' => ['Nombre del curso', 'Excel para finanzas'],
                 'titulo' => ['Título del anuncio', 'Cambio de horario de la clase en vivo'],
@@ -192,6 +215,7 @@ final class EmailCatalog
             'name' => 'Recordatorio: el acceso a un curso vence pronto',
             'when' => 'Cada mañana, a quien le quedan 7 días de acceso a un curso que no terminó.',
             'to' => 'El alumno',
+            'optout' => 'reminders',
             'variables' => [
                 'curso' => ['Nombre del curso', 'Excel para finanzas'],
                 'fecha_fin' => ['Último día de acceso', '28/10/2026'],
@@ -207,6 +231,7 @@ final class EmailCatalog
             'name' => 'Certificado emitido',
             'when' => 'Cuando se emite un certificado, al completar el curso o a mano.',
             'to' => 'El alumno',
+            'optout' => 'courses',
             'variables' => [
                 'curso' => ['Nombre del curso', 'Excel para finanzas'],
                 'codigo' => ['Código de verificación del certificado', 'CERT-7K2M9Q'],
@@ -315,6 +340,7 @@ final class EmailCatalog
             'name' => 'Recordatorio: una cuota vence pronto',
             'when' => 'Cada mañana, 3 días antes de que venza una cuota sin pagar.',
             'to' => 'Quien compró',
+            'optout' => 'reminders',
             'variables' => [
                 'cuota' => ['Número de la cuota', '2'],
                 'importe' => ['Importe de la cuota', 'S/ 60.00'],
@@ -362,6 +388,7 @@ final class EmailCatalog
             'name' => 'Clase en vivo hoy',
             'when' => 'La mañana del día de una clase en vivo confirmada (no los feriados ni los días sin clase del docente).',
             'to' => 'Los alumnos con acceso al curso',
+            'optout' => 'reminders',
             'variables' => [
                 'curso' => ['Nombre del curso', 'Excel para finanzas'],
                 'hora' => ['Hora de inicio', '19:00'],
@@ -380,6 +407,7 @@ Enlace de la clase: {enlace}',
             'name' => 'Horario por confirmar',
             'when' => 'Cuando el personal arma o cambia el horario de un docente en «Horarios».',
             'to' => 'El docente',
+            'optout' => 'staff',
             'variables' => [
                 'desde' => ['Fecha desde la que vale el horario', '03/11/2026'],
                 'enviado_por' => ['Quién armó el horario', 'Carla Rojas'],
@@ -394,6 +422,7 @@ Enlace de la clase: {enlace}',
             'name' => 'Horario observado por el docente',
             'when' => 'Cuando un docente pide cambios en el horario que le enviaron.',
             'to' => 'Quien armó el horario',
+            'optout' => 'staff',
             'variables' => [
                 'docente' => ['Nombre del docente', 'Rosa Quispe'],
                 'observacion' => ['Lo que pide cambiar el docente', 'Los martes no puedo antes de las 10:00.'],
@@ -441,6 +470,7 @@ Enlace de la clase: {enlace}',
             'name' => 'Consulta de soporte nueva',
             'when' => 'Cuando alguien abre una consulta en «Ayuda».',
             'to' => 'El personal que atiende soporte',
+            'optout' => 'staff',
             'variables' => [
                 'numero' => ['Número de la consulta', '#0012'],
                 'asunto' => ['Asunto de la consulta', 'No carga el video'],
@@ -456,6 +486,7 @@ Enlace de la clase: {enlace}',
             'name' => 'Mensaje nuevo en una consulta',
             'when' => 'Cuando quien consultó escribe de nuevo. Le llega a quien tiene asignada la consulta (si no tiene, a todo el personal de soporte).',
             'to' => 'El personal que atiende soporte',
+            'optout' => 'staff',
             'variables' => [
                 'numero' => ['Número de la consulta', '#0012'],
                 'asunto' => ['Asunto de la consulta', 'No carga el video'],
@@ -471,6 +502,7 @@ Enlace de la clase: {enlace}',
             'name' => 'Hoja nueva en el Libro de Reclamaciones',
             'when' => 'Cuando alguien registra un reclamo o una queja.',
             'to' => 'El personal que atiende el Libro de Reclamaciones',
+            'optout' => 'staff',
             'variables' => [
                 'tipo' => ['«reclamo» o «queja»', 'reclamo'],
                 'codigo' => ['Código de la hoja', 'LR-2026-000012'],
@@ -486,6 +518,7 @@ Enlace de la clase: {enlace}',
             'name' => 'Cobro en línea por revisar',
             'when' => 'Cuando una pasarela cobró algo que no se pudo aplicar a su orden (otro importe, orden vencida o ya pagada).',
             'to' => 'El personal que confirma pagos',
+            'optout' => 'staff',
             'variables' => [
                 'orden' => ['Número de la orden', '00042'],
                 'motivo' => ['Por qué quedó en revisión', 'El importe cobrado no coincide con el de la orden.'],
@@ -500,6 +533,7 @@ Enlace de la clase: {enlace}',
             'name' => 'Página enviada a revisión',
             'when' => 'Cuando quien redacta envía una página a revisión.',
             'to' => 'El personal que publica páginas',
+            'optout' => 'staff',
             'variables' => [
                 'pagina' => ['Título de la página', 'Preguntas frecuentes'],
                 'autor' => ['Quién la envió', 'Ana Torres'],

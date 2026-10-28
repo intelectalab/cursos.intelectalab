@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { KeyRound, MonitorSmartphone, UserRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { TwoFactorCard } from '../components/TwoFactorCard';
+import { EmailPreferencesCard } from '../components/EmailPreferencesCard';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import {
   Alert,
@@ -192,7 +193,7 @@ export const AccountPage: React.FC = () => {
 
   return (
     <div>
-      <PageHeader title="Mi cuenta" icon={UserRound} subtitle="Tu perfil, tu contraseña y los dispositivos con sesión abierta." />
+      <PageHeader title="Mi cuenta" icon={UserRound} subtitle="Tu perfil, tu contraseña, los correos que recibes y los dispositivos con sesión abierta." />
 
       <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-5 items-start">
         <div className="space-y-5">
@@ -218,6 +219,7 @@ export const AccountPage: React.FC = () => {
 
           <PasswordCard onChanged={reload} />
           <TwoFactorCard onChanged={() => void refresh()} />
+          <EmailPreferencesCard />
         </div>
 
       <Card>
