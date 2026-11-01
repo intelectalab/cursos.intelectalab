@@ -25,6 +25,8 @@ use App\Modules\Sales\Application\Payments\Online\PayPalGateway;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
+use App\Modules\Tenancy\Application\PushGateway;
+use App\Modules\Tenancy\Application\WebPushGateway;
 use App\Modules\Tenancy\Domain\Events\TenantProvisioned;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -62,6 +64,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Cupo de alumnos: lo pone el plan de la organización en la plataforma
         $this->app->bind(EnrollmentQuota::class, PlanQuota::class);
+
+        // Avisos al teléfono: Web Push (las pruebas lo reemplazan para no salir a internet)
+        $this->app->bind(PushGateway::class, WebPushGateway::class);
     }
 
     /**
@@ -93,6 +98,8 @@ class AppServiceProvider extends ServiceProvider
 
         // «Descargar los datos de mi academia» es pesado: 3 cada 10 minutos por persona, con su propio contador
         RateLimiter::for('data-export', fn (Request $request) => Limit::perMinutes(10, 3)->by('data-export:'.($request->user()?->getAuthIdentifier() ?: $request->ip())));
+        // Aviso de prueba al teléfono: con nombre para que no comparta el contador de las demás rutas
+        RateLimiter::for('push-test', fn (Request $request) => Limit::perMinute(3)->by('push-test:'.($request->user()?->getAuthIdentifier() ?: $request->ip())));
 
         // Reacciones entre módulos: quien emite el evento no conoce a quien lo escucha
         Event::listen(EnrollmentCompleted::class, IssueCertificateOnCompletion::class);

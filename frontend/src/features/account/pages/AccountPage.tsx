@@ -3,6 +3,7 @@ import { KeyRound, MonitorSmartphone, UserRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { TwoFactorCard } from '../components/TwoFactorCard';
 import { EmailPreferencesCard } from '../components/EmailPreferencesCard';
+import { PushNoticesCard } from '../components/PushNoticesCard';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import {
   Alert,
@@ -220,6 +221,7 @@ export const AccountPage: React.FC = () => {
           <PasswordCard onChanged={reload} />
           <TwoFactorCard onChanged={() => void refresh()} />
           <EmailPreferencesCard />
+          <PushNoticesCard />
         </div>
 
       <Card>

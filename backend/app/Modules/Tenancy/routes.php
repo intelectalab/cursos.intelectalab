@@ -9,6 +9,7 @@ use App\Modules\Tenancy\Http\Controllers\HolidayController;
 use App\Modules\Tenancy\Http\Controllers\InstallableAppController;
 use App\Modules\Tenancy\Http\Controllers\MailSettingsController;
 use App\Modules\Tenancy\Http\Controllers\PlatformEmailTemplateController;
+use App\Modules\Tenancy\Http\Controllers\PushSubscriptionController;
 use App\Modules\Tenancy\Http\Controllers\TenantController;
 use App\Modules\Tenancy\Http\Controllers\TenantSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -66,6 +67,14 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'throttle:20,1'])->g
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->prefix('/auth/email-preferences')->group(function () {
     Route::get('/', [EmailPreferencesController::class, 'mine']);
     Route::put('/', [EmailPreferencesController::class, 'updateMine']);
+});
+
+// Avisos al teléfono de quien inició sesión, por dispositivo («Mi cuenta»)
+Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->prefix('/auth/push')->group(function () {
+    Route::get('/', [PushSubscriptionController::class, 'show']);
+    Route::post('/subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:20,1');
+    Route::delete('/subscriptions', [PushSubscriptionController::class, 'destroy']);
+    Route::post('/test', [PushSubscriptionController::class, 'test'])->middleware('throttle:push-test');
 });
 
 // Configuración general de la organización

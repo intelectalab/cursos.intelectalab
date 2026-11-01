@@ -78,6 +78,11 @@ class SecurityBaselineTest extends TestCase
         // Correos que recibe la propia persona
         'GET api/v1/auth/email-preferences',
         'PUT api/v1/auth/email-preferences',
+        // Avisos al teléfono de los dispositivos propios
+        'GET api/v1/auth/push',
+        'POST api/v1/auth/push/subscriptions',
+        'DELETE api/v1/auth/push/subscriptions',
+        'POST api/v1/auth/push/test',
         // Manual de uso en PDF del Centro de ayuda
         'GET api/v1/help/manual',
     ];

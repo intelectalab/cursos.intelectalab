@@ -3,6 +3,7 @@ import type { AuthSession, User, Tenant } from './types';
 import { api, UNAUTHORIZED_EVENT } from '../../shared/api/client';
 import { can } from '../../shared/auth/permissions';
 import { clearSession, loadSession, saveSession } from '../../shared/auth/sessionStorage';
+import { forgetDeviceOnLogout } from '../../shared/pwa/pushNotices';
 
 interface AuthContextType {
   session: AuthSession | null;
@@ -32,6 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(async () => {
+    // Antes de cerrar la sesión en el servidor: después ya no se puede quitar el dispositivo
+    await forgetDeviceOnLogout();
     try {
       await api.post('/auth/logout');
     } catch {

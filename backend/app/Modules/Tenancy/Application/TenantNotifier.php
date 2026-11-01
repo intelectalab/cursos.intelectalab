@@ -22,6 +22,10 @@ use Throwable;
  *
  * Si la persona se dio de baja de ese tipo de correo, no sale; si se puede
  * dar de baja, lleva el enlace al pie (EmailPreferences).
+ *
+ * A quien tiene cuenta y activó los avisos en su teléfono, el mismo aviso le
+ * llega ahí, con las mismas bajas. Solo los que se pueden dejar de recibir:
+ * cuenta, contraseña, compras y pagos siguen solo por correo.
  */
 class TenantNotifier
 {
@@ -35,6 +39,7 @@ class TenantNotifier
         private readonly TenantMailer $mailer,
         private readonly EmailPreferences $preferences,
         private readonly TenantAppearance $appearance,
+        private readonly PushNotifier $push,
     ) {}
 
     /**
@@ -50,7 +55,7 @@ class TenantNotifier
             return;
         }
 
-        $this->notifyEmail($user->email, $user->first_name, $key, $values, $path);
+        $this->deliver($user->email, $user->first_name, $key, $values, $path, $user);
     }
 
     /**
@@ -59,6 +64,15 @@ class TenantNotifier
      * @param  array<string, string|int|float|null>  $values
      */
     public function notifyEmail(?string $email, ?string $name, string $key, array $values = [], ?string $path = null): void
+    {
+        $this->deliver($email, $name, $key, $values, $path, null);
+    }
+
+    /**
+     * @param  array<string, string|int|float|null>  $values
+     * @param  User|null  $user  con cuenta, el aviso también va a sus teléfonos
+     */
+    private function deliver(?string $email, ?string $name, string $key, array $values, ?string $path, ?User $user): void
     {
         $tenant = $this->tenant();
 
@@ -86,6 +100,10 @@ class TenantNotifier
             ]);
 
         $this->send($tenant, $email, $mail, $content['subject']);
+
+        if ($user !== null && $category !== null) {
+            $this->push->notify($tenant, $user, $content['subject'], $content['lines'][0] ?? '', $this->origin($tenant).($path ?? '/'), $key);
+        }
     }
 
     /**

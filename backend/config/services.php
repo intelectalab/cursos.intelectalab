@@ -14,6 +14,14 @@ return [
     |
     */
 
+    // Avisos al teléfono (Web Push): llaves VAPID de la plataforma, generadas con `php artisan webpush:keys`
+    'webpush' => [
+        'public_key' => env('WEBPUSH_PUBLIC_KEY'),
+        'private_key' => env('WEBPUSH_PRIVATE_KEY'),
+        // Contacto que ven los servicios de avisos: la dirección del sitio (debe ser https) o un mailto:
+        'subject' => env('WEBPUSH_SUBJECT', env('APP_URL')),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
