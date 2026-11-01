@@ -52,6 +52,9 @@ class SecurityBaselineTest extends TestCase
         'POST api/v1/platform/payments/webhooks/{gateway}',
         'GET api/v1/site/pages',
         'GET api/v1/site/pages/{slug}',
+        // Aplicación instalable: el navegador pide manifiesto e ícono sin sesión
+        'GET api/v1/app/manifest',
+        'GET api/v1/app/icon/{size}/{maskable?}',
         // Darse de baja de correos: el permiso va en la firma del enlace
         'GET api/v1/email-preferences/{token}',
         'PUT api/v1/email-preferences/{token}',

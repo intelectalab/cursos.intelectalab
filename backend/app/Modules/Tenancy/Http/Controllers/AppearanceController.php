@@ -4,6 +4,7 @@ namespace App\Modules\Tenancy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Files\Application\FileStorage;
+use App\Modules\Tenancy\Application\InstallableApp;
 use App\Modules\Tenancy\Application\TenantAppearance;
 use App\Shared\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,10 @@ class AppearanceController extends Controller
 {
     private const HEX = 'regex:/^#[0-9a-fA-F]{6}$/';
 
-    public function __construct(private readonly TenantAppearance $appearance) {}
+    public function __construct(
+        private readonly TenantAppearance $appearance,
+        private readonly InstallableApp $app,
+    ) {}
 
     public function show(): JsonResponse
     {
@@ -24,6 +28,11 @@ class AppearanceController extends Controller
             'background' => [
                 'max_kb' => config('files.limits.image'),
                 'extensions' => config('files.purposes.'.TenantAppearance::BACKGROUND_PURPOSE.'.extensions'),
+            ],
+            // Ícono de la aplicación instalable: si subió uno propio (si no, se arma con el logo)
+            'app_icon' => [
+                'custom' => $this->app->hasCustomIcon(),
+                'extensions' => config('files.purposes.'.InstallableApp::ICON_PURPOSE.'.extensions'),
             ],
         ]);
     }
@@ -73,5 +82,20 @@ class AppearanceController extends Controller
         $this->appearance->removeBackground($request->attributes->get('tenant'));
 
         return ApiResponse::success(['login_background_url' => null]);
+    }
+
+    public function uploadAppIcon(Request $request, FileStorage $storage): JsonResponse
+    {
+        $request->validate(['file' => $storage->rules(InstallableApp::ICON_PURPOSE)]);
+        $this->app->replaceIcon($request->attributes->get('tenant'), $request->file('file'));
+
+        return ApiResponse::success(['custom' => true]);
+    }
+
+    public function removeAppIcon(Request $request): JsonResponse
+    {
+        $this->app->removeIcon($request->attributes->get('tenant'));
+
+        return ApiResponse::success(['custom' => false]);
     }
 }

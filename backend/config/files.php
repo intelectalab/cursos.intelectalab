@@ -34,6 +34,12 @@ return [
             'limit' => 'image',
             'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
         ],
+        // Ícono propio de la aplicación instalable (Apariencia); se sirve ya armado por /app/icon
+        'app_icon' => [
+            'visibility' => 'private',
+            'limit' => 'image',
+            'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
+        ],
         'course_cover' => [
             'visibility' => 'public',
             'limit' => 'image',

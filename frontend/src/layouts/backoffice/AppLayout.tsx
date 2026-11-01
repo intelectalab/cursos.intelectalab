@@ -8,6 +8,7 @@ import { AssistantLauncher } from '../../features/assistant/components/Assistant
 import { HelpProvider } from '../../features/helpcenter/HelpContext';
 import { HelpPanel } from '../../features/helpcenter/HelpPanel';
 import { PlanBanner } from '../../features/settings/components/PlanBanner';
+import { InstallBanner, UpdateNotice } from '../../shared/pwa/InstallPrompts';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { LoadingState } from '../../shared/ui';
@@ -18,7 +19,7 @@ export const AppLayout: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const { pathname } = useLocation();
-  const { session, logout, hasPermission } = useAuth();
+  const { session, tenant, logout, hasPermission } = useAuth();
 
   // Al pasar a escritorio el panel deja de existir: no debe reabrirse al volver a móvil
   if (isDesktop && isDrawerOpen) setIsDrawerOpen(false);
@@ -61,7 +62,9 @@ export const AppLayout: React.FC = () => {
             </div>
           )}
           {!session?.support_mode && hasPermission('tenant_settings.read') && <PlanBanner />}
+          <UpdateNotice />
           <Header onToggleSidebar={toggleSidebar} isMenuOpen={isDesktop ? !isCollapsed : isDrawerOpen} />
+          {!session?.support_mode && tenant && <InstallBanner name={tenant.name} />}
           <main id="contenido" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-none">
             {/* La clave reinicia la animación de entrada al cambiar de pantalla */}
             <div key={pathname} className="max-w-[1400px] mx-auto p-4 sm:p-7 lg:p-8 animate-rise">

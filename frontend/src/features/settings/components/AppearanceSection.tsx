@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ImageUp, Palette, RotateCcw, Sparkles, Trash2, Wand2 } from 'lucide-react';
+import { ImageUp, Palette, RotateCcw, Smartphone, Sparkles, Trash2, Wand2 } from 'lucide-react';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, Card, Field, IconChip, INPUT_CLASS } from '../../../shared/ui';
 import { useTenant } from '../../../shared/tenancy/TenantContext';
+import { pathTenant } from '../../../shared/tenancy/hosts';
 import {
   applyTheme,
   contrastWithWhite,
@@ -79,10 +80,14 @@ export const AppearanceSection: React.FC<{ logoUrl: string | null; editable: boo
   const [footer, setFooter] = useState<SiteFooter>(saved?.footer ?? EMPTY_FOOTER);
   const [options, setOptions] = useState<{ primary: string; accent: string }[] | null>(null);
   const [rules, setRules] = useState<BackgroundRules>({ max_kb: 2048, extensions: ['png', 'jpg', 'webp'] });
-  const [busy, setBusy] = useState<'save' | 'reset' | 'logo' | 'upload' | 'remove' | null>(null);
+  const [busy, setBusy] = useState<'save' | 'reset' | 'logo' | 'upload' | 'remove' | 'icon' | 'icon-remove' | null>(null);
+  // Ícono de la aplicación instalable: si subió uno propio, y una marca para recargar la vista previa
+  const [iconCustom, setIconCustom] = useState(false);
+  const [iconStamp, setIconStamp] = useState(() => Date.now());
   const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'info' } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const iconInput = useRef<HTMLInputElement>(null);
 
   // Vista previa en toda la aplicación; al salir sin guardar vuelven los colores guardados
   const savedPrimary = saved?.primary ?? null;
@@ -99,7 +104,11 @@ export const AppearanceSection: React.FC<{ logoUrl: string | null; editable: boo
     let active = true;
     api
       .get('/settings/appearance')
-      .then((response) => active && setRules(response.data.meta.background as BackgroundRules))
+      .then((response) => {
+        if (!active) return;
+        setRules(response.data.meta.background as BackgroundRules);
+        setIconCustom(Boolean(response.data.meta.app_icon?.custom));
+      })
       .catch(() => undefined);
     return () => {
       active = false;
@@ -210,6 +219,41 @@ export const AppearanceSection: React.FC<{ logoUrl: string | null; editable: boo
       },
       'No se pudo quitar la imagen.',
     );
+
+  const uploadIcon = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > rules.max_kb * 1024) {
+      setError(`La imagen pesa más de ${Math.round((rules.max_kb / 1024) * 10) / 10} MB.`);
+      return;
+    }
+    void run(
+      'icon',
+      async () => {
+        const body = new FormData();
+        body.append('file', file);
+        await api.post('/settings/appearance/app-icon', body);
+        setIconCustom(true);
+        setIconStamp(Date.now());
+      },
+      'No se pudo subir el ícono.',
+    );
+  };
+
+  const removeIcon = () =>
+    run(
+      'icon-remove',
+      async () => {
+        await api.delete('/settings/appearance/app-icon');
+        setIconCustom(false);
+        setIconStamp(Date.now());
+      },
+      'No se pudo quitar el ícono.',
+    );
+
+  // El ícono armado por el servidor; en el modo por ruta, la imagen lleva la academia
+  const iconPreview = `/api/v1/app/icon/192?${pathTenant ? `tenant=${pathTenant}&` : ''}t=${iconStamp}&from=${encodeURIComponent(`${savedPrimary ?? ''}${logoUrl ?? ''}`)}`;
 
   return (
     <Card className="p-5 sm:p-6">
@@ -322,6 +366,34 @@ export const AppearanceSection: React.FC<{ logoUrl: string | null; editable: boo
                   )}
                 </div>
                 <p className="text-xs text-slate-500">Opcional. Una foto horizontal de tu sede o tus clases; se guarda al elegirla y se le pone encima tu color principal.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-5 border-t border-slate-200/80 space-y-4">
+          <div>
+            <h3 className="text-[13px] font-semibold text-slate-900">Ícono de la app</h3>
+            <p className="text-xs text-slate-500">
+              Es el que ven tus alumnos al instalar la academia en su teléfono o computadora. Se arma solo con tu logo sobre tu color principal.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <img src={iconPreview} alt="Ícono de la app" width={72} height={72} className="w-[72px] h-[72px] shrink-0 rounded-2xl border border-slate-200 shadow-sm" />
+            {editable && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <input ref={iconInput} type="file" className="sr-only" accept={rules.extensions.map((extension) => `.${extension}`).join(',')} onChange={uploadIcon} aria-label="Ícono de la app" tabIndex={-1} />
+                  <Button size="sm" icon={<Smartphone className="w-4 h-4" />} processing={busy === 'icon'} disabled={busy !== null} onClick={() => iconInput.current?.click()}>
+                    {iconCustom ? 'Cambiar ícono' : 'Subir un ícono propio'}
+                  </Button>
+                  {iconCustom && (
+                    <Button size="sm" variant="danger" icon={<Trash2 className="w-4 h-4" />} processing={busy === 'icon-remove'} disabled={busy !== null} onClick={() => void removeIcon()}>
+                      Usar el logo
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">Opcional. Una imagen cuadrada de al menos 512 × 512 píxeles; se guarda al elegirla.</p>
               </div>
             )}
           </div>

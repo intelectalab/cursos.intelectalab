@@ -3,6 +3,7 @@ import { Building2, Loader2 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { centralUrl, displayAddress, guessCentralDomain, setTenancyMode, type TenancyMode } from './hosts';
 import { applyTheme, type Appearance } from './theme';
+import { setThemeColor, setupInstallableApp } from '../pwa/installableApp';
 
 export interface CurrentTenant {
   id: string;
@@ -102,6 +103,13 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const primary = state.status === 'ready' ? (state.tenant?.appearance?.primary ?? null) : null;
   const accent = state.status === 'ready' ? (state.tenant?.appearance?.accent ?? null) : null;
   useEffect(() => applyTheme(primary, accent), [primary, accent]);
+  useEffect(() => setThemeColor(primary ?? '#084586'), [primary]);
+
+  // Dentro de una academia, la aplicación se puede instalar con su nombre y su ícono
+  const insideAcademy = state.status === 'ready' && state.tenant !== null;
+  useEffect(() => {
+    if (insideAcademy) setupInstallableApp();
+  }, [insideAcademy]);
 
   const setAppearance = useCallback((appearance: Appearance) => {
     setState((current) => (current.status === 'ready' && current.tenant ? { ...current, tenant: { ...current.tenant, appearance } } : current));

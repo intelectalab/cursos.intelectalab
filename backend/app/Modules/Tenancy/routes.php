@@ -6,6 +6,7 @@ use App\Modules\Tenancy\Http\Controllers\EmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\GradeScaleController;
 use App\Modules\Tenancy\Http\Controllers\HelpManualController;
 use App\Modules\Tenancy\Http\Controllers\HolidayController;
+use App\Modules\Tenancy\Http\Controllers\InstallableAppController;
 use App\Modules\Tenancy\Http\Controllers\MailSettingsController;
 use App\Modules\Tenancy\Http\Controllers\PlatformEmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\TenantController;
@@ -52,6 +53,12 @@ Route::middleware('tenant')->prefix('/email-preferences/{token}')->where(['token
     Route::post('/unsubscribe', [EmailPreferencesController::class, 'oneClick'])->middleware('throttle:10,1');
 });
 
+// Aplicación instalable de la academia: el navegador pide el manifiesto y el ícono sin sesión
+Route::middleware(['tenant', 'throttle:60,1'])->prefix('/app')->group(function () {
+    Route::get('/manifest', [InstallableAppController::class, 'manifest']);
+    Route::get('/icon/{size}/{maskable?}', [InstallableAppController::class, 'icon'])->whereNumber('size')->whereIn('maskable', ['maskable']);
+});
+
 // Manual de uso en PDF para el Centro de ayuda: cualquiera con sesión en la academia
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'throttle:20,1'])->get('/help/manual', HelpManualController::class);
 
@@ -77,6 +84,8 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::delete('/settings/appearance', [AppearanceController::class, 'reset']);
         Route::post('/settings/appearance/login-background', [AppearanceController::class, 'uploadBackground']);
         Route::delete('/settings/appearance/login-background', [AppearanceController::class, 'removeBackground']);
+        Route::post('/settings/appearance/app-icon', [AppearanceController::class, 'uploadAppIcon']);
+        Route::delete('/settings/appearance/app-icon', [AppearanceController::class, 'removeAppIcon']);
     });
 
     // Escalas de notas guardadas por la organización

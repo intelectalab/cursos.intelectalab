@@ -6,6 +6,7 @@ import { Avatar } from '../../shared/ui';
 import { ChevronRight, CircleHelp, Globe, LogOut, PanelLeft } from 'lucide-react';
 import { useHelp } from '../../features/helpcenter/HelpContext';
 import { displayAddress } from '../../shared/tenancy/hosts';
+import { InstallButton } from '../../shared/pwa/InstallPrompts';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -55,6 +56,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isMenuOpen }) =
           <Globe className="w-3.5 h-3.5" />
           {displayAddress()}
         </span>
+
+        {tenant && <InstallButton name={tenant.name} />}
 
         {/* Ayuda de la pantalla abierta (y de su pestaña) */}
         <button
