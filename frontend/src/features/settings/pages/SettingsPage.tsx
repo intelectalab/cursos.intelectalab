@@ -41,6 +41,7 @@ import { HolidaysSection } from '../components/HolidaysSection';
 import { RefundPolicySection } from '../components/RefundPolicySection';
 import { AssistantAliasesSection } from '../components/AssistantAliasesSection';
 import { PaymentGatewaysSection } from '../components/PaymentGatewaysSection';
+import { InvoicingSection } from '../components/InvoicingSection';
 import { PlanCard } from '../components/PlanCard';
 import { AppearanceSection } from '../components/AppearanceSection';
 import { DataExportCard } from '../components/DataExportCard';
@@ -747,6 +748,10 @@ export const SettingsPage: React.FC = () => {
       <div className="mt-5">
         {/* Vuelve a cargar al cambiar el tipo de cambio, que decide si PayPal se ofrece */}
         <PaymentGatewaysSection key={rateVersion} editable={editable} />
+      </div>
+
+      <div className="mt-5">
+        <InvoicingSection editable={editable} />
       </div>
 
       <div className="mt-5">

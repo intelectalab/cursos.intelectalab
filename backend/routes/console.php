@@ -34,6 +34,9 @@ Schedule::command('platform-backups:run')->everyMinute()->withoutOverlapping(120
 // Aviso a la plataforma si el último respaldo falló o hace más de 48 horas que no hay uno bueno
 Schedule::command('platform-backups:check')->dailyAt('09:00');
 
+// Comprobantes electrónicos: estado de los que siguen en SUNAT y reintento de los que no salieron
+Schedule::command('invoices:check')->everyFiveMinutes()->withoutOverlapping(10);
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');

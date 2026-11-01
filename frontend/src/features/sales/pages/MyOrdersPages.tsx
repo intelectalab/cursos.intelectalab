@@ -7,6 +7,7 @@ import { formatDateTime, formatMoney, orderCode, salesApi, type MyOrder, type Or
 import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
 import { closeCheckoutTab, openCheckoutTab, sendToCheckout, useCheckoutTab } from '../../../shared/payments/checkoutTab';
 import { appUrl } from '../../../shared/tenancy/hosts';
+import { OrderInvoices } from '../../invoicing/components/OrderInvoices';
 
 // "Mis compras": las órdenes del comprador
 export const MyOrdersPage: React.FC = () => {
@@ -367,6 +368,7 @@ export const MyOrderPage: React.FC = () => {
           <Card className="p-5 sm:p-6">
             <h2 className="text-sm font-semibold text-slate-900 mb-3">Detalle de la compra</h2>
             <OrderSummary order={order} />
+            <OrderInvoices orderId={order.id} staff={false} awaiting={order.status === 'PAID' || order.status === 'PARTIAL'} />
           </Card>
 
           {order.status === 'PENDING' && (

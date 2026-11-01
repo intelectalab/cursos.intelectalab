@@ -4,6 +4,7 @@ namespace App\Modules\Sales\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Courses\Domain\Models\Course;
+use App\Modules\Crm\Domain\Models\Company;
 use App\Modules\Enrollments\Application\EnrollmentQuota;
 use App\Modules\Enrollments\Application\EnrollmentService;
 use App\Modules\Enrollments\Domain\Models\Enrollment;
@@ -11,8 +12,10 @@ use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Promotions\Application\CouponService;
 use App\Modules\Promotions\Domain\Models\Promotion;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
+use App\Modules\Sales\Domain\Billing;
 use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
+use App\Modules\Sales\Domain\Events\PaymentConfirmed;
 use App\Modules\Sales\Domain\Models\Currency;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
@@ -342,6 +345,8 @@ class OrderService
             $order = Order::create([
                 'number' => (int) Order::query()->max('number') + 1,
                 'company_id' => $companyId,
+                // Venta a una empresa: factura con su RUC, si lo tiene registrado
+                'billing' => Billing::forCompany(Company::query()->findOrFail($companyId)),
                 'currency_id' => $currencyId,
                 'subtotal_amount' => $total,
                 'discount_amount' => 0,
@@ -401,6 +406,8 @@ class OrderService
                 'confirmed_by' => $online ? null : $actor->id,
                 'paid_at' => $data['paid_at'] ?? now(),
             ]);
+            // Su comprobante electrónico (si la academia los emite) sale cuando el pago quedó guardado
+            PaymentConfirmed::dispatch($payment);
 
             $this->audit->record('payments.confirmed', $payment, null, [
                 'order' => $order->number,

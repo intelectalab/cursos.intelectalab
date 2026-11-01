@@ -9,6 +9,8 @@ import { COURSE_CARD_CLASS, formatMoney, salesApi, type CatalogPackage, type Che
 import { CouponBox } from '../components/CouponBox';
 import { CourseCardBody } from '../components/CourseCatalog';
 import { PublicShell } from '../components/PublicShell';
+import { billingPayload, invoicingApi, type BillingInput } from '../../invoicing/api';
+import { BillingFields } from '../../invoicing/components/BillingFields';
 
 // Precio del paquete con lo que costaría por separado y el ahorro
 const PackagePrice: React.FC<{ item: CatalogPackage; className?: string }> = ({ item, className = '' }) => (
@@ -144,6 +146,14 @@ export const PackageCheckoutPage: React.FC = () => {
   const [state, setState] = useState<'loading' | 'ready' | 'unavailable' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
   const [coupon, setCoupon] = useState<CouponCheck | null>(null);
+  // Si la academia emite comprobantes, se pregunta boleta o factura
+  const [invoicing, setInvoicing] = useState(false);
+  const [billing, setBilling] = useState<BillingInput>({ type: 'BOLETA', doc_type: 'DNI' });
+  const [billingErrors, setBillingErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    invoicingApi.enabled().then(setInvoicing).catch(() => setInvoicing(false));
+  }, []);
   const [processing, setProcessing] = useState(false);
   const [notice, setNotice] = useState<{ tone: 'danger' | 'info'; text: string } | null>(null);
 
@@ -173,7 +183,7 @@ export const PackageCheckoutPage: React.FC = () => {
     setNotice(null);
 
     try {
-      const order = await salesApi.placePackageOrder(item.id, coupon?.total_amount ?? item.price, coupon?.code);
+      const order = await salesApi.placePackageOrder(item.id, coupon?.total_amount ?? item.price, coupon?.code, invoicing ? billingPayload(billing) : undefined);
       navigate(`/my-orders/${order.id}`, { replace: true });
     } catch (err) {
       const data = apiError(err);
@@ -187,6 +197,10 @@ export const PackageCheckoutPage: React.FC = () => {
         setItem({ ...item, price: data.details.subtotal });
         setCoupon(null);
         setNotice({ tone: 'info', text: 'El precio cambió mientras lo veías. Revisa el nuevo total (si tenías un cupón, aplícalo otra vez) y confirma.' });
+      } else if (data?.code === 'VALIDATION_ERROR' && data.details) {
+        // Los datos del comprobante: cada error junto a su campo
+        setBillingErrors(Object.fromEntries(Object.entries(data.details as Record<string, string[]>).map(([key, messages]) => [key, messages[0]])));
+        setNotice({ tone: 'danger', text: 'Revisa los datos del comprobante.' });
       } else if (data?.code === 'COUPON_INVALID') {
         setCoupon(null);
         setNotice({ tone: 'danger', text: `${data.message} Puedes continuar sin el cupón.` });
@@ -270,6 +284,10 @@ export const PackageCheckoutPage: React.FC = () => {
             </dl>
 
             {Number(item.price) > 0 && <CouponBox product={{ package_id: item.id }} applied={coupon} onChange={setCoupon} />}
+
+            {invoicing && Number(total) > 0 && (
+              <BillingFields value={billing} onChange={setBilling} total={Number(total)} currency={item.currency} errors={billingErrors} />
+            )}
 
             <p className="flex items-start gap-2 text-xs text-slate-500">
               <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600" />

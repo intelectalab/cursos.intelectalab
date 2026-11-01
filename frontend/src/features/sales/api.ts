@@ -1,4 +1,5 @@
 import type { CourseLevel } from '../courses/api';
+import type { BillingInput } from '../invoicing/api';
 import { api, postIdempotent } from '../../shared/api/client';
 import type { Tone } from '../../shared/ui';
 import type { PageMeta } from '../identity/api';
@@ -263,6 +264,8 @@ export interface AssistedSaleInput {
   payment?: { method: PaymentMethod; reference?: string; notes?: string };
   installments?: { amount: number; due_date: string }[];
   expected_total?: string;
+  // Comprobante: boleta o factura (si la academia los emite)
+  billing?: BillingInput;
 }
 
 export interface ConfirmPaymentInput {
@@ -310,11 +313,11 @@ export const salesApi = {
   async catalogCourse(course: string) {
     return (await api.get(`/catalog/courses/${course}`)).data.data as AvailableCourseDetail;
   },
-  async placeOrder(courseId: string, expectedTotal: string, couponCode?: string) {
-    return (await postIdempotent('/orders', { course_id: courseId, expected_total: expectedTotal, coupon_code: couponCode })).data.data as MyOrder;
+  async placeOrder(courseId: string, expectedTotal: string, couponCode?: string, billing?: BillingInput) {
+    return (await postIdempotent('/orders', { course_id: courseId, expected_total: expectedTotal, coupon_code: couponCode, billing })).data.data as MyOrder;
   },
-  async placePackageOrder(packageId: string, expectedTotal: string, couponCode?: string) {
-    return (await postIdempotent('/orders', { package_id: packageId, expected_total: expectedTotal, coupon_code: couponCode })).data.data as MyOrder;
+  async placePackageOrder(packageId: string, expectedTotal: string, couponCode?: string, billing?: BillingInput) {
+    return (await postIdempotent('/orders', { package_id: packageId, expected_total: expectedTotal, coupon_code: couponCode, billing })).data.data as MyOrder;
   },
   // El servidor dice si el cupón aplica y cuánto se pagaría; vuelve a calcularlo al crear la orden
   async validateCoupon(code: string, product: { course_id: string } | { package_id: string }) {

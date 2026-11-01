@@ -14,6 +14,7 @@ use App\Modules\Certificates\Application\IssueCertificateOnGrade;
 use App\Modules\Courses\Application\CourseContentExtension;
 use App\Modules\Enrollments\Application\EnrollmentQuota;
 use App\Modules\Enrollments\Domain\Events\EnrollmentCompleted;
+use App\Modules\Invoicing\Listeners\IssueInvoiceOnPayment;
 use App\Modules\Sales\Application\Exchange\ExchangeRateService;
 use App\Modules\Sales\Application\Exchange\ExchangeRateSource;
 use App\Modules\Sales\Application\Exchange\SunatExchangeRateSource;
@@ -25,6 +26,7 @@ use App\Modules\Sales\Application\Payments\Online\PayPalGateway;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
 use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
+use App\Modules\Sales\Domain\Events\PaymentConfirmed;
 use App\Modules\Tenancy\Application\PushGateway;
 use App\Modules\Tenancy\Application\WebPushGateway;
 use App\Modules\Tenancy\Domain\Events\TenantProvisioned;
@@ -103,6 +105,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Reacciones entre módulos: quien emite el evento no conoce a quien lo escucha
         Event::listen(EnrollmentCompleted::class, IssueCertificateOnCompletion::class);
+        Event::listen(PaymentConfirmed::class, IssueInvoiceOnPayment::class);
         Event::listen(GradeRecorded::class, IssueCertificateOnGrade::class);
         Event::listen(OrderPaid::class, IssueLicensesOnOrderPaid::class);
         Event::listen(TenantProvisioned::class, StartTrialOnProvision::class);

@@ -83,6 +83,8 @@ class SecurityBaselineTest extends TestCase
         'POST api/v1/auth/push/subscriptions',
         'DELETE api/v1/auth/push/subscriptions',
         'POST api/v1/auth/push/test',
+        // Si la academia emite comprobantes (para preguntar boleta o factura al comprar)
+        'GET api/v1/invoicing/status',
         // Manual de uso en PDF del Centro de ayuda
         'GET api/v1/help/manual',
     ];

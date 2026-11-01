@@ -10,6 +10,7 @@ use App\Modules\Identity\Application\RoleService;
 use App\Modules\Identity\Domain\Catalog\RoleCatalog;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Sales\Application\OrderService;
+use App\Modules\Sales\Domain\Billing;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\Package;
 use App\Modules\Sales\Domain\Models\Payment;
@@ -134,7 +135,7 @@ class AssistedSaleController extends Controller
             'payment.reference' => ['nullable', 'string', 'max:120'],
             'payment.notes' => ['nullable', 'string', 'max:500'],
             'expected_total' => ['nullable', 'numeric', 'min:0'],
-        ], [
+        ] + Billing::rules(is_string($request->input('billing.doc_type')) ? $request->input('billing.doc_type') : null), Billing::messages() + [
             'student.email.unique' => 'Ya hay una persona con ese correo: búscala en «Alumno registrado».',
             'student.doc_number.unique' => 'Ya hay una persona con ese documento: búscala en «Alumno registrado».',
             'discount.prohibits' => 'Usa un cupón o un descuento manual, no los dos.',
@@ -154,7 +155,7 @@ class AssistedSaleController extends Controller
                 ? Package::query()->findOrFail($data['package_id'])
                 : Course::query()->with('currentVersion')->findOrFail($data['course_id']);
 
-            return $this->orders->placeAssisted($request->user(), $customer, $product, [
+            $order = $this->orders->placeAssisted($request->user(), $customer, $product, [
                 'coupon_code' => $data['coupon_code'] ?? null,
                 'discount' => isset($data['discount']) ? ['amount' => (string) $data['discount']['amount'], 'reason' => trim($data['discount']['reason'])] : null,
                 'mode' => $data['mode'],
@@ -163,6 +164,11 @@ class AssistedSaleController extends Controller
                 'installments' => $installments,
                 'expected_total' => isset($data['expected_total']) ? (string) $data['expected_total'] : null,
             ]);
+
+            // Antes de que termine la operación: el comprobante del pago sale con estos datos
+            $order->forceFill(['billing' => Billing::from($data['billing'] ?? null, $customer)])->save();
+
+            return $order;
         });
 
         return ApiResponse::success(OrderPresenter::make(Order::query()->with(OrderController::RELATIONS)->findOrFail($order->id)), null, 201);

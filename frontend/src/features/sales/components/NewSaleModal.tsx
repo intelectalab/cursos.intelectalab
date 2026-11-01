@@ -15,6 +15,8 @@ import {
   type PaymentMethod,
 } from '../api';
 import { InstallmentPlanForm, type PlanRow } from './Installments';
+import { billingPayload, invoicingApi, type BillingInput } from '../../invoicing/api';
+import { BillingFields } from '../../invoicing/components/BillingFields';
 
 const pad = (value: number) => String(value).padStart(2, '0');
 // Valor de un <input type="datetime-local"> en la hora del navegador
@@ -140,6 +142,14 @@ export const NewSaleModal: React.FC<{
   const [plan, setPlan] = useState<{ rows: PlanRow[]; valid: boolean }>({ rows: [], valid: false });
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Comprobante del pago, si la academia los emite
+  const [invoicing, setInvoicing] = useState(false);
+  const [billing, setBilling] = useState<BillingInput>({ type: 'BOLETA', doc_type: 'DNI' });
+  const [billingErrors, setBillingErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    invoicingApi.enabled().then(setInvoicing).catch(() => setInvoicing(false));
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -199,12 +209,16 @@ export const NewSaleModal: React.FC<{
       ...(mode === 'LATER' && deadline ? { expires_at: new Date(deadline).toISOString() } : {}),
       ...(mode === 'PAID' || (mode === 'INSTALLMENTS' && firstPaid) ? { payment: { method, reference: reference.trim() || undefined } } : {}),
       ...(mode === 'INSTALLMENTS' ? { installments: plan.rows.map((row) => ({ amount: Number(row.amount), due_date: row.due_date })) } : {}),
+      ...(invoicing ? { billing: billingPayload(billing) } : {}),
     };
 
     setProcessing(true);
+    setBillingErrors({});
     try {
       onDone(await salesApi.placeAssistedSale(input));
     } catch (err) {
+      const details = (err as { response?: { data?: { details?: Record<string, string[]> } } }).response?.data?.details ?? {};
+      setBillingErrors(Object.fromEntries(Object.entries(details).filter(([key]) => key.startsWith('billing.')).map(([key, messages]) => [key, messages[0]])));
       setError(apiErrorMessage(err, 'No se pudo registrar la venta.'));
     } finally {
       setProcessing(false);
@@ -425,6 +439,12 @@ export const NewSaleModal: React.FC<{
               ) : (
                 <p className="text-[13px] text-slate-500">Elige primero qué compra para armar las cuotas.</p>
               ))}
+
+            {invoicing && total > 0 && (
+              <div className="pt-4 border-t border-slate-200/80">
+                <BillingFields value={billing} onChange={setBilling} total={total} currency={currency} errors={billingErrors} forStudent />
+              </div>
+            )}
           </section>
         </form>
       )}

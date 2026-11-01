@@ -8,6 +8,7 @@ use App\Modules\Sales\Application\OrderService;
 use App\Modules\Sales\Application\Payments\Online\GatewayErrors;
 use App\Modules\Sales\Application\Payments\Online\OnlinePaymentService;
 use App\Modules\Sales\Application\Payments\PaymentGateway;
+use App\Modules\Sales\Domain\Billing;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
 use App\Modules\Sales\Domain\Models\Package;
@@ -66,7 +67,7 @@ class OrderController extends Controller
             // Total que el comprador vio en pantalla; el servidor lo contrasta con el precio vigente (RN-008)
             'expected_total' => ['nullable', 'numeric', 'min:0'],
             'coupon_code' => ['nullable', 'string', 'max:40'],
-        ]);
+        ] + Billing::rules(is_string($request->input('billing.doc_type')) ? $request->input('billing.doc_type') : null), Billing::messages());
 
         $expectedTotal = isset($data['expected_total']) ? (string) $data['expected_total'] : null;
         $coupon = $data['coupon_code'] ?? null;
@@ -74,6 +75,9 @@ class OrderController extends Controller
         $order = isset($data['package_id'])
             ? $this->orders->placePackage($request->user(), Package::query()->findOrFail($data['package_id']), $expectedTotal, $coupon)
             : $this->orders->place($request->user(), Course::query()->with('currentVersion')->findOrFail($data['course_id']), $expectedTotal, $coupon);
+
+        // El comprobante que pidió: se emite con cada pago
+        $order->forceFill(['billing' => Billing::from($data['billing'] ?? null, $request->user())])->save();
 
         return $this->respondToCustomer($order, 201);
     }

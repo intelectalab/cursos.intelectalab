@@ -9,6 +9,8 @@ import { CouponBox } from '../components/CouponBox';
 import { CourseCover, CourseFacts } from '../components/CourseCatalog';
 import { CourseCompanions } from '../components/CourseCompanions';
 import { RefundPolicyNote } from '../components/RefundPolicyNote';
+import { billingPayload, invoicingApi, type BillingInput } from '../../invoicing/api';
+import { BillingFields } from '../../invoicing/components/BillingFields';
 
 // Checkout (FP-02): resumen de la compra y confirmación. El precio que vale es el del servidor.
 export const CheckoutPage: React.FC = () => {
@@ -21,6 +23,14 @@ export const CheckoutPage: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [notice, setNotice] = useState<{ tone: 'danger' | 'info'; text: string } | null>(null);
   const [coupon, setCoupon] = useState<CouponCheck | null>(null);
+  // Si la academia emite comprobantes, se pregunta boleta o factura
+  const [invoicing, setInvoicing] = useState(false);
+  const [billing, setBilling] = useState<BillingInput>({ type: 'BOLETA', doc_type: 'DNI' });
+  const [billingErrors, setBillingErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    invoicingApi.enabled().then(setInvoicing).catch(() => setInvoicing(false));
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -48,7 +58,7 @@ export const CheckoutPage: React.FC = () => {
     setNotice(null);
 
     try {
-      const order = await salesApi.placeOrder(course.id, coupon?.total_amount ?? course.price, coupon?.code);
+      const order = await salesApi.placeOrder(course.id, coupon?.total_amount ?? course.price, coupon?.code, invoicing ? billingPayload(billing) : undefined);
       navigate(`/my-orders/${order.id}`, { replace: true });
     } catch (err) {
       const data = apiError(err);
@@ -63,6 +73,10 @@ export const CheckoutPage: React.FC = () => {
         setCourse({ ...course, price: data.details.subtotal });
         setCoupon(null);
         setNotice({ tone: 'info', text: 'El precio cambió mientras lo veías. Revisa el nuevo total (si tenías un cupón, aplícalo otra vez) y confirma.' });
+      } else if (data?.code === 'VALIDATION_ERROR' && data.details) {
+        // Los datos del comprobante: cada error junto a su campo
+        setBillingErrors(Object.fromEntries(Object.entries(data.details as Record<string, string[]>).map(([key, messages]) => [key, messages[0]])));
+        setNotice({ tone: 'danger', text: 'Revisa los datos del comprobante.' });
       } else if (data?.code === 'COUPON_INVALID') {
         setCoupon(null);
         setNotice({ tone: 'danger', text: `${data.message} Puedes continuar sin el cupón.` });
@@ -150,6 +164,10 @@ export const CheckoutPage: React.FC = () => {
             </dl>
 
             {Number(course.price) > 0 && <CouponBox product={{ course_id: course.id }} applied={coupon} onChange={setCoupon} />}
+
+            {invoicing && !free && (
+              <BillingFields value={billing} onChange={setBilling} total={Number(total)} currency={course.currency} errors={billingErrors} />
+            )}
 
             {Number(course.price) > 0 && <RefundPolicyNote />}
 

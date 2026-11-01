@@ -464,6 +464,23 @@ Enlace de la clase: {enlace}',
             'button' => 'Consultar mi hoja',
         ],
         // ── Avisos al personal ───────────────────────────────────
+        'personal_comprobante_con_problema' => [
+            'scope' => self::SCOPE_ACADEMY,
+            'group' => 'Avisos al personal',
+            'name' => 'Comprobante electrónico con problema',
+            'when' => 'Cuando SUNAT rechaza un comprobante o no se pudo emitir tras varios intentos.',
+            'to' => 'El personal que confirma los pagos',
+            'optout' => 'staff',
+            'variables' => [
+                'comprobante' => ['Serie y número del comprobante', 'B001-00000012'],
+                'orden' => ['Número de la orden', '#00045'],
+                'motivo' => ['Lo que respondió SUNAT o Mifact', 'Falta el documento del comprador.'],
+            ],
+            'essential' => ['comprobante', 'motivo'],
+            'subject' => 'Revisa el comprobante {comprobante}',
+            'body' => "El comprobante {comprobante} de la orden {orden} no quedó emitido.\n\nMotivo: {motivo}\n\nCorrige los datos del comprobante en la orden y vuelve a intentarlo.",
+            'button' => 'Ver las órdenes',
+        ],
         'personal_consulta_nueva' => [
             'scope' => self::SCOPE_ACADEMY,
             'group' => 'Avisos al personal',

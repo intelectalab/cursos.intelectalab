@@ -44,6 +44,7 @@ import {
 import { DueInstallments, InstallmentPlanForm } from '../components/Installments';
 import { OrderStatusBadge, OrderSummary } from '../components/OrderParts';
 import { PaymentReviewList } from '../components/PaymentReviews';
+import { OrderInvoices } from '../../invoicing/components/OrderInvoices';
 import { ExportButton } from '../../../shared/ui/ExportButton';
 import { SearchSelect } from '../../../shared/ui/SearchSelect';
 import { RefundWindowAlert } from '../components/RefundWindowAlert';
@@ -257,6 +258,7 @@ const OrderModal: React.FC<{
               </Alert>
             )}
             <OrderSummary order={order} />
+            <OrderInvoices orderId={order.id} staff canFix={canConfirm} total={Number(order.total_amount)} currency={order.currency} awaiting={order.status === 'PAID' || order.status === 'PARTIAL'} />
             {pending && order.expires_at && (
               <p className="text-xs text-slate-500">
                 Espera {hasPlan ? 'su primera cuota' : 'su pago'} hasta el {formatDateTime(order.expires_at)}.

@@ -55,6 +55,7 @@ class Order extends Model
         'licenses_release_reason',
         'sold_by',
         'discount_reason',
+        'billing',
     ];
 
     protected function casts(): array
@@ -69,6 +70,7 @@ class Order extends Model
             'cancelled_at' => 'datetime',
             'refunded_at' => 'datetime',
             'licenses_released_at' => 'datetime',
+            'billing' => 'array',
         ];
     }
 
