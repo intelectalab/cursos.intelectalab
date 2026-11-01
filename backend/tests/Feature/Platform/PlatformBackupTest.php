@@ -125,7 +125,11 @@ class PlatformBackupTest extends TestCase
     public function test_a_failed_backup_is_logged_and_the_platform_is_warned(): void
     {
         Mail::fake();
-        Process::fake(['pg_dump*' => Process::result(errorOutput: 'connection refused', exitCode: 1)]);
+        // Se mira la orden y no su texto: en Linux cada parte va entre comillas ('pg_dump' ...) y un patrón no coincidiría
+        Process::preventStrayProcesses();
+        Process::fake(fn ($process) => ((array) $process->command)[0] === 'pg_dump'
+            ? Process::result(errorOutput: 'connection refused', exitCode: 1)
+            : Process::result());
         $this->platformToken();
 
         app(PlatformBackup::class)->request('root@plataforma.test');
