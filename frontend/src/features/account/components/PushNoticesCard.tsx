@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { BellRing, Send } from 'lucide-react';
 import { api, apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Button, Card, IconChip, LoadingState } from '../../../shared/ui';
-import { disablePush, enablePush, pushState, type PushState } from '../../../shared/pwa/pushNotices';
+import { disablePush, enablePush, PushError, pushState, type PushState } from '../../../shared/pwa/pushNotices';
 
 interface PushSettings {
   enabled: boolean;
@@ -48,7 +49,9 @@ export const PushNoticesCard: React.FC = () => {
     try {
       await action();
     } catch (err) {
-      setError(apiErrorMessage(err, fallback));
+      // Los errores del navegador (no de la API) se muestran con su detalle para poder ayudar
+      const browserError = err instanceof Error && !isAxiosError(err) ? ` (Detalle: ${err.name}: ${err.message})` : '';
+      setError(err instanceof PushError ? err.message : `${apiErrorMessage(err, fallback)}${browserError}`);
     } finally {
       setBusy(null);
     }

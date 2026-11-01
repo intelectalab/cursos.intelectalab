@@ -45,10 +45,40 @@ export async function enablePush(publicKey: string): Promise<PushState> {
     return Notification.permission === 'denied' ? 'blocked' : 'off';
   }
 
-  const subscription = await worker.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+  const options = { userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) };
+  let subscription: PushSubscription;
+  try {
+    subscription = await worker.pushManager.subscribe(options);
+  } catch (error) {
+    // Una suscripción vieja con otra llave impide la nueva: se quita y se intenta otra vez
+    const previous = await worker.pushManager.getSubscription();
+    if (!previous) throw new PushError(error);
+    await previous.unsubscribe();
+    try {
+      subscription = await worker.pushManager.subscribe(options);
+    } catch (retryError) {
+      throw new PushError(retryError);
+    }
+  }
   await api.post('/auth/push/subscriptions', subscription.toJSON());
 
   return 'on';
+}
+
+// El error del navegador explicado: qué pasó y qué hacer, con el detalle técnico para soporte
+export class PushError extends Error {
+  constructor(cause: unknown) {
+    const name = cause instanceof Error ? cause.name : 'Error';
+    const detail = cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause);
+    const advice =
+      name === 'NotAllowedError'
+        ? 'El teléfono no dio permiso para los avisos. Permítelos para esta app en la configuración del teléfono y vuelve a intentarlo.'
+        : name === 'AbortError'
+          ? 'El servicio de avisos del teléfono no respondió. Revisa que Chrome esté actualizado y tenga conexión, y vuelve a intentarlo.'
+          : 'El navegador no pudo activar los avisos.';
+    super(`${advice} (Detalle: ${detail})`, { cause });
+    this.name = 'PushError';
+  }
 }
 
 export async function disablePush(): Promise<void> {
