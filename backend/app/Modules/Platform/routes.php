@@ -21,7 +21,8 @@ Route::prefix('platform')->middleware('central')->group(function () {
 
         // Respaldos semanales para descargar
         Route::get('/backups', [PlatformBackupController::class, 'index']);
-        Route::get('/backups/{name}', [PlatformBackupController::class, 'download'])->where('name', 'erp-semana-[0-9-]+\.tar\.gz')->middleware('throttle:10,1');
+        Route::post('/backups', [PlatformBackupController::class, 'store'])->middleware('throttle:5,1');
+        Route::get('/backups/{name}', [PlatformBackupController::class, 'download'])->where('name', 'erp-(semana|manual)-[0-9-]+\.tar\.gz')->middleware('throttle:10,1');
 
         // Correo de envío de la plataforma
         Route::get('/mail', [PlatformMailController::class, 'show']);

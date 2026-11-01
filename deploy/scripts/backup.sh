@@ -38,6 +38,23 @@ TARGET="$BACKUP_DIR/$STAMP"
 mkdir -p "$TARGET"
 chmod 700 "$BACKUP_DIR"
 
+# Bitácora que lee la consola de la plataforma (Respaldos): una línea JSON por respaldo, bueno o fallido
+STARTED="$(date -Iseconds)"
+LOG_FILE="$WEEKLY_DIR/estado.jsonl"
+mkdir -p "$WEEKLY_DIR"
+log_entry() { # tipo, bueno (true|false), tamaño en bytes, archivo, error
+    local size="${3:-null}" file="null" error="null"
+    [ -n "$4" ] && file="\"$4\""
+    # Sin comillas ni barras en el mensaje: la línea debe seguir siendo JSON válido
+    [ -n "$5" ] && error="\"$(printf '%s' "$5" | tr -d '"\\')\""
+    printf '{"kind":"%s","started_at":"%s","finished_at":"%s","ok":%s,"size":%s,"file":%s,"error":%s,"by":null}\n' \
+        "$1" "$STARTED" "$(date -Iseconds)" "$2" "$size" "$file" "$error" >> "$LOG_FILE"
+    chown www-data:www-data "$LOG_FILE" "$WEEKLY_DIR"
+    chmod 600 "$LOG_FILE"
+}
+# Si algo falla, queda anotado (y la consola avisa por correo a la mañana siguiente)
+trap 'log_entry DAILY false "" "" "Falló en la línea $LINENO del script; ver /var/log/erp-backup.log"' ERR
+
 echo "[$(date '+%F %T')] Copia $STAMP: base de datos"
 # Formato propio de PostgreSQL: comprimido y restaurable tabla por tabla con pg_restore
 # --enable-row-security: sin él pg_dump se niega a leer tablas con RLS forzado
@@ -54,6 +71,8 @@ chmod 600 "$TARGET"/*
 pg_restore --list "$TARGET/base.dump" > /dev/null
 tar --list --gzip --file="$TARGET/archivos.tar.gz" > /dev/null
 du -sh "$TARGET" | sed "s/^/[$(date '+%F %T')] Tamaño: /"
+
+SIZE="$(du -sb "$TARGET" | cut -f1)"
 
 if [ -n "$REMOTE" ]; then
     echo "[$(date '+%F %T')] Enviando la copia a $REMOTE"
@@ -72,9 +91,11 @@ if [ "$(date +%u)" = "$WEEKLY_DAY" ]; then
     chmod 600 "$WEEKLY_FILE"
     # Solo los últimos WEEKLY_KEEP
     ls -1t "$WEEKLY_DIR"/erp-semana-*.tar.gz 2>/dev/null | tail -n +"$((WEEKLY_KEEP + 1))" | xargs -r rm -f
+    log_entry WEEKLY true "$(stat -c %s "$WEEKLY_FILE")" "$(basename "$WEEKLY_FILE")" ""
 fi
 
 # Limpieza de las copias antiguas
 find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +"$RETENTION_DAYS" -exec rm -rf {} +
 
+log_entry DAILY true "$SIZE" "" ""
 echo "[$(date '+%F %T')] Copia $STAMP terminada"

@@ -95,6 +95,17 @@ export const AssistantLauncher: React.FC = () => {
     [busy, hasPermission, userKey, prompts],
   );
 
+  // La autoayuda abre el asistente con la pregunta ya escrita
+  useEffect(() => {
+    const onAsk = (event: Event) => {
+      const question = (event as CustomEvent<string>).detail;
+      setOpen(true);
+      if (question) void ask(question);
+    };
+    window.addEventListener('assistant:ask', onAsk);
+    return () => window.removeEventListener('assistant:ask', onAsk);
+  }, [ask]);
+
   if (!hasPermission('assistant.use')) return null;
 
   const close = () => {

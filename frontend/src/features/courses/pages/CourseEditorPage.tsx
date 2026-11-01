@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useHelpSection } from '../../helpcenter/HelpContext';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   Archive,
@@ -365,6 +366,8 @@ export const CourseEditorPage: React.FC = () => {
   // ?tab=tracking abre directo en Seguimiento (desde el aviso de tareas por calificar)
   const [params] = useSearchParams();
   const [tab, setTab] = useState<TabId>(() => (params.get('tab') === 'tracking' ? 'tracking' : 'content'));
+  // La ayuda muestra la de la pestaña abierta
+  useHelpSection(tab);
   const [dialog, setDialog] = useState<'publish' | 'archive' | 'restore' | null>(null);
   const [attempt, setAttempt] = useState(0);
 

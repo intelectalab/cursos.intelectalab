@@ -43,6 +43,7 @@ import { AssistantAliasesSection } from '../components/AssistantAliasesSection';
 import { PaymentGatewaysSection } from '../components/PaymentGatewaysSection';
 import { PlanCard } from '../components/PlanCard';
 import { AppearanceSection } from '../components/AppearanceSection';
+import { DataExportCard } from '../components/DataExportCard';
 
 interface Settings {
   name: string;
@@ -759,6 +760,12 @@ export const SettingsPage: React.FC = () => {
       {editable && hasPermission('assistant.use') && (
         <div className="mt-5">
           <AssistantAliasesSection />
+        </div>
+      )}
+
+      {editable && (
+        <div className="mt-5">
+          <DataExportCard />
         </div>
       )}
 

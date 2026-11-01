@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   LineChart,
   BookOpen,
+  CircleHelp,
   CalendarDays,
   CalendarCheck2,
   GraduationCap,
@@ -61,6 +62,7 @@ const UsersPage = lazyPage(() => import('../features/identity/pages/UsersPage'),
 const RolesPage = lazyPage(() => import('../features/identity/pages/RolesPage'), 'RolesPage');
 const SettingsPage = lazyPage(() => import('../features/settings/pages/SettingsPage'), 'SettingsPage');
 const AuditPage = lazyPage(() => import('../features/audit/pages/AuditPage'), 'AuditPage');
+const HelpCenterPage = lazyPage(() => import('../features/helpcenter/HelpCenterPage'), 'HelpCenterPage');
 
 // «general» va suelto arriba; los demás son grupos que se despliegan en el menú
 export type ModuleGroup = 'general' | 'academic' | 'commercial' | 'attention' | 'admin';
@@ -207,6 +209,16 @@ export const APP_MODULES: ModuleItem[] = [
     // Es para quien pide ayuda; el personal atiende desde Soporte
     explicit: true,
     component: MyTicketsPage,
+  },
+  {
+    id: 'help-center',
+    name: 'Centro de ayuda',
+    description: 'Cómo usar cada pantalla, paso a paso, y el manual de uso',
+    href: '/help-center',
+    icon: CircleHelp,
+    tone: 'info',
+    group: 'general',
+    component: HelpCenterPage,
   },
   {
     id: 'courses',

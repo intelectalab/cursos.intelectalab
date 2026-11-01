@@ -91,6 +91,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute((int) config('identity.api_rate_limit'))
             ->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
 
+        // «Descargar los datos de mi academia» es pesado: 3 cada 10 minutos por persona, con su propio contador
+        RateLimiter::for('data-export', fn (Request $request) => Limit::perMinutes(10, 3)->by('data-export:'.($request->user()?->getAuthIdentifier() ?: $request->ip())));
+
         // Reacciones entre módulos: quien emite el evento no conoce a quien lo escucha
         Event::listen(EnrollmentCompleted::class, IssueCertificateOnCompletion::class);
         Event::listen(GradeRecorded::class, IssueCertificateOnGrade::class);

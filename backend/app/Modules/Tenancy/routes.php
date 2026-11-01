@@ -4,6 +4,7 @@ use App\Modules\Tenancy\Http\Controllers\AppearanceController;
 use App\Modules\Tenancy\Http\Controllers\EmailPreferencesController;
 use App\Modules\Tenancy\Http\Controllers\EmailTemplateController;
 use App\Modules\Tenancy\Http\Controllers\GradeScaleController;
+use App\Modules\Tenancy\Http\Controllers\HelpManualController;
 use App\Modules\Tenancy\Http\Controllers\HolidayController;
 use App\Modules\Tenancy\Http\Controllers\MailSettingsController;
 use App\Modules\Tenancy\Http\Controllers\PlatformEmailTemplateController;
@@ -51,6 +52,9 @@ Route::middleware('tenant')->prefix('/email-preferences/{token}')->where(['token
     Route::post('/unsubscribe', [EmailPreferencesController::class, 'oneClick'])->middleware('throttle:10,1');
 });
 
+// Manual de uso en PDF para el Centro de ayuda: cualquiera con sesión en la academia
+Route::middleware(['tenant', 'auth:sanctum', 'tenant.user', 'throttle:20,1'])->get('/help/manual', HelpManualController::class);
+
 // Los correos que recibe quien inició sesión («Mi cuenta»)
 Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->prefix('/auth/email-preferences')->group(function () {
     Route::get('/', [EmailPreferencesController::class, 'mine']);
@@ -63,6 +67,8 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
     Route::put('/settings', [TenantSettingsController::class, 'update'])->middleware('permission:tenant_settings.update');
     Route::post('/settings/logo', [TenantSettingsController::class, 'uploadLogo'])->middleware('permission:tenant_settings.update');
     Route::delete('/settings/logo', [TenantSettingsController::class, 'removeLogo'])->middleware('permission:tenant_settings.update');
+    // Todos los datos y archivos de la academia en un ZIP: solo quien edita la configuración (Administrador)
+    Route::get('/settings/data-export', [TenantSettingsController::class, 'exportData'])->middleware(['permission:tenant_settings.update', 'throttle:data-export']);
 
     // Apariencia: colores de la academia y su pantalla de acceso
     Route::get('/settings/appearance', [AppearanceController::class, 'show'])->middleware('permission:tenant_settings.read');

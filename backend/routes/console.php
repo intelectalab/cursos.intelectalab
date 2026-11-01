@@ -28,6 +28,12 @@ Schedule::command('reminders:send')->dailyAt('08:00');
 // Aviso a los alumnos de las clases en vivo del día: corre cada hora y sale a las 7:30 de cada academia
 Schedule::command('live-classes:remind')->hourlyAt(30);
 
+// «Respaldo ahora» de la consola: el pedido se hace aquí, sin el tope de tiempo de la web ni de la cola
+Schedule::command('platform-backups:run')->everyMinute()->withoutOverlapping(120)->runInBackground();
+
+// Aviso a la plataforma si el último respaldo falló o hace más de 48 horas que no hay uno bueno
+Schedule::command('platform-backups:check')->dailyAt('09:00');
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');

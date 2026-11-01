@@ -106,6 +106,16 @@ class ReportFile
     }
 
     /**
+     * Un libro de Excel con el diseño de la academia, ya escrito en un archivo temporal (para meterlo en un ZIP).
+     *
+     * @param  array<string, array{headers: list<string>, rows: list<list<string|int|float|null>>}>  $sheets
+     */
+    public function xlsxFile(array $sheets): string
+    {
+        return $this->spreadsheet($sheets, 'xlsx');
+    }
+
+    /**
      * @param  array<string, array{headers: list<string>, rows: list<list<string|int|float|null>>}>  $sheets
      */
     private function spreadsheet(array $sheets, string $format): string

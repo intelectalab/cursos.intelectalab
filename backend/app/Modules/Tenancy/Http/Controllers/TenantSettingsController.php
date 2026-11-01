@@ -4,6 +4,7 @@ namespace App\Modules\Tenancy\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Files\Application\FileStorage;
+use App\Modules\Tenancy\Application\AcademyDataExport;
 use App\Modules\Tenancy\Application\GradeScaleService;
 use App\Modules\Tenancy\Application\TenantLogoService;
 use App\Modules\Tenancy\Application\TenantSettingsService;
@@ -12,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class TenantSettingsController extends Controller
 {
@@ -97,6 +99,19 @@ class TenantSettingsController extends Controller
         return ApiResponse::success([
             'logo_url' => $this->logo->replace($request->attributes->get('tenant'), $request->file('file')),
         ]);
+    }
+
+    /**
+     * «Descargar los datos de mi academia»: un ZIP con sus datos en Excel y sus archivos.
+     */
+    public function exportData(Request $request, AcademyDataExport $export): BinaryFileResponse
+    {
+        // Una academia grande puede tardar: sin el tope de 30 segundos
+        set_time_limit(600);
+
+        $tenant = $request->attributes->get('tenant');
+
+        return response()->download($export->build($tenant), "datos-{$tenant->slug}-".now()->format('Y-m-d').'.zip', ['Content-Type' => 'application/zip'])->deleteFileAfterSend();
     }
 
     public function removeLogo(Request $request): JsonResponse

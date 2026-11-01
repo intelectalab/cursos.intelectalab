@@ -75,6 +75,8 @@ class SecurityBaselineTest extends TestCase
         // Correos que recibe la propia persona
         'GET api/v1/auth/email-preferences',
         'PUT api/v1/auth/email-preferences',
+        // Manual de uso en PDF del Centro de ayuda
+        'GET api/v1/help/manual',
     ];
 
     public function test_every_route_requires_a_session_unless_it_is_declared_public(): void
