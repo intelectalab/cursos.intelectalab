@@ -42,7 +42,7 @@ const ROLES = [
     base: ACADEMY,
     email: 'admin@plataforma.com',
     find: { '/courses': 'Excel para finanzas', '/schedules': 'Rosa Quispe' },
-    routes: ['/dashboard', '/panel', '/courses', '/students', '/teachers', '/schedules', '/enrollments', '/question-banks', '/crm', '/billing', '/promotions', '/certificates', '/certificates/design', '/support', '/claims', '/reports', '/users', '/roles', '/settings', '/settings/plan', '/settings/emails', '/pages', '/audit', '/account'],
+    routes: ['/dashboard', '/panel', '/courses', '/students', '/teachers', '/schedules', '/enrollments', '/question-banks', '/crm', '/billing', '/invoices', '/promotions', '/certificates', '/certificates/design', '/support', '/claims', '/reports', '/users', '/roles', '/settings', '/settings/plan', '/settings/emails', '/pages', '/audit', '/account'],
     extras: [
       { route: '/courses', name: 'nuevo-curso', steps: [button('Nuevo curso')] },
       { route: '/students', name: 'nuevo-alumno', steps: [button('Nuevo alumno')] },

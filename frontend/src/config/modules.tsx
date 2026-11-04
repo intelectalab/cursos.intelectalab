@@ -48,6 +48,7 @@ const MySchedulePage = lazyPage(() => import('../features/schedules/pages/MySche
 const StudentsPage = lazyPage(() => import('../features/students/pages/StudentsPage'), 'StudentsPage');
 const MyOrdersPage = lazyPage(() => import('../features/sales/pages/MyOrdersPages'), 'MyOrdersPage');
 const OrdersPage = lazyPage(() => import('../features/sales/pages/OrdersPage'), 'OrdersPage');
+const InvoicesPage = lazyPage(() => import('../features/invoicing/pages/InvoicesPage'), 'InvoicesPage');
 const MyCertificatesPage = lazyPage(() => import('../features/certificates/pages/MyCertificatesPage'), 'MyCertificatesPage');
 const CertificatesPage = lazyPage(() => import('../features/certificates/pages/CertificatesPage'), 'CertificatesPage');
 const CrmPage = lazyPage(() => import('../features/crm/pages/CrmPage'), 'CrmPage');
@@ -313,6 +314,18 @@ export const APP_MODULES: ModuleItem[] = [
     permission: ['orders.read', 'orders.support.read'],
     badge: (pending) => (pending.payment_reviews ?? 0) + (pending.overdue_installments ?? 0),
     component: OrdersPage,
+  },
+  {
+    id: 'invoices',
+    name: 'Comprobantes',
+    description: 'Boletas, facturas y notas de crédito con su estado en SUNAT',
+    href: '/invoices',
+    icon: Receipt,
+    tone: 'success',
+    group: 'commercial',
+    // Lo ve quien consulta las órdenes; anula y corrige quien confirma los pagos
+    permission: ['orders.read', 'orders.support.read'],
+    component: InvoicesPage,
   },
   {
     id: 'promotions',

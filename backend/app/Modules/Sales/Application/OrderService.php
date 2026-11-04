@@ -16,6 +16,7 @@ use App\Modules\Sales\Domain\Billing;
 use App\Modules\Sales\Domain\Events\OrderCancelled;
 use App\Modules\Sales\Domain\Events\OrderPaid;
 use App\Modules\Sales\Domain\Events\PaymentConfirmed;
+use App\Modules\Sales\Domain\Events\PaymentRefunded;
 use App\Modules\Sales\Domain\Models\Currency;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Modules\Sales\Domain\Models\OrderInstallment;
@@ -529,6 +530,8 @@ class OrderService
             'refund_reason' => $reason,
             'refund_reference' => $reference,
         ]);
+
+        PaymentRefunded::dispatch($payment);
     }
 
     /**

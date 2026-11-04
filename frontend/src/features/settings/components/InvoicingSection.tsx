@@ -17,6 +17,9 @@ interface Invoicing {
   establishment_code: string;
   boleta_series: string;
   factura_series: string;
+  // Series de las notas de crédito (B… para boletas, F… para facturas)
+  credit_boleta_series: string;
+  credit_factura_series: string;
   igv_mode: 'INCLUDED' | 'EXONERATED';
   // Último número usado de cada serie: el siguiente comprobante sale con el que sigue
   boleta_last_number: number;
@@ -40,6 +43,8 @@ const EMPTY: Form = {
   establishment_code: '0000',
   boleta_series: 'B001',
   factura_series: 'F001',
+  credit_boleta_series: 'BC01',
+  credit_factura_series: 'FC01',
   igv_mode: 'INCLUDED',
   boleta_last_number: 0,
   factura_last_number: 0,
@@ -195,6 +200,14 @@ export const InvoicingSection: React.FC<{ editable: boolean }> = ({ editable }) 
             <Field label="Serie de facturas" hint="Empieza con F, por ejemplo F001.">
               {input('factura_series', { maxLength: 4, onChange: (event) => set('factura_series', event.target.value.toUpperCase()) })}
               {fieldError('factura_series')}
+            </Field>
+            <Field label="Serie de notas de crédito (boletas)" hint="Empieza con B, por ejemplo BC01. Corrige boletas al reembolsar o anular.">
+              {input('credit_boleta_series', { maxLength: 4, onChange: (event) => set('credit_boleta_series', event.target.value.toUpperCase()) })}
+              {fieldError('credit_boleta_series')}
+            </Field>
+            <Field label="Serie de notas de crédito (facturas)" hint="Empieza con F, por ejemplo FC01.">
+              {input('credit_factura_series', { maxLength: 4, onChange: (event) => set('credit_factura_series', event.target.value.toUpperCase()) })}
+              {fieldError('credit_factura_series')}
             </Field>
             <Field label="Último número emitido (boletas)" hint="Si ya emitiste boletas con esta serie desde Mifact, el último número. Solo puede subir.">
               {input('boleta_last_number', { type: 'number', min: 0 })}

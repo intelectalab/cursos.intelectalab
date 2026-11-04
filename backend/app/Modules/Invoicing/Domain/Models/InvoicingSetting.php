@@ -34,6 +34,8 @@ class InvoicingSetting extends Model
         'establishment_code',
         'boleta_series',
         'factura_series',
+        'credit_boleta_series',
+        'credit_factura_series',
         'igv_mode',
         'token',
         'last_error',

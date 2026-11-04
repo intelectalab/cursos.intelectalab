@@ -2,6 +2,7 @@
 
 namespace App\Modules\Invoicing\Application;
 
+use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoicingSetting;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -12,7 +13,8 @@ use RuntimeException;
  *
  * Responde siempre 200: el resultado está en `estado_documento` (101 en
  * proceso, 102 aceptado, 103 con observaciones, 104 rechazado, 105 anulado,
- * 108 baja pendiente) y los problemas, en `errors`.
+ * 108 baja pendiente) y los problemas, en `errors`. Las notas de crédito
+ * (tipo 07) se emiten y consultan igual que las boletas y facturas.
  */
 class MifactClient
 {
@@ -49,12 +51,26 @@ class MifactClient
     }
 
     /**
+     * Pide anular (dar de baja) un comprobante ya informado a SUNAT. Mifact
+     * lo deja en «solicitud de baja» (108) y lo procesa al final del día.
+     *
+     * @return array<string, mixed>
+     */
+    public function void(InvoicingSetting $setting, string $type, string $series, int $number, string $date, string $reason): array
+    {
+        return $this->post($setting, 'LowInvoice', ['COD_TIP_NIF_EMIS' => '6'] + self::key($setting, $type, $series, $number, $date) + [
+            'TXT_DESC_MTVO' => mb_substr($reason, 0, 100),
+            'COD_PTO_VENTA' => 'erp',
+        ]);
+    }
+
+    /**
      * Prueba de la conexión: pregunta por un documento que no existe. Si
      * responde que no existe, el RUC y el token son correctos.
      */
     public function check(InvoicingSetting $setting): ?string
     {
-        $response = $this->status($setting, '03', $setting->boleta_series, 0, now()->toDateString());
+        $response = $this->status($setting, '03', $setting->boleta_series, 0, Invoice::today()->toDateString());
         $error = (string) ($response['errors'] ?? '');
 
         return str_contains(mb_strtolower($error), 'no existe') ? null : self::readable($error);

@@ -23,6 +23,10 @@ use Throwable;
  * el correlativo de la academia. Se envían al proveedor (Mifact), que los
  * pasa a SUNAT; el estado se consulta hasta que queda aceptado o rechazado.
  *
+ * Al devolver un pago sale sola la nota de crédito que corrige su
+ * comprobante. Un comprobante con error se anula dentro del plazo de SUNAT;
+ * pasado el plazo, se corrige con una nota de crédito.
+ *
  * Un comprobante rechazado no se reutiliza: al reintentar sale otro número.
  */
 class InvoiceIssuer
@@ -50,19 +54,102 @@ class InvoiceIssuer
 
     /**
      * Emite el comprobante de un pago. Si la academia no emite comprobantes,
-     * o el pago ya tiene uno vigente, no hace nada.
+     * el pago ya no está confirmado o ya tiene uno vigente, no hace nada.
      */
     public function issueFor(Payment $payment): ?Invoice
     {
         $setting = $this->setting();
 
-        if (! $setting?->enabled || (float) $payment->amount <= 0) {
+        if (! $setting?->enabled || (float) $payment->amount <= 0 || $payment->status !== Payment::STATUS_CONFIRMED) {
             return null;
         }
 
-        $existing = Invoice::query()->where('payment_id', $payment->id)->where('status', '!=', Invoice::STATUS_REJECTED)->first();
+        $existing = Invoice::query()->sales()->where('payment_id', $payment->id)->whereNotIn('status', Invoice::DISCARDED)->first();
 
         return $existing ?? $this->send($this->create($setting, $payment), $setting);
+    }
+
+    /**
+     * Se devolvió un pago: su comprobante se corrige con una nota de crédito
+     * por devolución total. Si el comprobante no llegó a emitirse, ya no sale.
+     */
+    public function creditNoteFor(Payment $payment, string $reason): ?Invoice
+    {
+        $setting = $this->setting();
+        $original = Invoice::query()->sales()->where('payment_id', $payment->id)->latest()->first();
+
+        if ($setting === null || $original === null || in_array($original->status, Invoice::DISCARDED, true) || $original->status === Invoice::STATUS_VOIDING) {
+            return null;
+        }
+
+        if (in_array($original->status, [Invoice::STATUS_PENDING, Invoice::STATUS_ERROR], true)) {
+            return $this->record($original, Invoice::STATUS_CANCELLED, null, 'No se emitió: el pago se devolvió antes.');
+        }
+
+        if ($original->isCredited()) {
+            return null;
+        }
+
+        // Si el comprobante todavía está en SUNAT, la nota espera a que lo acepten (ver send())
+        return $this->send($this->createCreditNote($setting, $original, $reason, Invoice::CREDIT_REFUND), $setting);
+    }
+
+    /**
+     * El personal corrige un comprobante aceptado sin devolver el dinero (por
+     * ejemplo, cuando ya pasó el plazo para anularlo): nota de crédito por
+     * anulación de la operación.
+     */
+    public function creditNote(Invoice $invoice, string $reason): Invoice
+    {
+        $setting = $this->enabledSetting();
+
+        if ($invoice->isCreditNote() || ! $invoice->isValid()) {
+            throw new ApiException(ErrorCode::Conflict, 'Solo una boleta o factura aceptada por SUNAT se corrige con una nota de crédito.', 409);
+        }
+        if ($invoice->isCredited()) {
+            throw new ApiException(ErrorCode::Conflict, 'Este comprobante ya tiene una nota de crédito.', 409);
+        }
+
+        return $this->send($this->createCreditNote($setting, $invoice, $reason, Invoice::CREDIT_CANCELLATION), $setting);
+    }
+
+    /**
+     * Pide a SUNAT anular un comprobante emitido con error. Solo dentro del
+     * plazo (Invoice::VOID_DAYS desde la emisión); la baja se confirma al
+     * final del día y `invoices:check` la deja anulada.
+     */
+    public function void(Invoice $invoice, string $reason): Invoice
+    {
+        $setting = $this->enabledSetting();
+
+        if ($invoice->isCreditNote() || ! $invoice->isValid()) {
+            throw new ApiException(ErrorCode::Conflict, 'Solo se anula una boleta o factura aceptada por SUNAT.', 409);
+        }
+        if ($invoice->isCredited()) {
+            throw new ApiException(ErrorCode::Conflict, 'Este comprobante ya fue corregido con una nota de crédito: no se anula.', 409);
+        }
+        if ($invoice->isPastVoidDeadline()) {
+            throw new ApiException(ErrorCode::Conflict, 'Pasó el plazo de SUNAT para anularlo ('.Invoice::VOID_DAYS.' días desde la emisión). Corrígelo con una nota de crédito.', 409);
+        }
+
+        try {
+            $response = $this->mifact->void($setting, $invoice->document_type, $invoice->series, $invoice->number, $invoice->issue_date->toDateString(), $reason);
+        } catch (Throwable $error) {
+            Log::warning("No se pudo anular el comprobante {$invoice->code()}: ".$error->getMessage());
+
+            throw new ApiException(ErrorCode::Conflict, 'No se pudo conectar con Mifact. Inténtalo en unos minutos.', 409);
+        }
+
+        $code = (string) ($response['estado_documento'] ?? '');
+        if (! in_array($code, ['105', '108'], true)) {
+            throw new ApiException(ErrorCode::Conflict, 'Mifact no aceptó la anulación: '.MifactClient::readable((string) ($response['errors'] ?? '')), 409);
+        }
+
+        $invoice->forceFill(['reason' => mb_substr(trim($reason), 0, 100), 'checked_at' => now()]);
+
+        return $code === '105'
+            ? $this->voided($invoice)
+            : $this->record($invoice, Invoice::STATUS_VOIDING, $code, 'Anulación pedida: SUNAT la confirma al final del día.');
     }
 
     /**
@@ -74,6 +161,22 @@ class InvoiceIssuer
 
         if ($setting === null) {
             return $invoice;
+        }
+
+        if ($invoice->isCreditNote()) {
+            // Una nota de crédito espera a que SUNAT acepte el comprobante que corrige
+            $reference = $invoice->reference()->first();
+            if ($reference === null || in_array($reference->status, Invoice::DISCARDED, true)) {
+                return $this->record($invoice, Invoice::STATUS_CANCELLED, null, 'No se emitió: el comprobante que corregía no llegó a valer.');
+            }
+            if (! $reference->isValid()) {
+                $invoice->forceFill(['checked_at' => now(), 'provider_message' => "Sale cuando SUNAT acepte {$reference->code()}."])->save();
+
+                return $invoice;
+            }
+        } elseif ($invoice->payment()->value('status') === Payment::STATUS_REFUNDED) {
+            // El pago se devolvió antes de que el comprobante saliera: ya no hace falta
+            return $this->record($invoice, Invoice::STATUS_CANCELLED, null, 'No se emitió: el pago se devolvió antes.');
         }
 
         $invoice->forceFill(['attempts' => $invoice->attempts + 1, 'checked_at' => now()]);
@@ -119,7 +222,7 @@ class InvoiceIssuer
     }
 
     /**
-     * Consulta el estado en el proveedor (para los que quedaron en proceso).
+     * Consulta el estado en el proveedor (los que quedaron en proceso o con la anulación pedida).
      */
     public function refresh(Invoice $invoice, ?InvoicingSetting $setting = null): Invoice
     {
@@ -145,21 +248,36 @@ class InvoiceIssuer
 
     /**
      * El personal lo vuelve a intentar: con los datos de facturación de la
-     * orden como estén ahora. Uno rechazado se reemplaza por otro número.
+     * orden como estén ahora. Uno rechazado o anulado se reemplaza por otro número.
      */
     public function retry(Invoice $invoice): Invoice
     {
-        if ($invoice->isValid() || $invoice->status === Invoice::STATUS_PROCESSING) {
+        if ($invoice->isValid() || in_array($invoice->status, Invoice::AWAITING_SUNAT, true)) {
             throw new ApiException(ErrorCode::Conflict, 'Este comprobante ya está en SUNAT: no se vuelve a emitir.', 409);
         }
-
-        $setting = $this->setting();
-
-        if (! $setting?->enabled) {
-            throw new ApiException(ErrorCode::Conflict, 'La academia no tiene activos los comprobantes electrónicos.', 409);
+        if ($invoice->status === Invoice::STATUS_CANCELLED) {
+            throw new ApiException(ErrorCode::Conflict, 'Este comprobante ya no hace falta: no se emite.', 409);
         }
 
-        if ($invoice->status === Invoice::STATUS_REJECTED) {
+        $setting = $this->enabledSetting();
+
+        if ($invoice->isCreditNote()) {
+            $reference = $invoice->reference()->firstOrFail();
+
+            return $invoice->status === Invoice::STATUS_REJECTED
+                ? $this->send($this->createCreditNote($setting, $reference, (string) $invoice->reason, (string) $invoice->credit_type), $setting)
+                : $this->send($invoice->forceFill(['attempts' => 0]), $setting);
+        }
+
+        if ($invoice->payment->status !== Payment::STATUS_CONFIRMED) {
+            throw new ApiException(ErrorCode::Conflict, 'El pago se devolvió: ya no se emite su comprobante.', 409);
+        }
+
+        if (in_array($invoice->status, [Invoice::STATUS_REJECTED, Invoice::STATUS_VOIDED], true)) {
+            if (Invoice::query()->sales()->where('payment_id', $invoice->payment_id)->whereNotIn('status', Invoice::DISCARDED)->exists()) {
+                throw new ApiException(ErrorCode::Conflict, 'Este pago ya tiene otro comprobante.', 409);
+            }
+
             return $this->send($this->create($setting, $invoice->payment), $setting);
         }
 
@@ -188,6 +306,17 @@ class InvoiceIssuer
         }
     }
 
+    private function enabledSetting(): InvoicingSetting
+    {
+        $setting = $this->setting();
+
+        if (! $setting?->enabled) {
+            throw new ApiException(ErrorCode::Conflict, 'La academia no tiene activos los comprobantes electrónicos.', 409);
+        }
+
+        return $setting;
+    }
+
     /**
      * Crea el comprobante con el siguiente número de su serie.
      */
@@ -203,9 +332,6 @@ class InvoiceIssuer
             $type = $customer['customer_doc_type'] === Invoice::DOC_RUC ? Invoice::TYPE_FACTURA : Invoice::TYPE_BOLETA;
             $series = $type === Invoice::TYPE_FACTURA ? $setting->factura_series : $setting->boleta_series;
 
-            $counter = InvoiceSeries::query()->lockForUpdate()->firstOrCreate(['document_type' => $type, 'series' => $series], ['last_number' => 0]);
-            $counter->increment('last_number');
-
             $exonerated = $setting->igv_mode === InvoicingSetting::IGV_EXONERATED;
             $taxable = $exonerated ? $total : round($total / (1 + self::IGV_RATE), 2);
 
@@ -214,8 +340,8 @@ class InvoiceIssuer
                 'payment_id' => $payment->id,
                 'document_type' => $type,
                 'series' => $series,
-                'number' => $counter->last_number,
-                'issue_date' => now()->toDateString(),
+                'number' => $this->nextNumber($type, $series),
+                'issue_date' => Invoice::today()->toDateString(),
                 'currency' => $currency,
                 'exchange_rate' => $currency === 'PEN' ? null : $this->rates->currentRate(),
                 'taxable_amount' => $taxable,
@@ -233,15 +359,57 @@ class InvoiceIssuer
     }
 
     /**
+     * La nota de crédito de un comprobante: por el total, al mismo receptor,
+     * con la serie de notas de su tipo (B… para boletas, F… para facturas).
+     */
+    private function createCreditNote(InvoicingSetting $setting, Invoice $original, string $reason, string $creditType): Invoice
+    {
+        return DB::transaction(function () use ($setting, $original, $reason, $creditType) {
+            $series = $original->document_type === Invoice::TYPE_FACTURA ? $setting->credit_factura_series : $setting->credit_boleta_series;
+            $label = $creditType === Invoice::CREDIT_REFUND ? 'Devolución' : 'Anulación';
+
+            $note = Invoice::query()->create($original->only([
+                'currency', 'exchange_rate', 'taxable_amount', 'igv_amount', 'total_amount', 'igv_mode',
+                'customer_doc_type', 'customer_doc_number', 'customer_name', 'customer_address',
+            ]) + [
+                'order_id' => $original->order_id,
+                'payment_id' => $original->payment_id,
+                'reference_invoice_id' => $original->id,
+                'document_type' => Invoice::TYPE_CREDIT_NOTE,
+                'credit_type' => $creditType,
+                'series' => $series,
+                'number' => $this->nextNumber(Invoice::TYPE_CREDIT_NOTE, $series),
+                'issue_date' => Invoice::today()->toDateString(),
+                'reason' => mb_substr(trim($reason) ?: $label, 0, 100),
+                'description' => mb_strimwidth("{$label} de {$original->code()} · {$original->description}", 0, 250, '…'),
+                'status' => Invoice::STATUS_PENDING,
+            ]);
+
+            $this->audit->record('invoices.credit_note_created', $note, null, ['code' => $note->code(), 'reference' => $original->code(), 'total' => $note->total_amount, 'reason' => $note->reason]);
+
+            return $note;
+        });
+    }
+
+    /**
+     * El siguiente número de la serie, tomado con bloqueo para que no se repita.
+     */
+    private function nextNumber(string $type, string $series): int
+    {
+        $counter = InvoiceSeries::query()->lockForUpdate()->firstOrCreate(['document_type' => $type, 'series' => $series], ['last_number' => 0]);
+        $counter->increment('last_number');
+
+        return $counter->last_number;
+    }
+
+    /**
      * El siguiente número libre de su serie, para un comprobante que no llegó a emitirse.
      */
     private function renumber(Invoice $invoice): Invoice
     {
         return DB::transaction(function () use ($invoice) {
-            $counter = InvoiceSeries::query()->lockForUpdate()->where('document_type', $invoice->document_type)->where('series', $invoice->series)->firstOrFail();
-            $counter->increment('last_number');
             $before = $invoice->code();
-            $invoice->forceFill(['number' => $counter->last_number])->save();
+            $invoice->forceFill(['number' => $this->nextNumber($invoice->document_type, $invoice->series)])->save();
             $this->audit->record('invoices.renumbered', $invoice, ['code' => $before], ['code' => $invoice->code(), 'reason' => 'El número ya estaba usado en Mifact.']);
 
             return $invoice;
@@ -338,6 +506,8 @@ class InvoiceIssuer
             'TXT_VERS_UBL' => '2.1',
             'TXT_VERS_ESTRUCT_UBL' => '2.0',
             'COD_TIP_OPE_SUNAT' => '0101',
+            // Nota de crédito: el motivo y el comprobante que corrige
+            ...($invoice->isCreditNote() ? $this->creditNoteFields($invoice) : []),
             'items' => [[
                 'COD_ITEM' => 'ORD-'.$invoice->order()->value('number'),
                 // ZZ: unidad de servicio (catálogo 03 de SUNAT)
@@ -360,6 +530,27 @@ class InvoiceIssuer
     }
 
     /**
+     * Tipo de nota (catálogo 09), motivo y el comprobante que corrige.
+     *
+     * @return array<string, mixed>
+     */
+    private function creditNoteFields(Invoice $note): array
+    {
+        $reference = $note->reference()->firstOrFail();
+
+        return [
+            'COD_TIP_NC' => $note->credit_type,
+            'TXT_DESC_MTVO' => $note->reason,
+            'docs_referenciado' => [[
+                'COD_TIP_DOC_REF' => $reference->document_type,
+                'NUM_SERIE_CPE_REF' => $reference->series,
+                'NUM_CORRE_CPE_REF' => str_pad((string) $reference->number, 8, '0', STR_PAD_LEFT),
+                'FEC_DOC_REF' => $reference->issue_date->toDateString(),
+            ]],
+        ];
+    }
+
+    /**
      * Guarda la respuesta del proveedor y avisa al personal si SUNAT lo rechazó o no se pudo emitir.
      *
      * @param  array<string, mixed>  $response
@@ -368,6 +559,17 @@ class InvoiceIssuer
     {
         $code = (string) ($response['estado_documento'] ?? '');
         $error = trim((string) ($response['errors'] ?? ''));
+
+        if ($code === '105') {
+            return $this->voided($invoice);
+        }
+
+        // Anulación pedida: sigue esperando, o SUNAT no la aceptó y el comprobante sigue vigente
+        if ($invoice->status === Invoice::STATUS_VOIDING) {
+            return in_array($code, ['102', '103'], true)
+                ? $this->record($invoice, $code === '102' ? Invoice::STATUS_ACCEPTED : Invoice::STATUS_OBSERVED, $code, 'SUNAT no aceptó la anulación: el comprobante sigue vigente. Corrígelo con una nota de crédito.')
+                : $this->record($invoice, Invoice::STATUS_VOIDING, $invoice->provider_status, $invoice->provider_message);
+        }
 
         [$status, $message] = match ($code) {
             '102' => [Invoice::STATUS_ACCEPTED, $response['sunat_description'] ?? null],
@@ -386,6 +588,13 @@ class InvoiceIssuer
         $invoice->forceFill(['hash' => ($response['codigo_hash'] ?? null) ?: $invoice->hash]);
 
         return $this->record($invoice, $status, $code !== '' ? $code : null, $message);
+    }
+
+    private function voided(Invoice $invoice): Invoice
+    {
+        $invoice->forceFill(['voided_at' => now()]);
+
+        return $this->record($invoice, Invoice::STATUS_VOIDED, '105', 'Anulado en SUNAT.');
     }
 
     private function record(Invoice $invoice, string $status, ?string $code, ?string $message): Invoice

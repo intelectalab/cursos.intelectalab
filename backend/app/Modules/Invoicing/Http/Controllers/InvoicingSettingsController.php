@@ -59,6 +59,9 @@ class InvoicingSettingsController extends Controller
             'establishment_code' => ['required', 'digits:4'],
             'boleta_series' => ['required', 'string', 'regex:/^B[A-Z0-9]{3}$/'],
             'factura_series' => ['required', 'string', 'regex:/^F[A-Z0-9]{3}$/'],
+            // Series de las notas de crédito: si no llegan se conservan (por defecto BC01 y FC01)
+            'credit_boleta_series' => ['sometimes', 'required', 'string', 'regex:/^B[A-Z0-9]{3}$/'],
+            'credit_factura_series' => ['sometimes', 'required', 'string', 'regex:/^F[A-Z0-9]{3}$/'],
             'igv_mode' => ['required', Rule::in(InvoicingSetting::IGV_MODES)],
             // Sin token nuevo se conserva el guardado
             'token' => [Rule::requiredIf($current === null), 'nullable', 'string', 'max:500'],
@@ -71,6 +74,8 @@ class InvoicingSettingsController extends Controller
             'ubigeo.digits' => 'El ubigeo tiene 6 dígitos (por ejemplo, 150101 para Lima).',
             'boleta_series.regex' => 'La serie de boletas empieza con B y tiene 4 caracteres, por ejemplo B001.',
             'factura_series.regex' => 'La serie de facturas empieza con F y tiene 4 caracteres, por ejemplo F001.',
+            'credit_boleta_series.regex' => 'Las notas de crédito de boletas van con una serie que empieza con B, por ejemplo BC01.',
+            'credit_factura_series.regex' => 'Las notas de crédito de facturas van con una serie que empieza con F, por ejemplo FC01.',
             'token.required' => 'Pega el token que te dio Mifact.',
         ]);
 
@@ -164,6 +169,8 @@ class InvoicingSettingsController extends Controller
             'establishment_code' => $setting->establishment_code,
             'boleta_series' => $setting->boleta_series,
             'factura_series' => $setting->factura_series,
+            'credit_boleta_series' => $setting->credit_boleta_series ?? 'BC01',
+            'credit_factura_series' => $setting->credit_factura_series ?? 'FC01',
             'igv_mode' => $setting->igv_mode,
             // Último número usado de cada serie (el siguiente comprobante sale con el que sigue)
             'boleta_last_number' => (int) InvoiceSeries::query()->where('document_type', Invoice::TYPE_BOLETA)->where('series', $setting->boleta_series)->value('last_number'),

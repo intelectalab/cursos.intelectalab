@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileText, Pencil, RotateCcw } from 'lucide-react';
+import { Ban, FileMinus, FileText, Pencil, RotateCcw } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Modal } from '../../../shared/ui';
 import { formatMoney } from '../../sales/api';
-import { billingPayload, INVOICE_STATUS, invoicingApi, type Billing, type BillingInput, type Invoice } from '../api';
+import { billingPayload, INVOICE_STATUS, INVOICE_TYPE, invoicingApi, type Billing, type BillingInput, type Invoice } from '../api';
 import { BillingFields } from './BillingFields';
+import { InvoiceCorrectionModal, type Correction } from './InvoiceCorrectionModal';
 
 const toInput = (billing: Billing | null): BillingInput =>
   billing?.type === 'FACTURA'
@@ -13,7 +14,8 @@ const toInput = (billing: Billing | null): BillingInput =>
 
 /**
  * Los comprobantes de una orden. El personal ve el motivo de un rechazo,
- * corrige los datos del comprobante y reintenta; el comprador los descarga.
+ * corrige los datos del comprobante y reintenta, y anula o corrige con una
+ * nota de crédito uno aceptado; el comprador los descarga.
  */
 // Mientras un comprobante sigue en camino, la lista se vuelve a pedir cada 5 segundos (hasta un minuto)
 const POLL_MS = 5000;
@@ -35,6 +37,7 @@ export const OrderInvoices: React.FC<{
   const [editing, setEditing] = useState<BillingInput | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [polls, setPolls] = useState(0);
+  const [correcting, setCorrecting] = useState<{ invoice: Invoice; mode: Correction } | null>(null);
 
   // El personal recibe también los datos del comprobante guardados en la orden
   const fetchInvoices = useCallback(
@@ -130,12 +133,14 @@ export const OrderInvoices: React.FC<{
         {invoices?.map((invoice) => (
           <li key={invoice.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3.5 py-2.5 text-[13px]">
             <span className="font-semibold text-slate-900 tnum">
-              {invoice.type === 'FACTURA' ? 'Factura' : 'Boleta'} {invoice.code}
+              {INVOICE_TYPE[invoice.type]} {invoice.code}
             </span>
             <Badge tone={INVOICE_STATUS[invoice.status].tone} dot>
               {INVOICE_STATUS[invoice.status].label}
             </Badge>
             <span className="text-slate-500 tnum">{formatMoney(invoice.total, invoice.currency)}</span>
+            {invoice.reference_code && <span className="text-xs text-slate-500">Corrige {invoice.reference_code}</span>}
+            {invoice.credited && <span className="text-xs text-slate-500">Con nota de crédito</span>}
             <span className="flex-1" />
             {invoice.has_pdf && (
               <Button
@@ -163,10 +168,32 @@ export const OrderInvoices: React.FC<{
                 Reintentar
               </Button>
             )}
+            {staff && canFix && invoice.can_void && (
+              <Button size="sm" variant="ghost" icon={<Ban className="w-4 h-4" />} disabled={busy !== null} onClick={() => setCorrecting({ invoice, mode: 'void' })}>
+                Anular
+              </Button>
+            )}
+            {staff && canFix && invoice.can_credit && !invoice.can_void && (
+              <Button size="sm" variant="ghost" icon={<FileMinus className="w-4 h-4" />} disabled={busy !== null} onClick={() => setCorrecting({ invoice, mode: 'credit' })}>
+                Nota de crédito
+              </Button>
+            )}
             {staff && invoice.message && invoice.status !== 'ACCEPTED' && <p className="basis-full text-xs text-slate-600">{invoice.message}</p>}
           </li>
         ))}
       </ul>
+
+      {correcting && (
+        <InvoiceCorrectionModal
+          invoice={correcting.invoice}
+          mode={correcting.mode}
+          onClose={() => setCorrecting(null)}
+          onDone={async () => {
+            setCorrecting(null);
+            await load();
+          }}
+        />
+      )}
 
       {editing && (
         <Modal

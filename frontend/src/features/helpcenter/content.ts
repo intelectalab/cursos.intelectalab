@@ -172,6 +172,17 @@ export const HELP_TOPICS: Record<string, HelpTopic> = {
     tips: ['«Constancia de venta» imprime lo cobrado (no es boleta ni factura).', '«Descargar» baja la lista en Excel, PDF, CSV u ODS con los filtros que tengas.'],
     faqs: [{ q: '¿Qué es «Cobros en revisión»?', a: 'Un pago en línea que la pasarela cobró pero no se pudo aplicar a su orden. Revísalo en la pasarela y márcalo como resuelto.' }],
   },
+  invoices: {
+    title: 'Comprobantes',
+    summary: 'Las boletas, facturas y notas de crédito de la academia, con su estado en SUNAT. Salen solas al confirmarse cada pago.',
+    steps: [
+      'Usa las tarjetas para ver los vigentes, los que van en camino, los que tienen un problema o los anulados.',
+      '«Reintentar» vuelve a emitir uno que no salió (antes corrige los datos del comprador en la orden).',
+      '«Anular» da de baja un comprobante con error dentro de los 7 días de SUNAT; luego «Emitir otro» saca uno nuevo.',
+      'Pasado el plazo, «Nota de crédito» lo corrige por el total.',
+    ],
+    tips: ['Al reembolsar una compra, su nota de crédito sale sola: no hace falta emitirla aquí.', 'Anular o emitir una nota de crédito no devuelve el dinero.'],
+  },
   promotions: {
     title: 'Promociones',
     summary: 'Cupones de descuento y paquetes de cursos a un precio especial.',

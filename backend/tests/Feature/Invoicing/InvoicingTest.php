@@ -329,4 +329,19 @@ class InvoicingTest extends TestCase
         $this->flushHeaders();
         $this->withToken($this->login('beta', 'admin@beta.com'))->get($this->tenantUrl('beta', "/invoices/{$invoice->id}/pdf"), ['Accept' => 'application/json'])->assertNotFound();
     }
+
+    public function test_the_invoice_is_dated_in_the_academy_time_not_the_server_time(): void
+    {
+        $this->connect()->assertOk();
+        $order = $this->order();
+
+        // 8:30 p. m. en Lima ya es el día siguiente en UTC: SUNAT no acepta una fecha futura
+        $this->travelTo(now('America/Lima')->setDate(2026, 11, 3)->setTime(20, 30));
+        $this->flushHeaders();
+        $this->admin = $this->login('acme', 'admin@acme.com');
+        $this->confirm($order);
+
+        $this->assertSame('2026-11-03', $this->sent()[0]['FEC_EMIS']);
+        $this->assertSame('2026-11-03', $this->invoices()->sole()->issue_date->toDateString());
+    }
 }

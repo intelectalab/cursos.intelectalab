@@ -15,15 +15,19 @@ Route::middleware(['tenant', 'auth:sanctum', 'tenant.user'])->group(function () 
         Route::post('/settings/invoicing/check', [InvoicingSettingsController::class, 'check'])->middleware('throttle:10,1');
     });
 
-    // Comprobantes de una orden: los ve quien consulta las órdenes
+    // Los comprobantes (todos o los de una orden): los ve quien consulta las órdenes
     Route::middleware('permission:orders.read,orders.support.read')->group(function () {
+        Route::get('/invoices', [InvoiceController::class, 'all']);
+        Route::get('/invoices/export', [InvoiceController::class, 'export'])->middleware('throttle:10,1');
         Route::get('/orders/{order}/invoices', [InvoiceController::class, 'index'])->whereUuid('order');
         Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->whereUuid('invoice')->middleware('throttle:30,1');
     });
-    // Los corrige y reintenta quien confirma los pagos
+    // Los corrige, reintenta, anula o corrige con una nota de crédito quien confirma los pagos
     Route::middleware('permission:payments.confirm')->group(function () {
         Route::put('/orders/{order}/billing', [InvoiceController::class, 'updateBilling'])->whereUuid('order');
         Route::post('/invoices/{invoice}/retry', [InvoiceController::class, 'retry'])->whereUuid('invoice')->middleware('throttle:20,1');
+        Route::post('/invoices/{invoice}/void', [InvoiceController::class, 'void'])->whereUuid('invoice')->middleware('throttle:10,1');
+        Route::post('/invoices/{invoice}/credit-note', [InvoiceController::class, 'creditNote'])->whereUuid('invoice')->middleware('throttle:10,1');
     });
 
     // El comprador: los comprobantes de sus compras
