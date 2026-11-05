@@ -75,6 +75,7 @@ class TenantSettingsController extends Controller
                 'max:'.TenantSettingsService::CLAIM_RESPONSE_MAX,
             ],
             'require_two_factor' => ['sometimes', 'boolean'],
+            'search_indexing' => ['sometimes', 'boolean'],
             'session_minutes' => [
                 'required', 'integer',
                 'min:'.config('identity.session_lifetime_min'),

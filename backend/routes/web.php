@@ -1,7 +1,3 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-Route::get('/', function () {
-    return view('welcome');
-});
+// La aplicación web la sirve Nginx (frontend/dist); las páginas públicas para buscadores están en routes/seo.php.

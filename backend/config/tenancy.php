@@ -33,6 +33,14 @@ return [
     'public_url' => env('TENANCY_PUBLIC_URL'),
 
     /*
+    | Página de entrada compilada de la aplicación web (index.html). En las
+    | páginas públicas el servidor le agrega el título, la descripción y los
+    | datos para buscadores antes de enviarla (S26).
+    */
+
+    'web_index' => env('WEB_INDEX_HTML', base_path('../frontend/dist/index.html')),
+
+    /*
     |--------------------------------------------------------------------------
     | Subdominios reservados
     |--------------------------------------------------------------------------

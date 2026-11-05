@@ -63,6 +63,8 @@ interface Settings {
   grade_scale: number;
   // Exigir la verificación en dos pasos a todo el personal
   require_two_factor: boolean;
+  // Que la portada, el catálogo, los cursos, los paquetes y las páginas aparezcan en Google
+  search_indexing: boolean;
   logo_url: string | null;
 }
 
@@ -390,7 +392,7 @@ export const SettingsPage: React.FC = () => {
     setStatus('idle');
   };
 
-  const text = (key: Exclude<keyof Settings, 'require_two_factor'>) => ({
+  const text = (key: Exclude<keyof Settings, 'require_two_factor' | 'search_indexing'>) => ({
     className: INPUT_CLASS,
     disabled: !editable,
     value: form[key] ?? '',
@@ -713,6 +715,24 @@ export const SettingsPage: React.FC = () => {
               <span className="block text-[13px] font-medium text-slate-800">Exigir la verificación en dos pasos a todo el personal</span>
               <span className="block text-xs text-slate-500 mt-0.5">
                 Quien no sea alumno ni responsable de empresa deberá activarla al entrar: además de su contraseña, un código de la aplicación de su teléfono. Para exigirla, actívala primero en «Mi cuenta».
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3 mt-4 cursor-pointer">
+            <input
+              type="checkbox"
+              className={`${CHECKBOX_CLASS} mt-0.5`}
+              disabled={!editable}
+              checked={form.search_indexing ?? true}
+              onChange={(event) => {
+                setForm({ ...form, search_indexing: event.target.checked });
+                setStatus('idle');
+              }}
+            />
+            <span>
+              <span className="block text-[13px] font-medium text-slate-800">Aparecer en Google y otros buscadores</span>
+              <span className="block text-xs text-slate-500 mt-0.5">
+                La portada, el catálogo, la ficha de cada curso y paquete y tus páginas publicadas salen en los buscadores, y al compartir un enlace en WhatsApp o Facebook se ve su título, descripción e imagen. Apágalo mientras armas tu catálogo.
               </span>
             </span>
           </label>

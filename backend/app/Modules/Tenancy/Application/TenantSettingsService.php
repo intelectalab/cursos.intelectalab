@@ -37,6 +37,8 @@ class TenantSettingsService
         'claim_response_days' => null,
         // Exigir la verificación en dos pasos a todo el personal (no a alumnos ni a responsables de empresa)
         'require_two_factor' => false,
+        // Que las páginas públicas (portada, catálogo, cursos, paquetes y páginas) aparezcan en Google y otros buscadores
+        'search_indexing' => true,
     ];
 
     /**
@@ -93,6 +95,14 @@ class TenantSettingsService
     public function currency(): string
     {
         return $this->stored()['primary_currency'] ?? self::DEFAULTS['primary_currency'];
+    }
+
+    /**
+     * Si la organización quiere aparecer en los buscadores (por defecto, sí).
+     */
+    public function searchIndexing(): bool
+    {
+        return (bool) ($this->stored()['search_indexing'] ?? self::DEFAULTS['search_indexing']);
     }
 
     /**
