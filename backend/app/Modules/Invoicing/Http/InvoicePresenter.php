@@ -46,6 +46,8 @@ final class InvoicePresenter
             'order_id' => $invoice->order_id,
             'order_number' => $invoice->relationLoaded('order') ? $invoice->order?->number : null,
             'message' => $invoice->provider_message,
+            // Cuándo se le envió al comprador por correo, con el PDF
+            'emailed_at' => $invoice->emailed_at?->toIso8601String(),
             'attempts' => $invoice->attempts,
             'can_retry' => ! $waiting && in_array($invoice->status, [Invoice::STATUS_REJECTED, Invoice::STATUS_ERROR, Invoice::STATUS_PENDING, Invoice::STATUS_VOIDED], true),
             // Dentro del plazo de SUNAT se anula; después, se corrige con una nota de crédito

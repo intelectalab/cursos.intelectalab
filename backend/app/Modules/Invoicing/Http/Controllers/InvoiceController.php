@@ -7,6 +7,7 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Invoicing\Application\InvoiceIssuer;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Http\InvoicePresenter;
+use App\Modules\Invoicing\Jobs\SendInvoiceMail;
 use App\Modules\Sales\Domain\Billing;
 use App\Modules\Sales\Domain\Models\Order;
 use App\Shared\Export\ExcelExport;
@@ -50,6 +51,9 @@ class InvoiceController extends Controller
     ];
 
     private const TYPE_LABELS = ['BOLETA' => 'Boleta', 'FACTURA' => 'Factura', 'NOTA_CREDITO' => 'Nota de crédito'];
+
+    /** Cómo se nombra cada archivo en los mensajes */
+    private const FILE_NAMES = ['pdf' => 'El PDF', 'xml' => 'El XML', 'cdr' => 'La constancia de SUNAT'];
 
     public function __construct(
         private readonly InvoiceIssuer $issuer,
@@ -111,14 +115,47 @@ class InvoiceController extends Controller
 
     public function pdf(Invoice $invoice): Response
     {
-        return $this->download($invoice);
+        return $this->download($invoice, 'pdf');
     }
 
     public function minePdf(Request $request, Invoice $invoice): Response
     {
         $this->assertOwner($request, $invoice->order);
 
-        return $this->download($invoice);
+        return $this->download($invoice, 'pdf');
+    }
+
+    /**
+     * El XML firmado o la constancia de SUNAT (CDR), los dos en ZIP.
+     */
+    public function file(Invoice $invoice, string $kind): Response
+    {
+        return $this->download($invoice, $kind);
+    }
+
+    public function mineFile(Request $request, Invoice $invoice, string $kind): Response
+    {
+        $this->assertOwner($request, $invoice->order);
+
+        return $this->download($invoice, $kind);
+    }
+
+    /**
+     * Le vuelve a enviar al comprador su comprobante por correo, con el PDF.
+     */
+    public function resend(Invoice $invoice): JsonResponse
+    {
+        if (! $invoice->isValid()) {
+            throw new ApiException(ErrorCode::Conflict, 'Solo se envía un comprobante aceptado por SUNAT.', 409);
+        }
+        if ($invoice->order?->customer === null) {
+            throw new ApiException(ErrorCode::Conflict, 'Esta orden no tiene a quién enviarle el comprobante.', 409);
+        }
+
+        SendInvoiceMail::dispatch($invoice->tenant_id, $invoice->id, resend: true);
+        $this->audit->record('invoices.resent', $invoice, null, ['code' => $invoice->code(), 'to' => $invoice->order->customer->email]);
+
+        return ApiResponse::success(['sent_to' => $invoice->order->customer->email]);
     }
 
     public function retry(Invoice $invoice): JsonResponse
@@ -235,18 +272,22 @@ class InvoiceController extends Controller
             ->all();
     }
 
-    private function download(Invoice $invoice): Response
+    private function download(Invoice $invoice, string $kind): Response
     {
-        $pdf = $this->issuer->pdf($invoice);
+        $bytes = $this->issuer->file($invoice, $kind);
 
-        if ($pdf === null) {
-            throw new ApiException(ErrorCode::NotFound, 'El PDF del comprobante todavía no está disponible.', 404);
+        if ($bytes === null) {
+            throw new ApiException(ErrorCode::NotFound, self::FILE_NAMES[$kind].' del comprobante todavía no está disponible.', 404);
         }
 
-        return response($pdf, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$invoice->code().'.pdf"',
-        ]);
+        // Los nombres de SUNAT: RUC-tipo-serie-número (la constancia empieza con R-)
+        $sunatName = implode('-', [$this->issuer->setting()?->ruc, $invoice->document_type, $invoice->series, str_pad((string) $invoice->number, 8, '0', STR_PAD_LEFT)]);
+
+        return response($bytes, 200, match ($kind) {
+            'pdf' => ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="'.$invoice->code().'.pdf"'],
+            'xml' => ['Content-Type' => 'application/zip', 'Content-Disposition' => 'attachment; filename="'.$sunatName.'.zip"'],
+            'cdr' => ['Content-Type' => 'application/zip', 'Content-Disposition' => 'attachment; filename="R-'.$sunatName.'.zip"'],
+        });
     }
 
     private function assertOwner(Request $request, ?Order $order): void

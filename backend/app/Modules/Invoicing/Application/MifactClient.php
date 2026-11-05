@@ -37,17 +37,34 @@ class MifactClient
         return $this->post($setting, 'GetEstatusInvoice', self::key($setting, $type, $series, $number, $date));
     }
 
+    /** Archivos de un comprobante: el PDF (A4), el XML firmado y la constancia de SUNAT (CDR), los dos en ZIP */
+    public const FILES = [
+        'pdf' => ['flag' => 'RETORNA_PDF', 'field' => 'pdf_bytes'],
+        'xml' => ['flag' => 'RETORNA_XML_ENVIO', 'field' => 'xml_enviado'],
+        'cdr' => ['flag' => 'RETORNA_XML_CDR', 'field' => 'cdr_sunat'],
+    ];
+
     /**
      * El PDF en formato A4, o null si el proveedor no lo devuelve.
      */
     public function pdf(InvoicingSetting $setting, string $type, string $series, int $number, string $date): ?string
     {
-        $response = $this->post($setting, 'GetInvoice', self::key($setting, $type, $series, $number, $date) + [
-            'RETORNA_PDF' => 'true', 'RETORNA_XML_ENVIO' => 'false', 'RETORNA_XML_CDR' => 'false', 'COD_FORM_IMPR' => '001',
-        ]);
-        $pdf = is_string($response['pdf_bytes'] ?? null) ? base64_decode($response['pdf_bytes'], true) : false;
+        return $this->file($setting, 'pdf', $type, $series, $number, $date);
+    }
 
-        return $pdf === false || $pdf === '' ? null : $pdf;
+    /**
+     * Uno de los archivos del comprobante (ver FILES), o null si el proveedor no lo devuelve.
+     */
+    public function file(InvoicingSetting $setting, string $kind, string $type, string $series, int $number, string $date): ?string
+    {
+        $flags = [self::FILES[$kind]['flag'] => 'true'] + array_fill_keys(array_column(self::FILES, 'flag'), 'false');
+
+        $response = $this->post($setting, 'GetInvoice', self::key($setting, $type, $series, $number, $date) + $flags + ['COD_FORM_IMPR' => '001']);
+        $encoded = $response[self::FILES[$kind]['field']] ?? null;
+        // Mifact a veces omite el relleno final del base64
+        $bytes = is_string($encoded) && $encoded !== '' ? base64_decode($encoded.str_repeat('=', (4 - strlen($encoded) % 4) % 4), true) : false;
+
+        return $bytes === false || $bytes === '' ? null : $bytes;
     }
 
     /**

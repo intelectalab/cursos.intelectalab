@@ -120,6 +120,7 @@ class Invoice extends Model
         'attempts',
         'checked_at',
         'voided_at',
+        'emailed_at',
     ];
 
     protected function casts(): array
@@ -134,6 +135,7 @@ class Invoice extends Model
             'attempts' => 'integer',
             'checked_at' => 'datetime',
             'voided_at' => 'datetime',
+            'emailed_at' => 'datetime',
         ];
     }
 

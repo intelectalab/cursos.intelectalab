@@ -2,6 +2,7 @@
 
 namespace App\Modules\Tenancy\Mail;
 
+use Illuminate\Mail\Attachment;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -18,6 +19,7 @@ class TenantNoticeMail extends Mailable
      * @param  list<string>  $lines  párrafos del mensaje
      * @param  array{label: string, url: string}|null  $action  botón principal
      * @param  array{label: string, url: string, one_click: string}|null  $unsubscribe  baja de este tipo de correo: enlace al pie y cabecera para el programa de correo
+     * @param  list<array{name: string, mime: string, data: string}>  $files  adjuntos (el contenido en base64, para que el correo se pueda encolar)
      */
     public function __construct(
         public readonly string $organization,
@@ -29,6 +31,7 @@ class TenantNoticeMail extends Mailable
         public readonly ?array $unsubscribe = null,
         // Color principal de la academia (cabecera y botón); null = el de IntelectaLab
         public readonly ?string $color = null,
+        public readonly array $files = [],
     ) {}
 
     public function envelope(): Envelope
@@ -50,5 +53,13 @@ class TenantNoticeMail extends Mailable
     public function content(): Content
     {
         return new Content(view: 'mail.notice');
+    }
+
+    /**
+     * @return list<Attachment>
+     */
+    public function attachments(): array
+    {
+        return array_map(fn (array $file) => Attachment::fromData(fn () => base64_decode($file['data']), $file['name'])->withMime($file['mime']), $this->files);
     }
 }

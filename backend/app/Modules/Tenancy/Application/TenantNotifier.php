@@ -48,14 +48,15 @@ class TenantNotifier
      *
      * @param  array<string, string|int|float|null>  $values  datos variables del correo
      * @param  string|null  $path  pantalla a la que lleva el botón
+     * @param  list<array{name: string, mime: string, data: string}>  $files  adjuntos, en base64 (por ejemplo, el PDF del comprobante)
      */
-    public function notify(?User $user, string $key, array $values = [], ?string $path = null): void
+    public function notify(?User $user, string $key, array $values = [], ?string $path = null, array $files = []): void
     {
         if ($user === null || $user->status !== User::STATUS_ACTIVE) {
             return;
         }
 
-        $this->deliver($user->email, $user->first_name, $key, $values, $path, $user);
+        $this->deliver($user->email, $user->first_name, $key, $values, $path, $user, $files);
     }
 
     /**
@@ -71,8 +72,9 @@ class TenantNotifier
     /**
      * @param  array<string, string|int|float|null>  $values
      * @param  User|null  $user  con cuenta, el aviso también va a sus teléfonos
+     * @param  list<array{name: string, mime: string, data: string}>  $files
      */
-    private function deliver(?string $email, ?string $name, string $key, array $values, ?string $path, ?User $user): void
+    private function deliver(?string $email, ?string $name, string $key, array $values, ?string $path, ?User $user, array $files = []): void
     {
         $tenant = $this->tenant();
 
@@ -92,7 +94,7 @@ class TenantNotifier
         }
 
         $mail = $category === null
-            ? $this->mail($tenant, $name, $content, $path)
+            ? new TenantNoticeMail(...$this->parts($tenant, $name, $content, $path === null ? null : $this->origin($tenant).$path), files: $files)
             : new TenantNoticeMail(...$this->parts($tenant, $name, $content, $path === null ? null : $this->origin($tenant).$path), unsubscribe: [
                 'label' => 'Dejar de recibir «'.EmailCatalog::OPT_OUTS[$category]['name'].'»',
                 'url' => EmailPreferences::pageUrl($tenant, $email, $category),

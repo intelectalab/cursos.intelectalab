@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Ban, FileMinus, FileText, Pencil, RotateCcw } from 'lucide-react';
+import { Ban, FileArchive, FileMinus, FileText, Mail, Pencil, RotateCcw } from 'lucide-react';
 import { apiErrorMessage } from '../../../shared/api/client';
 import { Alert, Badge, Button, Modal } from '../../../shared/ui';
-import { formatMoney } from '../../sales/api';
+import { formatDateTime, formatMoney } from '../../sales/api';
 import { billingPayload, INVOICE_STATUS, INVOICE_TYPE, invoicingApi, type Billing, type BillingInput, type Invoice } from '../api';
 import { BillingFields } from './BillingFields';
 import { InvoiceCorrectionModal, type Correction } from './InvoiceCorrectionModal';
@@ -33,6 +33,7 @@ export const OrderInvoices: React.FC<{
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [billing, setBilling] = useState<Billing | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<BillingInput | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -128,6 +129,7 @@ export const OrderInvoices: React.FC<{
         </p>
       )}
       {error && <Alert>{error}</Alert>}
+      {notice && <Alert tone="success">{notice}</Alert>}
       {invoices?.length === 0 && <p className="text-xs text-slate-500">El comprobante se emite cuando se confirma el pago.</p>}
       <ul className="divide-y divide-slate-200/80 rounded-xl border border-slate-200/80">
         {invoices?.map((invoice) => (
@@ -151,6 +153,37 @@ export const OrderInvoices: React.FC<{
                 onClick={() => void run(`pdf-${invoice.id}`, () => (staff ? invoicingApi.openPdf(invoice.id) : invoicingApi.openMyPdf(invoice.id)), 'No se pudo abrir el PDF.')}
               >
                 PDF
+              </Button>
+            )}
+            {invoice.has_pdf &&
+              (['xml', 'cdr'] as const).map((kind) => (
+                <Button
+                  key={kind}
+                  size="sm"
+                  variant="ghost"
+                  icon={<FileArchive className="w-4 h-4" />}
+                  title={kind === 'xml' ? 'XML firmado del comprobante (ZIP)' : 'Constancia de recepción de SUNAT (ZIP)'}
+                  processing={busy === `${kind}-${invoice.id}`}
+                  disabled={busy !== null}
+                  onClick={() => void run(`${kind}-${invoice.id}`, () => invoicingApi.downloadZip(invoice, kind, !staff), `No se pudo descargar el ${kind === 'xml' ? 'XML' : 'CDR'}.`)}
+                >
+                  {kind === 'xml' ? 'XML' : 'CDR'}
+                </Button>
+              ))}
+            {staff && canFix && invoice.has_pdf && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<Mail className="w-4 h-4" />}
+                processing={busy === `mail-${invoice.id}`}
+                disabled={busy !== null}
+                onClick={() => void run(`mail-${invoice.id}`, async () => {
+                  setNotice(null);
+                  const to = await invoicingApi.resend(invoice.id);
+                  setNotice(`Enviamos ${invoice.code} a ${to}, con el PDF adjunto.`);
+                }, 'No se pudo reenviar el comprobante.')}
+              >
+                Reenviar
               </Button>
             )}
             {staff && canFix && invoice.can_retry && (
@@ -179,6 +212,7 @@ export const OrderInvoices: React.FC<{
               </Button>
             )}
             {staff && invoice.message && invoice.status !== 'ACCEPTED' && <p className="basis-full text-xs text-slate-600">{invoice.message}</p>}
+            {staff && invoice.emailed_at && <p className="basis-full text-xs text-slate-500">Enviado al comprador el {formatDateTime(invoice.emailed_at)}.</p>}
           </li>
         ))}
       </ul>

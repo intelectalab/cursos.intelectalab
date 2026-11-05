@@ -381,6 +381,24 @@ final class EmailCatalog
             'button' => 'Ver mi orden',
         ],
 
+        'comprobante_emitido' => [
+            'scope' => self::SCOPE_ACADEMY,
+            'group' => 'Compras y pagos',
+            'name' => 'Comprobante electrónico',
+            'when' => 'Cuando SUNAT acepta la boleta, la factura o la nota de crédito de un pago. Va con el PDF adjunto.',
+            'to' => 'Quien compró',
+            'variables' => [
+                'tipo' => ['Boleta, factura o nota de crédito', 'boleta'],
+                'comprobante' => ['Serie y número del comprobante', 'B001-00000012'],
+                'orden' => ['Número de la orden', 'N.º 00042'],
+                'importe' => ['Importe del comprobante', 'S/ 120.00'],
+            ],
+            'essential' => ['comprobante'],
+            'subject' => 'Tu {tipo} electrónica {comprobante}',
+            'body' => "Te enviamos tu {tipo} electrónica {comprobante} por {importe}, de la orden {orden}. La encuentras adjunta en PDF.\n\nTambién puedes descargarla, con su XML y la constancia de SUNAT, desde «Mis compras».",
+            'button' => 'Ver mi compra',
+        ],
+
         // ── Atención ─────────────────────────────────────────────
         'clase_en_vivo_hoy' => [
             'scope' => self::SCOPE_ACADEMY,

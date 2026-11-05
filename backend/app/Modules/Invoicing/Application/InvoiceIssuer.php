@@ -6,6 +6,7 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceSeries;
 use App\Modules\Invoicing\Domain\Models\InvoicingSetting;
+use App\Modules\Invoicing\Jobs\SendInvoiceMail;
 use App\Modules\Sales\Application\Exchange\ExchangeRateService;
 use App\Modules\Sales\Domain\Billing;
 use App\Modules\Sales\Domain\Models\Order;
@@ -291,6 +292,14 @@ class InvoiceIssuer
      */
     public function pdf(Invoice $invoice): ?string
     {
+        return $this->file($invoice, 'pdf');
+    }
+
+    /**
+     * Un archivo del comprobante ya aceptado: el PDF, el XML o la constancia de SUNAT (MifactClient::FILES).
+     */
+    public function file(Invoice $invoice, string $kind): ?string
+    {
         $setting = $this->setting();
 
         if ($setting === null || ! $invoice->isValid()) {
@@ -298,9 +307,9 @@ class InvoiceIssuer
         }
 
         try {
-            return $this->mifact->pdf($setting, $invoice->document_type, $invoice->series, $invoice->number, $invoice->issue_date->toDateString());
+            return $this->mifact->file($setting, $kind, $invoice->document_type, $invoice->series, $invoice->number, $invoice->issue_date->toDateString());
         } catch (Throwable $error) {
-            Log::warning("No se pudo bajar el PDF del comprobante {$invoice->code()}: ".$error->getMessage());
+            Log::warning("No se pudo bajar el {$kind} del comprobante {$invoice->code()}: ".$error->getMessage());
 
             return null;
         }
@@ -620,6 +629,12 @@ class InvoiceIssuer
                 'orden' => $order ? '#'.str_pad((string) $order->number, 5, '0', STR_PAD_LEFT) : '',
                 'motivo' => (string) $invoice->provider_message,
             ], '/billing');
+        }
+
+        // Recién aceptado por SUNAT: se le envía al comprador con el PDF (una sola vez; después, con «Reenviar»)
+        $wasValid = in_array($before, [Invoice::STATUS_ACCEPTED, Invoice::STATUS_OBSERVED], true);
+        if ($invoice->isValid() && ! $wasValid && $invoice->emailed_at === null) {
+            SendInvoiceMail::dispatch($invoice->tenant_id, $invoice->id)->afterCommit();
         }
 
         return $invoice;

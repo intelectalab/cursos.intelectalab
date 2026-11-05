@@ -56,6 +56,8 @@ export interface Invoice {
   order_id?: string;
   order_number?: number | null;
   message?: string | null;
+  // Cuándo se le envió al comprador por correo
+  emailed_at?: string | null;
   attempts?: number;
   can_retry?: boolean;
   // Dentro del plazo de SUNAT se anula; después, se corrige con una nota de crédito
@@ -81,6 +83,19 @@ export const INVOICE_STATUS: Record<InvoiceStatus, { label: string; tone: 'neutr
   VOIDED: { label: 'Anulado', tone: 'neutral' },
   CANCELLED: { label: 'Sin emitir (pago devuelto)', tone: 'neutral' },
 };
+
+// El XML firmado y la constancia de SUNAT (CDR) llegan en ZIP: se descargan con el nombre que da el servidor
+async function downloadZip(path: string, fallback: string): Promise<void> {
+  const response = await api.get(path, { responseType: 'blob' });
+  const header = String(response.headers['content-disposition'] ?? '');
+  const name = /filename="([^"]+)"/.exec(header)?.[1] ?? fallback;
+  const url = URL.createObjectURL(response.data as Blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
 
 // El PDF lo da el servidor con la sesión: se abre en una pestaña nueva
 async function openPdf(path: string): Promise<void> {
@@ -120,6 +135,12 @@ export const invoicingApi = {
   async updateBilling(order: string, billing: BillingInput) {
     return (await api.put(`/orders/${order}/billing`, { billing })).data.data.billing as Billing;
   },
+  // Le vuelve a enviar el comprobante al comprador; responde a qué correo
+  async resend(invoice: string) {
+    return (await api.post(`/invoices/${invoice}/resend`)).data.data.sent_to as string;
+  },
   openPdf: (invoice: string) => openPdf(`/invoices/${invoice}/pdf`),
   openMyPdf: (invoice: string) => openPdf(`/me/invoices/${invoice}/pdf`),
+  downloadZip: (invoice: Invoice, kind: 'xml' | 'cdr', mine: boolean) =>
+    downloadZip(`${mine ? '/me' : ''}/invoices/${invoice.id}/${kind}`, `${kind === 'cdr' ? 'R-' : ''}${invoice.code}.zip`),
 };
